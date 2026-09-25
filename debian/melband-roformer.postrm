@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "purge" ]; then
+    cat <<'EOF'
+melband-roformer removed.
+
+Note: downloaded model weights (if any) were kept at, for each user who
+ran the tool:
+    ~/.cache/melband-roformer-infer/
+This is per-user cache data outside dpkg's purview; remove it manually if
+you no longer want it.
+EOF
+fi
+
+#DEBHELPER#
+
+exit 0

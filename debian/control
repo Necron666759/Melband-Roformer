@@ -1,0 +1,40 @@
+Source: melband-roformer
+Section: sound
+Priority: optional
+Maintainer: melband-roformer packaging <packaging@example.invalid>
+Build-Depends: debhelper-compat (= 13),
+               python3 (>= 3.11),
+               python3-venv,
+               python3-pip,
+               python3-pytest,
+               ca-certificates
+Standards-Version: 4.6.2
+Homepage: https://github.com/openmirlab/melband-roformer-infer
+Rules-Requires-Root: no
+
+Package: melband-roformer
+Architecture: amd64
+Depends: ${misc:Depends},
+         ffmpeg
+Recommends: gir1.2-gtk-4.0,
+            python3-gi,
+            libgl1,
+            libglib2.0-0
+Description: Local GPU-accelerated vocal/instrumental separation (Mel-Band RoFormer)
+ melband-roformer is a CLI (and optional GTK4 GUI) for separating vocals
+ and speech from music tracks entirely locally, using the Mel-Band
+ RoFormer architecture, with NVIDIA CUDA acceleration when available and
+ automatic CPU fallback otherwise. No audio is ever sent to a network
+ service.
+ .
+ This package wraps the upstream melband-roformer-infer Python project
+ (MIT licensed) and ships a self-contained Python environment (including
+ PyTorch) under /usr/lib/melband-roformer/venv so it cannot conflict with
+ the system Python or other Python applications. Model weights (~913 MB)
+ are NOT included in this package; they are downloaded on first use with
+ explicit user confirmation and sha256 verification. Requires a
+ user-installed NVIDIA driver for GPU use (this package does not install
+ or manage any NVIDIA kernel driver or CUDA toolkit).
+ .
+ Run `melband-roformer --info` or `melband-roformer --self-test` after
+ installing to check your environment.
