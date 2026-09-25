@@ -1,5 +1,0 @@
-#!/bin/sh
-# Thin dispatcher: execs the wrapper CLI inside the bundled, isolated venv.
-# Does not touch the system Python or PATH beyond this one exec.
-set -e
-exec /usr/lib/melband-roformer/venv/bin/python3 -m melband_roformer_wrapper.cli "$@"
