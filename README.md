@@ -35,7 +35,7 @@ process, why the package is large, what is/isn't bundled).
 - CUDA runtime    Already included in the package along with PyTorch
 - RAM	The exact minimum value is not specified in the provided files
 - VRAM    The exact minimum value is not specified; a configuration with an RTX 3060 Ti 8 GB is working successfully
-- GUI    For the GUI, GTK4/PyGObject are additionally required: gir1.2-gtk-4.0, python3-gi, libgl1, libglib2.0-0
+- For the GUI, GTK4/PyGObject are additionally required: gir1.2-gtk-4.0, python3-gi, libgl1, libglib2.0-0
 
 **OS / architecture**
 - `amd64` only.
