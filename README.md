@@ -298,3 +298,13 @@ alias documented in this wrapper's `--help`).
 - GTK4 GUI (`melband-roformer-gui`) is a thin optional layer; it has not
   been visually tested in this environment (no display server available
   here — see README.debian.md "What was actually verified").
+
+<p align="center">
+  <img src="ScreenShots/my_cat.png" width="50%">
+</p>
+
+Donate $5 to buy food for a cat:
+<br>
+USDT(TRC20): TWEmMHfc5DbQuDru8oaXNoXxTNkqYJbsYv<br>
+BTC(BEP20): 0x147d19ae0e1b50ca6c87d32b2f716068e6ba5b17<br>
+SOL(SOL): j3kkX7VuKfchcnH8Y9bUCbqjjA4ssLpspvsw4YZi8ia<br>
