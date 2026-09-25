@@ -22,6 +22,21 @@ process, why the package is large, what is/isn't bundled).
 
 ## 0. System Requirements
 
+**Summary / Overview**
+OS    Debian 13 (Trixie)
+Architecture    amd64 / x86-64
+Python    Python ≥ 3.11; the pre-built Debian 13 package uses Python 3.13
+Disk Space    Several GB are required to install the package; the actual installed package with venv takes up about 6.5 GB
+Model    Additionally, about 913 MB for melband-roformer-kim-vocals
+FFmpeg    Required
+NVIDIA GPU    Required for CUDA hardware acceleration; CPU fallback is also supported
+NVIDIA Driver    ≥ 560.28.03 for the PyTorch CUDA 12.6 used
+System CUDA Toolkit    Not required
+CUDA runtime    Already included in the package along with PyTorch
+RAM	The exact minimum value is not specified in the provided files
+VRAM    The exact minimum value is not specified; a configuration with an RTX 3060 Ti 8 GB is working successfully
+GUI    For the GUI, GTK4/PyGObject are additionally required: gir1.2-gtk-4.0, python3-gi, libgl1, libglib2.0-0
+
 **OS / architecture**
 - `amd64` only.
 - Built and tested against Debian 13 (Trixie), Python >= 3.11 (Trixie
