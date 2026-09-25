@@ -122,7 +122,7 @@ required)**
 
 ```bash
 git clone <this-repo-url>
-cd melband-roformer-debian
+cd Melband-Roformer
 ./scripts/build-deb.sh
 ```
 
