@@ -17,7 +17,60 @@ process, why the package is large, what is/isn't bundled).
 
 ---
 
-## 1. Install
+## 1. System Requirements
+
+**OS / architecture**
+- Debian 13 (Trixie), `amd64` only. The `.deb` is built and tested against
+  this exact release/arch combination; other distros/architectures are
+  not supported out of the box.
+- Python >= 3.11 (built and tested against Trixie's system Python 3.13).
+
+**Required (Depends)**
+- `ffmpeg`
+
+**Recommended, GUI only (Recommends)**
+- `gir1.2-gtk-4.0`, `python3-gi`, `libgl1`, `libglib2.0-0` — needed only
+  for `melband-roformer-gui`; the CLI works without them.
+
+**Build-time only (Build-Depends, for rebuilding the package)**
+- `debhelper-compat (= 13)`, `python3-venv`, `python3-pip`,
+  `python3-pytest`, `ca-certificates`
+
+**Python environment (bundled in the package's own venv — no system pip
+required)**
+- `torch==2.11.0` (CUDA 12.6 / `cu126` build)
+- `torchaudio==2.11.0`
+- `melband-roformer-infer==0.1.5`
+- `soundfile>=0.12,<0.13`
+
+**GPU (optional, for acceleration)**
+- NVIDIA GPU, Ampere (`sm_86`) or newer recommended (target hardware:
+  RTX 3060 Ti).
+- NVIDIA driver **>= 560.28.03** — hard floor for the `cu126` PyTorch
+  build; below this, CUDA will not initialize.
+- The package does **not** install or manage the NVIDIA driver or CUDA
+  toolkit — install these yourself first.
+- No GPU/driver present → automatic CPU fallback (slower, but works).
+- Indicative VRAM usage on an RTX 3060 Ti: ~7.4 GiB free out of 8 GiB
+  (see `--info` output in §7).
+
+**Disk**
+- The `.deb` itself is several GB (bundled venv + CUDA PyTorch runtime).
+- Model weights are downloaded separately on first use: ~913 MB
+  (`MelBandRoformer.ckpt`, from Hugging Face), with explicit user
+  confirmation and sha256 verification.
+- Cache location: `~/.cache/melband-roformer-infer/<model-slug>/`.
+
+**Network**
+- Not required for `apt install` (everything needed is already in the
+  package).
+- Required once, to download the model weights (Hugging Face), with
+  explicit user consent.
+- Inference itself is fully local — no audio is ever sent anywhere.
+
+---
+
+## 2. Install
 
 ```bash
 sudo apt install ./melband-roformer_0.1.0_amd64.deb
@@ -30,7 +83,7 @@ use (see §4), because Debian packages should not ship near-gigabyte binary
 blobs that most users may not even need immediately, and because you should
 explicitly consent to that download.
 
-## 2. Remove
+## 3. Remove
 
 ```bash
 sudo apt remove melband-roformer
@@ -41,7 +94,7 @@ downloaded model weights in `~/.cache/melband-roformer-infer/` (per-user
 cache, outside package management) — remove that directory yourself if
 wanted.
 
-## 3. Basic usage
+## 4. Basic usage
 
 ```bash
 melband-roformer input.wav
@@ -55,7 +108,7 @@ melband-roformer ./input/*.wav --output-dir ./output   # batch
 Output: `<name>_vocals.wav` and `<name>_instrumental.wav` next to (or in
 `--output-dir`), same sample rate as the input where the model allows it.
 
-## 4. Model download
+## 5. Model download
 
 ```bash
 melband-roformer --list-models
@@ -82,7 +135,7 @@ own default — this wrapper does not relocate it, so it composes with any
 other tool using the same upstream package). Override with
 `MELBAND_ROFORMER_MODELS_PATH` or `--models-dir`.
 
-## 5. CUDA / GPU
+## 6. CUDA / GPU
 
 ```bash
 melband-roformer --info
@@ -112,7 +165,7 @@ Run `melband-roformer --info` for details.
 isn't actually available, so you know your GPU setup is broken rather than
 silently getting a slow CPU run.
 
-## 6. Diagnostics
+## 7. Diagnostics
 
 ```bash
 melband-roformer --self-test
@@ -134,17 +187,17 @@ Any `[OK]` becomes `[FAIL] <reason>` with an actionable message
 instead of a stack trace when something is missing (no GPU, no model, wrong
 driver, etc).
 
-## 7. Model weights location
+## 8. Model weights location
 
 `~/.cache/melband-roformer-infer/<model-slug>/` (upstream default, see §4).
 
-## 8. Output location
+## 9. Output location
 
 Current directory by default, or `--output-dir <path>` / `--store_dir`
 (upstream's underlying flag; `--output-dir` is accepted as the friendlier
 alias documented in this wrapper's `--help`).
 
-## 9. Known limitations
+## 10. Known limitations
 
 - **This is a vocal/instrumental *music* separation model, not a
   speech-recognition or dedicated dialogue-isolation model.** Extracting a
