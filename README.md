@@ -23,9 +23,9 @@ process, why the package is large, what is/isn't bundled).
 ## 0. System Requirements
 
 **Summary / Overview**
-OS    Debian 13 (Trixie)
-Architecture    amd64 / x86-64
-Python    Python ≥ 3.11; the pre-built Debian 13 package uses Python 3.13
+- OS    Debian 13 (Trixie)
+- Architecture    amd64 / x86-64
+- Python    Python ≥ 3.11; the pre-built Debian 13 package uses Python 3.13
 Disk Space    Several GB are required to install the package; the actual installed package with venv takes up about 6.5 GB
 Model    Additionally, about 913 MB for melband-roformer-kim-vocals
 FFmpeg    Required
