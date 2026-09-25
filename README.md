@@ -1,7 +1,10 @@
 # melband-roformer (Debian package)
 
-Native `.deb` for Debian 13 (Trixie), amd64, that installs a local CLI/GUI
-wrapper around the upstream **[melband-roformer-infer](https://github.com/openmirlab/melband-roformer-infer)**
+Native `.deb`, `amd64`, built and released against Debian 13 (Trixie) but
+compatible with recent Debian/Ubuntu derivatives (see §1 for exactly what
+"compatible" means and the one case where it isn't guaranteed). It installs
+a local CLI/GUI wrapper around the upstream
+**[melband-roformer-infer](https://github.com/openmirlab/melband-roformer-infer)**
 package (MIT license, PyPI, Python API `mel_band_roformer`) to separate vocals
 from instrumental/music using **Mel-Band RoFormer**, with NVIDIA CUDA
 acceleration on GPUs such as the RTX 3060 Ti, and CPU fallback.
@@ -20,10 +23,40 @@ process, why the package is large, what is/isn't bundled).
 ## 1. System Requirements
 
 **OS / architecture**
-- Debian 13 (Trixie), `amd64` only. The `.deb` is built and tested against
-  this exact release/arch combination; other distros/architectures are
-  not supported out of the box.
-- Python >= 3.11 (built and tested against Trixie's system Python 3.13).
+- `amd64` only.
+- Built and tested against Debian 13 (Trixie), Python >= 3.11 (Trixie
+  ships 3.13). The build tooling itself (`scripts/build-deb.sh`,
+  `debian/rules`) is distro-agnostic `dpkg-buildpackage`/`debhelper` — it
+  was also test-built and smoke-tested (wrapper package install + import +
+  the non-GPU/non-model test tier) on **Ubuntu 24.04 LTS** with no changes
+  needed, and its `Build-Depends`/`Depends`/`Recommends` all resolve
+  cleanly there too. Expected to work the same way on any current
+  Debian/Ubuntu release, LTS or not (e.g. Ubuntu 25.10, 26.04) — the
+  distro/version only has to satisfy the two points below.
+- **Two things actually gate compatibility, not the distro name:**
+  1. **Python >= 3.11** available as `python3` (Ubuntu 22.04 ships 3.10 —
+     too old; 23.10+/24.04+ are fine).
+  2. **glibc version, direction matters.** glibc is backward- but not
+     forward-compatible: a binary built against an *older* glibc runs
+     fine on a *newer* one, never the reverse. The official `.deb` is
+     built on Debian 13 (glibc 2.41) and embeds a copy of that machine's
+     Python interpreter and compiled extensions (torch, numpy, scipy) via
+     `--copies` in `debian/rules`. That means it should run without issue
+     on anything with glibc >= 2.41 (Ubuntu 25.10 and 26.04+ are already
+     ahead, at 2.42) — including releases that don't exist yet, since
+     glibc only ever adds symbols going forward. It is **not guaranteed
+     on Ubuntu 24.04 LTS**, whose glibc (2.39) is older than the build
+     machine's. **Rebuilding locally with `scripts/build-deb.sh` sidesteps
+     this entirely**, since the venv then embeds the target system's own
+     interpreter and libraries instead of Debian 13's — this is the
+     recommended path on any system other than Debian 13 itself.
+- Package **names can still drift between releases** independently of
+  glibc — e.g. Ubuntu >= 24.04 renamed `libglib2.0-0` to
+  `libglib2.0-0t64` as part of its 64-bit `time_t` transition, so that
+  exact `Recommends` entry in `debian/control` won't resolve by that name
+  there (harmless for the CLI; only affects the optional GTK4 GUI).
+  Rebuilding locally also avoids this, since `apt`/`debhelper` resolve
+  whatever the target system currently calls its packages.
 
 **Required (Depends)**
 - `ffmpeg`
