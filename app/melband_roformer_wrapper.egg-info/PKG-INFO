@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: melband-roformer-wrapper
+Version: 0.1.0
+Summary: Debian-packaging CLI/GUI wrapper around upstream melband-roformer-infer
+License: MIT
+Requires-Python: >=3.11
+Requires-Dist: torch==2.11.0
+Requires-Dist: torchaudio==2.11.0
+Requires-Dist: melband-roformer-infer==0.1.5
+Requires-Dist: soundfile<0.13,>=0.12

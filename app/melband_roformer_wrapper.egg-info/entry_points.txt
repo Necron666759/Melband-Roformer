@@ -1,0 +1,3 @@
+[console_scripts]
+melband-roformer = melband_roformer_wrapper.cli:main
+melband-roformer-gui = melband_roformer_wrapper.gui:main

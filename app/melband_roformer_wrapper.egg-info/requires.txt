@@ -1,0 +1,4 @@
+torch==2.11.0
+torchaudio==2.11.0
+melband-roformer-infer==0.1.5
+soundfile<0.13,>=0.12

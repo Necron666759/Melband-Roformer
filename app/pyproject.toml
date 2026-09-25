@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "melband-roformer-wrapper"
+version = "0.1.0"
+description = "Debian-packaging CLI/GUI wrapper around upstream melband-roformer-infer"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    # Pinned to a CUDA 12.6 build compatible with RTX 3060 Ti (Ampere, sm_86).
+    # Installed from the PyTorch wheel index, not PyPI's default index -- see
+    # scripts/build-deb.sh which passes --index-url/--extra-index-url. Bumped
+    # from torch/torchaudio 2.6.0+cu124 to 2.11.0+cu126; both packages have
+    # published cp313 wheels on every CUDA channel since the 2.6.0 release,
+    # so this bump carries no repeat of the 2.5.x cp313-coverage gap (see
+    # requirements.txt for that history).
+    "torch==2.11.0",
+    "torchaudio==2.11.0",
+    # Real upstream project we wrap. Do not reimplement its CLI/model logic.
+    "melband-roformer-infer==0.1.5",
+    "soundfile>=0.12,<0.13",
+]
+
+[project.scripts]
+melband-roformer = "melband_roformer_wrapper.cli:main"
+melband-roformer-gui = "melband_roformer_wrapper.gui:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+# sitecustomize.py must install as a top-level module (NOT nested inside
+# the melband_roformer_wrapper package) so Python's `site` machinery
+# auto-imports it at interpreter start-up for every process using this
+# venv -- including the upstream `melband-roformer-infer` console-script,
+# which runs as its own subprocess/interpreter and never imports anything
+# from melband_roformer_wrapper. See sitecustomize.py's own docstring for
+# why this is where the torch.backends.cuda.sdp_kernel() deprecation fix
+# has to live.
+[tool.setuptools]
+py-modules = ["sitecustomize"]

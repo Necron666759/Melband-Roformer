@@ -1,0 +1,302 @@
+melband-roformer (0.1.11) unstable; urgency=medium
+
+  * app/sitecustomize.py: extend the venv-wide deprecated-API patch (added
+    in 0.1.7 for torch.backends.cuda.sdp_kernel) to also cover
+    torch.cuda.amp.autocast(), used by upstream
+    mel_band_roformer/utils.py. Observed on a real GPU run:
+      utils.py:86: FutureWarning: `torch.cuda.amp.autocast(args...)` is
+      deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+        with torch.cuda.amp.autocast():
+    Same fix shape as sdp_kernel: replace torch.cuda.amp.autocast itself,
+    at interpreter start-up, with a same-signature shim
+    (_CudaAmpAutocastShim, supporting enabled=/dtype=/cache_enabled=,
+    usable both as a context manager and as a decorator) built on the new,
+    non-deprecated torch.amp.autocast('cuda', ...), defaulting dtype to
+    float16 when not given to reproduce the old API's own default rather
+    than whatever torch.amp.autocast might otherwise pick for "cuda".
+    Upstream's own call site keeps working completely unmodified.
+  * tests/test_cli.py: add
+    test_sitecustomize_patches_deprecated_cuda_amp_autocast, mirroring
+    test_sitecustomize_patches_deprecated_sdp_kernel (added in 0.1.7) --
+    same subprocess_env()-based approach, so it exercises the exact
+    mechanism cli.py/selftest.py rely on for the real upstream subprocess,
+    not this test process's own possibly-different ambient
+    `import sitecustomize` resolution. Always-run tier, CPU-only.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Fri, 25 Sep 2026 11:00:00 +0000
+
+melband-roformer (0.1.10) unstable; urgency=medium
+
+  * scripts/build-deb.sh: skip `apt-get update` entirely when every
+    build-dep in BUILD_DEPS is already installed (new
+    _all_build_deps_installed(), checked via `dpkg-query -W -f='${Status}'`
+    per package), instead of always running it whenever `--no-deps` isn't
+    explicitly passed. `apt-get update` refreshes *every* apt source
+    configured on the machine, not just the two Debian ones this package
+    actually needs (deb.debian.org, security.debian.org) -- on a real
+    desktop that routinely also means unrelated third-party repos (GPU
+    vendor, browser, remote-desktop, chat client, etc.), several of which
+    can be slow or flaky to reach and none of which ship any of
+    BUILD_DEPS. A real build log showed this step being the longest-
+    hanging part of the whole invocation while reporting "Обновлено 0
+    пакетов, установлено 0 новых пакетов" -- i.e. a real network round
+    trip for zero effect, since the packages were already present.
+    `--no-deps` already let you skip this manually; this makes the script
+    make that same call automatically and correctly instead of relying on
+    the caller to remember the flag. Applied to both the root and
+    plain-user (`sudo apt-get ...`) code paths identically via the shared
+    BUILD_DEPS array and helper, so both stay in sync going forward.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Fri, 25 Sep 2026 10:00:00 +0000
+
+melband-roformer (0.1.9) unstable; urgency=medium
+
+  * debian/control: drop the unused ${shlibs:Depends} substvar from the
+    Depends field. dh_shlibdeps is (correctly, see override_dh_shlibdeps's
+    own comment) run with --exclude=usr/lib/melband-roformer/venv, since
+    the venv's vendored .so files (torch's bundled cuBLAS/cuDNN/NCCL,
+    numpy/scipy extensions) must not be resolved against Debian's shared
+    library database. The only files this package installs *outside*
+    that excluded venv are debian/melband-roformer{,-gui}.launcher, both
+    plain POSIX shell scripts, plus .desktop/.svg/man/doc files -- no
+    ELF at all. dh_shlibdeps therefore never has anything to analyze and
+    never writes a shlibs:Depends= line into
+    debian/melband-roformer.substvars (unlike misc:Depends/misc:Pre-Depends,
+    which override_dh_makeshlibs echoes explicitly). Referencing
+    ${shlibs:Depends} in control when nothing in the build can ever
+    populate it was always going to warn at dpkg-gencontrol time:
+      "substitution variable ${shlibs:Depends} used, but is not defined"
+    Confirmed by an actual 0.1.8 build. Since this isn't a build
+    misconfiguration but the correct, intended shape of the package
+    (bundled runtime, no system-library deps to express), the fix is to
+    stop declaring a substvar the build will never define, not to fake
+    one. No functional change to the shipped binary or its real runtime
+    dependencies (ffmpeg + ${misc:Depends} already cover them).
+
+ -- melband-roformer packaging <packaging@example.invalid>  Fri, 25 Sep 2026 09:00:00 +0000
+
+melband-roformer (0.1.8) unstable; urgency=medium
+
+  * Fix two bugs found via an actual failed build on real hardware (0.1.7
+    never having been build-tested for real before this):
+  * app/melband_roformer_wrapper/__init__.py: subprocess_env() was
+    computing its PYTHONPATH override by doing `import sitecustomize` in
+    the *current* process and reading that module's __file__ -- but
+    ambient `import sitecustomize` resolution is exactly the mechanism
+    subprocess_env() exists to route around (see its docstring), so on a
+    host where ambient resolution finds someone else's sitecustomize.py,
+    this computed the WRONG directory and silently defeated the whole
+    fix. Rewritten to derive the path purely from this package's own
+    on-disk location (melband_roformer_wrapper/ and sitecustomize.py are
+    installed by the same wheel into the same site-packages dir, see
+    app/pyproject.toml's py-modules) -- no import, no ambient resolution,
+    deterministic regardless of sys.path.
+  * tests/test_cli.py::test_sitecustomize_patches_deprecated_sdp_kernel
+    had the identical bug at the test level: it asserted on the *test
+    process's own* ambient `import sitecustomize` + direct
+    torch.backends.cuda.sdp_kernel() call, rather than on what production
+    code (cli.py/selftest.py) actually relies on. This passed in sandbox
+    testing but FAILED on a real machine where the test process's own
+    ambient resolution found a different sitecustomize.py (very plausibly
+    from one of the many third-party apt repos e.g. NVIDIA CUDA/
+    VirtualBox/etc. such a desktop install tends to have configured).
+    Rewritten to spawn a subprocess via subprocess_env(), exactly the way
+    cli.py/selftest.py launch the real melband-roformer-infer subprocess,
+    so the test now exercises (and only trusts) the actual production
+    mechanism.
+  * scripts/build-deb.sh: the $SUDO_USER/project-owner ownership-fixup
+    added in 0.1.7 only covered $PROJECT_ROOT and ~/.cache/pip; a real
+    build additionally hit `/tmp/pytest-of-$USER` (pytest's own tmp root,
+    created by debian/rules' override_dh_auto_test) being root-owned from
+    an earlier root-run build, which pytest's tmp_path fixture refuses to
+    reuse ("OSError: The temporary directory ... is not owned by the
+    current user"), aborting the whole test tier (and hence the build).
+    Refactored the ownership-fixup logic into a shared
+    _fix_stale_root_ownership_everywhere() helper and broadened its
+    coverage from ~/.cache/pip to all of ~/.cache (covers any other cache
+    tooling ever writes there, not just pip) plus
+    ${TMPDIR:-/tmp}/pytest-of-$USER, applied in both the $SUDO_USER path
+    and the direct-root/project-owner path added in 0.1.7.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 20:00:00 +0000
+
+melband-roformer (0.1.7) unstable; urgency=medium
+
+  * Fix `FutureWarning: torch.backends.cuda.sdp_kernel() is deprecated`
+    printed on every separation run. The warning comes from upstream
+    melband-roformer-infer's attention code, not from our own wrapper --
+    and the actual separation runs as a *subprocess* (cli.py execs the
+    `melband-roformer-infer` console-script directly), so a monkeypatch
+    inside melband_roformer_wrapper itself would never reach it. Added
+    app/sitecustomize.py, installed as a top-level module (new
+    `[tool.setuptools] py-modules` in app/pyproject.toml) so it lands in
+    the venv's own site-packages, where Python's `site` machinery
+    auto-imports it at the start of *every* interpreter invocation in
+    this venv -- our CLI, our GUI, and upstream's own console-scripts
+    alike. It replaces torch.backends.cuda.sdp_kernel() with a
+    same-signature shim built on the new, non-deprecated
+    torch.nn.attention.sdpa_kernel(), so upstream's existing call site
+    keeps working unmodified but no longer touches the deprecated code
+    path. Added tests/test_cli.py::test_sitecustomize_patches_deprecated_sdp_kernel
+    (always-run tier, CPU-only) asserting the context manager no longer
+    raises under `warnings.simplefilter("error", FutureWarning)`.
+  * scripts/build-deb.sh: when the root->$SUDO_USER drop-privileges step
+    (added in 0.1.5) runs, also fix ownership of any pre-existing
+    root-owned files under $SUDO_USER's own ~/.cache/pip before handing
+    off. An earlier root-run build (from before that drop existed, or
+    from a plain `sudo dpkg-buildpackage`/`sudo pip ...` bypassing this
+    script) can leave root-owned entries there; once the build correctly
+    drops to $SUDO_USER, pip can read but not write alongside them,
+    which surfaces as "WARNING: The directory '.../.cache/pip' ... is
+    not owned or is not writable by the current user" and silently
+    disables the cache rather than failing the build outright. Same fix
+    applied to $PROJECT_ROOT itself, since a previous root-run build can
+    just as easily leave out/, .venv-build/, or dpkg-buildpackage's own
+    debian/melband-roformer/, debian/.debhelper/ etc. root-owned -- that
+    would otherwise fail a later $SUDO_USER-based build with a hard
+    permission error only *after* redoing the whole (expensive) build.
+  * scripts/build-deb.sh: also handle a genuine root login/`su -` (no
+    `sudo`, so no $SUDO_USER to drop to -- previously this case just
+    warned and built as root unconditionally). Now falls back to
+    dropping to whichever user already owns the checkout (overwhelmingly
+    likely to be the intended non-root build user), same ownership
+    fixups as the $SUDO_USER path above, guarded by `sudo` actually being
+    installed and the owner being a real, non-root account; otherwise
+    still falls through to building as root with the existing warning.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 18:00:00 +0000
+
+melband-roformer (0.1.6) unstable; urgency=medium
+
+  * Bump pinned torch/torchaudio from 2.6.0 to 2.11.0 and switch the
+    PyTorch wheel index from cu124 to cu126 (app/requirements.txt,
+    app/pyproject.toml, debian/rules' TORCH_INDEX). Both packages ship
+    cp313 wheels on cu126 for 2.11.0, so this carries no repeat of the
+    2.5.x cp313-coverage gap fixed in 0.1.4. melband-roformer-infer==0.1.5
+    only requires torch>=2.0, so no source/CLI code changes were needed.
+  * app/melband_roformer_wrapper/gpuinfo.py: move TORCH_CUDA_CHANNEL to
+    "cu126" and raise MIN_DRIVER_VERSION[_STR] from 550.54.14 (CUDA 12.4
+    GA) to 560.28.03 (CUDA 12.6 GA), matching the new wheel channel's
+    driver floor; `--info`/`--self-test` now warn correctly against the
+    cu126 requirement instead of the stale cu124 one.
+  * README.md, README.debian.md: update the sample `--info` output and
+    driver-floor text to 2.11.0+cu126 / >=560.28.03.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 12:00:00 +0000
+
+melband-roformer (0.1.5) unstable; urgency=medium
+
+  * app/melband_roformer_wrapper/gpuinfo.py: fix `_min_driver_ok()` still
+    hardcoding the old cu121 driver floor (>=530.30.02) after 0.1.2/0.1.4
+    moved the build to cu124 (>=550.54.14). `--info`/`--self-test` were
+    silently reporting the driver as OK on 530-549, even though the
+    cu124 wheels shipped in this build do not work on those drivers.
+    Consolidated the floor into two module-level constants
+    (TORCH_CUDA_CHANNEL, MIN_DRIVER_VERSION[_STR]) that infoblock.py now
+    reads from too, instead of duplicating the number/wording in a
+    second place; debian/rules' TORCH_INDEX and app/requirements.txt now
+    carry a comment pointing back at gpuinfo.py as the value to update
+    first if the wheel channel changes again.
+  * Remove app/build/ (284 KiB of nested build/lib/build/lib/... cruft
+    left over from repeated untracked `setup.py build` runs) and add a
+    top-level .gitignore (build/, *.egg-info/, dist/, __pycache__/,
+    .venv-build/, out/) so it doesn't reaccumulate. debian/rules' own
+    --buildsystem=none does not run dh_auto_clean, so this was never
+    cleaned automatically.
+  * app/pyproject.toml: raise requires-python from >=3.10 to >=3.11 to
+    match debian/control's Build-Depends: python3 (>= 3.11); both already
+    run on Trixie's python3 3.13 in practice, this just removes the
+    stated inconsistency between the two.
+  * scripts/build-deb.sh: collect the built .deb/.changes/.buildinfo into
+    a new ./out/ directory next to the sources instead of leaving them in
+    the parent directory (dpkg-buildpackage's default), so there is one
+    predictable place to find the build output. scripts/test-deb.sh
+    updated to look there first (falls back to ../ for a package built
+    directly with dpkg-buildpackage).
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 12:00:00 +0000
+
+melband-roformer (0.1.4) unstable; urgency=medium
+
+  * Bump pinned torch/torchaudio from 2.5.1 to 2.6.0 (app/requirements.txt,
+    app/pyproject.toml). 0.1.2 switched the wheel index from cu121 to
+    cu124 believing that fixed cp313 coverage for both packages at 2.5.1,
+    but that was wrong: torchaudio never published a cp313 wheel at all
+    for the 2.5.x series, on cu124 or any other index (PyPI's file listing
+    for torchaudio 2.5.1 tops out at cp312). torch itself does have a
+    2.5.1 cp313/cu124 wheel, which is why `pip install -r
+    app/requirements.txt` got partway through -- torch==2.5.1 downloaded
+    (900+ MB) and installed, and only then did the build fail with "Could
+    not find a version that satisfies the requirement torchaudio==2.5.1"
+    on any Trixie (Python 3.13) build host. torchaudio's first cp313
+    wheels shipped with 2.6.0, which also has a matching cu124 build, so
+    both pins move to 2.6.0 together. melband-roformer-infer==0.1.5 only
+    requires torch>=2.0, so 2.6.0 is compatible; no source/CLI code
+    changes needed. See README.debian.md ("PyTorch / CUDA compatibility
+    used for build pinning") for detail.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 12:00:00 +0000
+
+melband-roformer (0.1.3) unstable; urgency=medium
+
+  * scripts/build-deb.sh: when invoked as root (e.g. `sudo
+    ./scripts/build-deb.sh`), only run the apt-get step as root and
+    re-exec the actual build (venv, pip, dpkg-buildpackage) as
+    $SUDO_USER. Building as root worked but left .venv-build/, the
+    source tree, and the resulting .deb/.buildinfo/.changes root-owned,
+    and could poison the real user's ~/.cache/pip -- unnecessary since
+    debian/rules is Rules-Requires-Root: no. Falls back to building as
+    root (with a warning) if there's no $SUDO_USER to drop to.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 12:00:00 +0000
+
+melband-roformer (0.1.2) unstable; urgency=medium
+
+  * Switch the PyTorch wheel index from cu121 to cu124 (still torch==2.5.1
+    / torchaudio==2.5.1, no version bump). Debian 13 (Trixie) ships Python
+    3.13, and while PyTorch's cu121 channel has a torch-2.5.1+cu121 wheel
+    for cp313, it never published the matching torchaudio-2.5.1+cu121
+    wheel for cp313 -- only up to cp312. That made
+    `pip install -r app/requirements.txt` fail with "Could not find a
+    version that satisfies the requirement torchaudio==2.5.1" on any
+    Trixie build host, even though the identical command worked for torch
+    itself. cu124 has full cp313 coverage for both packages at 2.5.1.
+    Driver floor moves from >=530.30.02 (CUDA 12.1) to >=550.54.14 (CUDA
+    12.4); RTX 3060 Ti (Ampere/sm_86) is unaffected architecturally. See
+    README.debian.md ("PyTorch / CUDA compatibility used for build
+    pinning") for the cu118 fallback if a host's driver is older than
+    550.54.14.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 12:00:00 +0000
+
+melband-roformer (0.1.1) unstable; urgency=medium
+
+  * Bump pinned torch/torchaudio from 2.4.1 to 2.5.1: the PyTorch cu121
+    wheel index no longer serves 2.4.1 builds (only 2.5.0/2.5.1 remain
+    published with the +cu121 tag), which made the venv-build step of
+    dh_auto_build fail with "Could not find a version that satisfies the
+    requirement torch==2.4.1". melband-roformer-infer==0.1.5 only requires
+    torch>=2.0, so 2.5.1 is compatible. No source/CLI code changes needed.
+  * Add python3-pytest to Build-Depends (debian/control) and to the
+    apt-get install list in scripts/build-deb.sh. override_dh_auto_test
+    runs pytest inside the build venv (--system-site-packages), but
+    nothing previously declared pytest as a build dependency, so builds
+    on a host without a pre-existing system python3-pytest would fail at
+    the test step with "No module named 'pytest'".
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 12:00:00 +0000
+
+melband-roformer (0.1.0) unstable; urgency=medium
+
+  * Initial release: CLI/GTK4-GUI wrapper around upstream
+    melband-roformer-infer 0.1.5 for local, GPU-accelerated (CUDA, with
+    CPU fallback) vocal/instrumental separation using Mel-Band RoFormer.
+  * Self-contained venv under /usr/lib/melband-roformer/venv, built at
+    package build time so `apt install` requires no network access.
+  * Explicit-consent, sha256-verified model download
+    (melband-roformer-kim-vocals by default), delegated to upstream's own
+    registry/checksum logic.
+  * --info / --self-test diagnostics; --device {auto,cuda,cpu} with clear,
+    non-crashing CPU fallback.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Thu, 24 Sep 2026 12:00:00 +0000
