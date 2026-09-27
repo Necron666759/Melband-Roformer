@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=melband-roformer
+GenericName=Audio vocal/instrumental separator
+Comment=Restricted terminal for melband-roformer audio separation only
+Exec=AppRun
+Icon=melband-roformer
+Categories=AudioVideo;Audio;
+Terminal=false
+NoDisplay=false

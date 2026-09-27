@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+# This script deliberately does nothing beyond a friendly, offline message.
+# It does NOT download anything, does NOT run pip, and does NOT require
+# network access -- the venv was already fully assembled at package BUILD
+# time (see debian/rules). Icon-cache/desktop-database refresh for the
+# .desktop file we installed is handled automatically by debhelper's
+# dpkg-trigger integration (hicolor-icon-theme / desktop-file-utils), not
+# by this script.
+
+if [ "$1" = "configure" ]; then
+    cat <<'EOF'
+melband-roformer installed.
+
+Model weights are NOT bundled in this package and are not downloaded yet.
+Run:
+    melband-roformer --info         # check Python/CUDA/GPU environment
+    melband-roformer --download-model
+    melband-roformer --self-test    # full readiness check
+
+GPU use requires an NVIDIA driver already installed on this system
+(this package does not install or manage NVIDIA drivers).
+EOF
+fi
+
+#DEBHELPER#
+
+exit 0

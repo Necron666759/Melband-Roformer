@@ -1,0 +1,63 @@
+#!/bin/bash
+# AppRun for melband-roformer.AppImage.
+#
+# This AppImage has exactly one purpose: run melband-roformer's restricted
+# terminal (appimage/melband-roformer-shell.py). It never execs a real
+# shell, never execs an arbitrary program from $PATH, and never forwards
+# $@ to anything other than that one script.
+set -euo pipefail
+
+# $APPDIR is exported by the AppImage runtime when running from a mounted
+# (or --appimage-extract-and-run extracted) image. Fall back to resolving
+# our own location for the "run AppRun directly out of an AppDir" dev case.
+if [ -z "${APPDIR:-}" ]; then
+    APPDIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+fi
+
+VENV_BIN="$APPDIR/usr/lib/melband-roformer/venv/bin"
+SHELL_SCRIPT="$APPDIR/usr/bin/melband-roformer-shell.py"
+HUD_TERM="$APPDIR/usr/bin/melband-roformer-hud-term.py"
+
+# Bundled venv's python3 first, then the host system. Nothing under
+# $APPDIR/usr/lib needs to be prepended to LD_LIBRARY_PATH: the bundled
+# interpreter's own tkinter/Tcl/Tk are fully self-contained (no libX11/
+# libxcb/libXft dependency -- verified via `objdump -p`/`ldd` against the
+# bundled interpreter; see README.appimage.md), so there is no longer a
+# bundled terminal emulator's shared-library search path to set up here.
+# One consequence of no Xft/fontconfig linkage: Tk itself can only ever
+# draw the host X server's non-antialiased core bitmap fonts. The HUD
+# terminal (melband-roformer-hud-term.py) works around this rather than
+# living with it: it rasterizes its own glyphs with Pillow/FreeType from
+# the DejaVu Sans Mono TrueType font bundled under
+# usr/share/melband-roformer/fonts/, so the terminal text is antialiased
+# regardless of what Tk itself is capable of.
+export PATH="$VENV_BIN:$APPDIR/usr/bin:$PATH"
+export XDG_DATA_DIRS="$APPDIR/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+# ---------------------------------------------------------------------------
+# HUD look ("cyborg vision" style: monochrome red-on-black, large type).
+# Only affects the *windowed* terminal below (melband-roformer-hud-term.py)
+# -- the "already have a terminal" path further down colors itself via
+# ANSI escapes printed by melband-roformer-shell.py instead, since it
+# doesn't own the terminal window. All of this is overridable via
+# environment variables so a user who dislikes it can restore the
+# defaults without editing this file.
+# ---------------------------------------------------------------------------
+export MELBAND_ROFORMER_HUD_FG="${MELBAND_ROFORMER_HUD_FG:-#ff2a00}"        # phosphor red
+export MELBAND_ROFORMER_HUD_BG="${MELBAND_ROFORMER_HUD_BG:-#0a0000}"        # near-black, faint red tint
+export MELBAND_ROFORMER_HUD_FONT_SIZE="${MELBAND_ROFORMER_HUD_FONT_SIZE:-16}"  # points; the terminal itself enforces a >= 14 floor
+export MELBAND_ROFORMER_HUD_ICON="$APPDIR/melband-roformer.png"
+
+if [ -t 0 ] && [ -t 1 ]; then
+    # Launched from an existing terminal: run the restricted shell right
+    # here instead of opening a redundant second terminal window.
+    exec "$VENV_BIN/python3" "$SHELL_SCRIPT" "$@"
+fi
+
+# Launched from a file manager / app launcher with no controlling
+# terminal: open melband-roformer's own bundled HUD terminal
+# (appimage/melband-roformer-hud-term.py), running nothing but the
+# restricted shell. No user-supplied command line ever reaches it here --
+# the argv below is fixed and hardcoded, exactly as it was for xterm's
+# old "-e" invocation.
+exec "$VENV_BIN/python3" "$HUD_TERM" "$VENV_BIN/python3" "$SHELL_SCRIPT"

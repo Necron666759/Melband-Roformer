@@ -1,0 +1,133 @@
+.TH MELBAND-ROFORMER 1 "2026-09-24" "melband-roformer 0.1.0" "User Commands"
+.SH NAME
+melband-roformer \- separate vocals/speech from music using Mel-Band RoFormer
+.SH SYNOPSIS
+.B melband-roformer
+.RI [ INPUT.wav " | " GLOB " ...]"
+.RB [ \-\-output\-dir
+.IR DIR ]
+.RB [ \-\-device
+.BR auto | cuda | cpu ]
+.RB [ \-\-model
+.IR SLUG ]
+.br
+.B melband-roformer
+.BR \-\-info | \-\-self\-test | \-\-list\-models | \-\-download\-model | \-\-version
+.SH DESCRIPTION
+.B melband-roformer
+is a Debian-packaged CLI wrapper around the upstream
+.B melband-roformer-infer
+project (MIT licensed), providing local, offline, GPU-accelerated
+vocal/instrumental music source separation using the Mel-Band RoFormer
+architecture. No audio is sent to any network service.
+.PP
+Given one or more input audio files (WAV/FLAC/MP3/OGG, anything
+.BR libsndfile / ffmpeg
+can decode), it writes
+.IR NAME _vocals.wav
+and
+.IR NAME _instrumental.wav
+for each input.
+.SH OPTIONS
+.TP
+.BI \-\-output\-dir " DIR"
+Directory to write output files to (default: current directory).
+.TP
+.BI \-\-device " auto|cuda|cpu"
+.B auto
+(default) uses the NVIDIA GPU via CUDA if available, otherwise CPU, and
+prints which it chose.
+.B cuda
+forces GPU use and exits with an explanatory error (not a Python
+traceback) if CUDA is unavailable.
+.B cpu
+forces CPU even if a GPU is present.
+.TP
+.BI \-\-model " SLUG"
+Select a model from the upstream registry (default:
+.BR melband-roformer-kim-vocals ,
+the recommended MelBand Roformer Kim model by Kimberley Jensen). See
+.BR \-\-list\-models .
+.TP
+.BI \-\-config\-path " FILE" ", " \-\-model\-path " FILE"
+Bypass registry auto-resolution and use an explicit local config/checkpoint
+pair.
+.TP
+.BI \-\-models\-dir " DIR"
+Override the model cache directory (default:
+.IR ~/.cache/melband\-roformer\-infer/ ).
+.TP
+.B \-\-yes ", " \-y
+Assume "yes" to the model-download confirmation prompt.
+.TP
+.B \-\-info
+Print Python/PyTorch/CUDA/GPU/model diagnostic information and exit.
+.TP
+.B \-\-self\-test
+Run a full readiness check: Python, PyTorch, CUDA, GPU, model presence,
+model loading, and a small real inference pass. Prints
+.BR [OK] / [FAIL] / [SKIP]
+per check.
+.TP
+.B \-\-list\-models
+List all models available in the upstream registry, with category and
+description.
+.TP
+.B \-\-download\-model
+Download (with confirmation and sha256 verification) the selected
+.RB ( \-\-model )
+or default model, then exit without processing any audio.
+.TP
+.B \-\-version
+Print the application version and exit.
+.SH FILES
+.TP
+.I ~/.cache/melband-roformer-infer/<model-slug>/
+Downloaded model checkpoints and configs (upstream's own default cache
+location; not managed by dpkg).
+.TP
+.I /usr/lib/melband-roformer/venv/
+Bundled, isolated Python environment (PyTorch, upstream package, and this
+wrapper). Not intended for direct use.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Runtime failure (forced GPU unavailable, download declined, self-test
+found a problem, separation subprocess failed).
+.TP
+.B 2
+Usage error (bad arguments, missing input file, unknown model slug).
+.SH EXAMPLES
+.PP
+Basic:
+.RS
+.EX
+melband-roformer song.wav
+.EE
+.RE
+.PP
+Batch, explicit output directory, forced GPU:
+.RS
+.EX
+melband-roformer ./input/*.wav --output-dir ./output --device cuda
+.EE
+.RE
+.SH KNOWN LIMITATIONS
+Mel-Band RoFormer is trained primarily on sung vocals, not spoken word.
+Extracting a short spoken monologue from a music intro (e.g. an
+industrial-track intro) often works reasonably but is
+.B not guaranteed
+to be clean; result quality depends heavily on the specific mix. Always
+listen to the output.
+.SH SEE ALSO
+Full documentation:
+.IR /usr/share/doc/melband-roformer/README.md ,
+.IR /usr/share/doc/melband-roformer/README.debian.md .
+Upstream project: https://github.com/openmirlab/melband-roformer-infer
+.SH AUTHOR
+Packaged for Debian 13 (Trixie) as part of this deliverable; wraps
+third-party upstream code and models, see
+.IR /usr/share/doc/melband-roformer/copyright .

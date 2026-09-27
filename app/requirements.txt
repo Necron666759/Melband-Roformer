@@ -1,0 +1,63 @@
+# Installed with:
+#   pip install --index-url https://download.pytorch.org/whl/cu130 \
+#               --extra-index-url https://pypi.org/simple -r requirements.txt
+# The PyTorch wheel index takes priority for torch/torchaudio (gives the
+# CUDA 13.0 build); everything else resolves from PyPI via the extra index.
+#
+# cu130, not cu126: bumped alongside torch 2.11.0 -> 2.13.0. cu130 is the
+# CUDA channel PyTorch itself now treats as the stable default (it is the
+# unsuffixed build published to PyPI as of the 2.11 release series);
+# cu126 is kept upstream only as a fallback for hosts on older drivers
+# (and is slated for removal entirely from PyTorch 2.15 -- see the
+# driver-floor note below for why that doesn't affect this package).
+#
+# torchaudio stays at ==2.11.0, NOT bumped to 2.13.0: upstream put
+# torchaudio into maintenance mode as of its 2.11.0 release -- that is
+# its final release, and it is explicitly documented as compatible with
+# torch>=2.11 without itself being rebuilt for later torch minors. So
+# bumping torch alone (2.11.0 -> 2.13.0) while leaving torchaudio pinned
+# at 2.11.0 is upstream's own supported path, not a mismatch.
+#
+# torch==2.13.0: version bump per request; melband-roformer-infer==0.1.5
+# only requires torch>=2.0, so this is compatible with no source/CLI code
+# changes needed.
+#
+# (Historical note, cu126/2.6.0-era: torchaudio never published ANY cp313
+# wheel at all for the 2.5.x series, on any index -- checked against
+# PyPI's file listing for the torchaudio 2.5.1 release, which only goes up
+# to cp312. torchaudio's first cp313 wheels shipped with the 2.6.0
+# release. torch itself did publish a 2.5.1 cp313 wheel, which is why only
+# the torchaudio half of `pip install -r requirements.txt` failed back
+# then. Not relevant to the current pins, kept here since the next bump
+# should check cp3.15 coverage the same way -- PyTorch 2.13 added Python
+# 3.15 wheels, but per its own release notes that support is CPU-only so
+# far (torch wheel only, no torchvision, and coverage for the CUDA
+# variants is not yet confirmed) -- do not assume cp315+cu130 exists
+# without checking the index first.)
+#
+# CUDA 13.0 build requires NVIDIA driver >= 580.65.06 (CUDA 13.0 GA linux
+# floor) -- a new major-branch floor, not a point bump: CUDA 13.x moved
+# the minimum required driver from the 12.x family's >=525 up to >=580.
+# RTX 3060 Ti is Ampere/sm_86, supported by every current PyTorch CUDA
+# build (no architecture concern here, only the driver-version floor
+# above).
+#
+# NOTE: this driver floor is also checked at runtime by
+# app/melband_roformer_wrapper/gpuinfo.py (TORCH_CUDA_CHANNEL /
+# MIN_DRIVER_VERSION). If you change the wheel index here or in
+# debian/rules' TORCH_INDEX, update those two constants in gpuinfo.py in
+# the same commit -- it is the single place the runtime --info/--self-test
+# checks read from.
+torch==2.13.0
+torchaudio==2.11.0
+
+# Real upstream project this package wraps. Pinned to the version verified
+# against this README/CLI at packaging time (see README.debian.md).
+melband-roformer-infer==0.1.5
+
+soundfile>=0.12,<0.13
+
+# Used directly by melband_roformer_wrapper.progress (the terminal
+# progress-bar rewrite), not just pulled in transitively via
+# melband-roformer-infer's own dependency on it.
+tqdm>=4.64
