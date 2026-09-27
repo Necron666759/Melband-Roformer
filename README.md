@@ -478,6 +478,10 @@ alias documented in this wrapper's `--help`). Same for the AppImage's
   `[melband-roformer]>` prompt (see §4).
 
 <p align="center">
+  <img src="ScreenShots/melband-roformer.png" width="50%">
+</p>
+
+<p align="center">
   <img src="ScreenShots/my_cat.png" width="50%">
 </p>
 
