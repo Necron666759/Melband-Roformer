@@ -85,14 +85,20 @@ class _ChunkProgressStream:
 
     def write(self, value: str) -> int:
         # tqdm uses bare carriage returns; verbose chunk messages use newlines.
-        # Treat either as a record boundary, but never pass the native tqdm
-        # records through to the terminal.
+        # Treat either as a record boundary, but never pass native tqdm records
+        # through to the terminal.
         for char in value:
             if char in "\r\n":
                 self._handle_line(self._pending)
                 self._pending = ""
             else:
                 self._pending += char
+        # stderr tqdm writes a complete carriage-return frame without a
+        # trailing delimiter. stdout chunk events may follow through this
+        # same redirected stream, so discard a recognized native frame now
+        # rather than letting it prefix the next stdout record.
+        if self._NATIVE_PROGRESS_LINE.match(self._pending):
+            self._pending = ""
         return len(value)
 
     def flush(self) -> None:
