@@ -261,9 +261,7 @@ shared with the `.deb` (see §5), so delete
 `~/.cache/melband-roformer-infer/` yourself if you no longer want the
 downloaded weights either.
 
-## 4. Basic usage
-
-### Intelligent multi-model analysis (mseparate)
+## Intelligent multi-model analysis (mseparate)
 
 The separate `mseparate` command analyzes audio and prepares a model execution plan. In this initial foundation release, neural inference is intentionally not enabled yet; the command reports technical measurements and does not modify the source file.
 
