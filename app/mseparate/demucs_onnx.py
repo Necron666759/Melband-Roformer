@@ -9,77 +9,86 @@ from __future__ import annotations
 import gc
 import os
 import re
+import shutil
 import sys
+import time
 from contextlib import redirect_stdout
 from pathlib import Path
+
+from tqdm import tqdm as _tqdm
 
 from .execution import BackendInfo, StemArtifact
 from .types import ModelManifest
 
 
 class _ChunkProgressStream:
-    """Convert demucs-onnx verbose chunk messages into flushed percentages.
+    """Render Demucs chunk progress with the same tqdm meter as the main CLI.
 
-    demucs-onnx only enables tqdm for a TTY. In GUI/subprocess output its
-    verbose chunk messages are otherwise block-buffered, making a live job
-    look frozen until inference returns. This small stdout proxy preserves
-    normal output and turns the library's real completed-chunk counter into
-    a machine-readable percentage without estimating progress by elapsed time.
+    The percentage is based only on completed chunks. The current chunk
+    number is displayed on the line immediately below the bar. Both lines
+    are redrawn in place; updates do not accumulate as a staircase in logs.
     """
 
-    _CHUNK_LINE = re.compile(r"^\s*chunk\s+(\d+)/(\d+):\s*(.*?)\s*$")
+    _CHUNK_LINE = re.compile(r"^\\s*chunk\\s+(\\d+)/(\\d+):\\s*(.*?)\\s*$")
 
     def __init__(self, stream):
         self._stream = stream
         self._pending = ""
-        self._last_elapsed = 0.0
+        self._started_at = time.monotonic()
+        self._last_total = 0
+        self._drawn = False
 
     @staticmethod
-    def _format_duration(seconds: float) -> str:
-        whole = max(0, int(round(seconds)))
-        minutes, secs = divmod(whole, 60)
-        return f"{minutes}m {secs:02d}s" if minutes else f"{secs}s"
+    def _terminal_width(fallback: int = 100) -> int:
+        try:
+            return shutil.get_terminal_size(fallback=(fallback, 24)).columns
+        except Exception:
+            return fallback
 
-    def _write_chunk_progress(self, completed: int, total: int, detail: str) -> None:
-        percent = min(100, round(completed * 100 / total))
-        width = 24
-        filled = min(width, round(width * completed / total))
-        bar = "█" * filled + "░" * (width - filled)
-
-        elapsed_match = re.search(r"([0-9]+(?:\.[0-9]+)?)s elapsed", detail)
-        timing = ""
-        if elapsed_match:
-            elapsed = float(elapsed_match.group(1))
-            chunk_seconds = elapsed - self._last_elapsed
-            self._last_elapsed = elapsed
-            if completed == 1:
-                timing = (
-                    f" | first chunk + warm-up: "
-                    f"{self._format_duration(chunk_seconds)}"
-                )
-            else:
-                timing = (
-                    f" | last chunk: {self._format_duration(chunk_seconds)}"
-                )
-            timing += f" | total: {self._format_duration(elapsed)}"
-
-        self._stream.write(f"    progress: [{bar}] {percent}%\n")
-        self._stream.write(
-            f"    chunks processed: {completed}/{total}{timing}\n"
+    def _render(self, completed: int, total: int, elapsed: float) -> str:
+        # Keep tqdm's native meter renderer and the terminal-width behavior
+        # used by app/melband_roformer_wrapper/progress.py on main.
+        return _tqdm.format_meter(
+            n=max(0, min(completed, total)),
+            total=total,
+            elapsed=elapsed,
+            ncols=self._terminal_width(),
+            prefix="Processing audio",
+            unit="chunk",
+            bar_format="{l_bar}{bar}|",
         )
+
+    def _write_chunk_progress(self, completed: int, total: int) -> None:
+        if total <= 0:
+            return
+        completed = max(0, min(completed, total))
+        elapsed = time.monotonic() - self._started_at
+        bar = self._render(completed, total, elapsed)
+        current = f"Обрабатывается фрагмент: {completed + 1} / {total}"
+        if completed >= total:
+            current = f"Обработано фрагментов: {total} / {total}"
+
+        if self._drawn:
+            # Cursor is on the second (counter) line after the previous
+            # update. Move to the bar, clear both rows, and redraw them.
+            self._stream.write("\\x1b[1A\\r\\x1b[2K")
+        else:
+            self._stream.write("\\r")
+            self._drawn = True
+        self._stream.write(bar + "\\n\\r\\x1b[2K" + current)
         self._stream.flush()
+        self._last_total = total
 
     def write(self, value: str) -> int:
         self._pending += value
-        while "\n" in self._pending:
-            line, self._pending = self._pending.split("\n", 1)
+        while "\\n" in self._pending:
+            line, self._pending = self._pending.split("\\n", 1)
             match = self._CHUNK_LINE.match(line)
             if match:
                 completed, total = int(match.group(1)), int(match.group(2))
-                if total > 0:
-                    self._write_chunk_progress(completed, total, match.group(3))
-                    continue
-            self._stream.write(line + "\n")
+                self._write_chunk_progress(completed, total)
+                continue
+            self._stream.write(line + "\\n")
         return len(value)
 
     def flush(self) -> None:
@@ -87,6 +96,13 @@ class _ChunkProgressStream:
             self._stream.write(self._pending)
             self._pending = ""
         self._stream.flush()
+
+    def finish(self) -> None:
+        self.flush()
+        if self._drawn:
+            self._stream.write("\\n")
+            self._stream.flush()
+            self._drawn = False
 
     def __getattr__(self, name):
         return getattr(self._stream, name)
@@ -232,7 +248,7 @@ class DemucsOnnxAdapter:
                     cache_dir=str(self._cache_dir), verbose=True,
                     progress=True, output_format="wav",
                 )
-                progress_stream.flush()
+                progress_stream.finish()
         finally:
             if self.no_download:
                 if old_offline is None:
