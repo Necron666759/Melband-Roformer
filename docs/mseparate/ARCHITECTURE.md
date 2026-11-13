@@ -146,3 +146,29 @@ candidates that are invalid, still warn, or show no resolved parent warning.
 This gate is not yet used to schedule automatic refinement: the current planner
 does not create refinement tasks, and reference-free technical cleanliness is
 not evidence of perceptual improvement. Parent artifacts must remain preserved.
+
+
+## Bundled model catalog and input compatibility
+
+The bundled catalog currently contains one reviewed entry: Kimberley Jensen's
+MelBand RoFormer vocal checkpoint. Its MIT license is declared by the
+checkpoint's Hugging Face repository; the checkpoint SHA-256 and byte size
+match the checksum inventory shipped with the pinned upstream
+`melband-roformer-infer==0.1.5` release. Its YAML configuration is pinned to
+the same upstream tag and checksum inventory.
+
+The model predicts vocals natively. The instrumental is the mixture residual
+(`mixture - vocals`), not a second independently predicted stem. The pinned
+upstream inference implementation reads WAV files, does not resample input,
+and handles mono by duplicating it to stereo for inference. The manifest
+therefore restricts automatic planning to WAV at 44.1 kHz with one or two
+channels. Other input formats and sample rates are rejected by the planner
+rather than silently passed to an incompatible backend.
+
+`mseparate --list-models` lists bundled models and their registry eligibility
+without requiring an input file. A user registry at
+`~/.local/share/mseparate/registry/models.json` overrides the bundled catalog;
+`--registry` selects an explicit alternate registry. Eligibility still does
+not mean inference has been enabled: this release only analyzes, plans and
+prepares assets. The real checkpoint/GPU inference integration remains gated
+on an end-to-end run against the target Debian/PyTorch/CUDA environment.
