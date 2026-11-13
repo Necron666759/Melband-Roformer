@@ -38,6 +38,7 @@ Both vocal models can also return an `instrumental.wav` residual computed exactl
 The inference library code (`pymss`) is MIT-licensed, but its code license does
 not replace the separate licenses of the downloaded model weights. Review the
 model license before using or redistributing the corresponding checkpoint.
+The pinned `pymss==2.3.5` release is classified as Alpha upstream. Its API and adapter contract are covered by CPU tests, but real checkpoint loading, VRAM use and GPU inference remain unverified until the hardware integration tests are run.
 The BS-RoFormer and MDX23C checkpoints have not yet undergone real-hardware
 inference in this project.
 
