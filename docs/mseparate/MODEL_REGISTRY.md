@@ -47,7 +47,7 @@ The bundled registry currently includes the following newly reviewed vocal model
 | `bs-roformer-anvuew-vocals` | BS-RoFormer | `bs-roformer-pymss` | GPL-3.0 | `8d0f72ad0ac4154f5f4c3cdf230880bbb9a5bd01dc610241a2abfe787f0d7784` |
 | `mdx23c-zfturbo-vocals` | MDX23C | `mdx23c-pymss` | CC-BY-NC-SA-4.0 | `49d51472769e34a2501cd1da782346a3212555c3a5619fc2c53507445528d816` |
 
-Both models expose only their native vocals estimate. Their secondary other/instrument estimate is not relabelled as a clean instrumental stem. The BS-RoFormer checkpoint/config are pinned to Hugging Face revision 7e4e5669cad8a8810983e02fa25294229246d374; the MDX23C checkpoint is pinned to Sucial/MSST-WebUI revision 55155c4e2f99d0ca94d24fce88d6dc25711a9252, with its matching configuration pinned to ZFTurbo tag v1.0.0.
+Both models expose only their native vocals estimate. Their secondary other/instrument estimate is not relabelled as a clean instrumental stem. The BS-RoFormer checkpoint/config are pinned to Hugging Face revision 7e4e5669cad8a8810983e02fa25294229246d374; the MDX23C checkpoint is pinned to Sucial/MSST-WebUI revision 55155c4e2f99d0ca94d24fce88d6dc25711a9252, with its matching configuration pinned to ZFTurbo commit 6190c903f353715b9d2f53bb40b0ff7145a13b72.
 
 The MDX23C model repository declares CC-BY-NC-SA-4.0. It is non-commercial: commercial use is not permitted; attribution and share-alike requirements apply. The BS-RoFormer model repository declares GPL-3.0. These are model-asset licenses, distinct from the MIT license of the pymss inference code.
 
