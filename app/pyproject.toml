@@ -34,6 +34,8 @@ dependencies = [
     # Optional semantic instrument/source ranking, loaded only for separation.
     "transformers>=4.45,<5",
     "librosa>=0.10.2,<1",
+    # MSST-format BS-RoFormer and MDX23C inference adapters. Requires torch>=2.7.1; the pinned 2.13.0 build satisfies it.
+    "pymss==2.3.5",
 ]
 
 [project.optional-dependencies]
