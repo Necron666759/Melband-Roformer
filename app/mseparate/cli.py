@@ -60,22 +60,20 @@ def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> 
             "CUDAExecutionProvider is unavailable; ONNX Runtime providers: "
             + ", ".join(sorted(available))
         )
-    if device == "cuda":
-        from .demucs_onnx import _prewarm_strict_cuda
 
-        try:
-            return _prewarm_strict_cuda(demucs_onnx, model_dir, "fp16weights")
-        finally:
-            demucs_onnx.session_pool().clear()
-    if device == "auto" and "CUDAExecutionProvider" in available:
-        provider = "cuda"
-    else:
-        provider = "cpu"
     model_dir.mkdir(parents=True, exist_ok=True)
     old_offline = os.environ.get("HF_HUB_OFFLINE")
     if no_download:
         os.environ["HF_HUB_OFFLINE"] = "1"
     try:
+        if device == "cuda":
+            from .demucs_onnx import _prewarm_strict_cuda
+
+            return _prewarm_strict_cuda(demucs_onnx, model_dir, "fp16weights")
+        if device == "auto" and "CUDAExecutionProvider" in available:
+            provider = "cuda"
+        else:
+            provider = "cpu"
         return demucs_onnx.prewarm(
             models=["htdemucs_6s"], precision="fp16weights",
             providers=provider, cache_dir=str(model_dir),
@@ -87,7 +85,6 @@ def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> 
                 os.environ.pop("HF_HUB_OFFLINE", None)
             else:
                 os.environ["HF_HUB_OFFLINE"] = old_offline
-
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
