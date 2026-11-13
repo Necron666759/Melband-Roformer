@@ -62,10 +62,10 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
             state["stems"] = tuple(stems)
             # Match tqdm's chunked stderr writes, then an ordinary warning.
             sys.stderr.write("Processing audio: 0%|          | 0/48")
-            sys.stderr.write("\\r")
+            sys.stderr.write("\r")
             sys.stderr.write("Processing audio: 50%|█████     | 24/48")
-            sys.stderr.write("\\r")
-            sys.stderr.write("\\nRuntime warning: fixture warning\\n")
+            sys.stderr.write("\r")
+            sys.stderr.write("\nRuntime warning: fixture warning\n")
             return {stem: np.full((mix.shape[1], mix.shape[0]), 0.125, dtype=np.float32)
                     for stem in stems}
 
@@ -84,9 +84,8 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
 
     stderr = capsys.readouterr().err
     assert stderr == (
-        "Processing audio: 0%|          | 0/48\\r"
-        "Processing audio: 50%|█████     | 24/48\\r"
-        "\\nRuntime warning: fixture warning\\n"
+        "Processing audio: 50%|█████     | 24/48\r"
+        "\nRuntime warning: fixture warning\n"
     )
     assert state["kwargs"]["model_type"] == "bs_roformer"
     assert state["kwargs"]["device"] == "cpu"
