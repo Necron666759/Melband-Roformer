@@ -69,7 +69,7 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
     monkeypatch.setitem(sys.modules, "pymss", SimpleNamespace(MSSeparator=FakeSeparator))
     manifest = _manifest(tmp_path, "bs-roformer-pymss")
     source = tmp_path / "input.wav"
-    sf.write(source, np.full((4096, 2), 0.05, dtype=np.float32), 44100)
+    sf.write(source, np.full((4096, 2), 0.05, dtype=np.float32), 44100, subtype="FLOAT")
 
     adapter = BSRoformerAdapter()
     assert adapter.compatibility(manifest) == (True, "")
