@@ -238,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
                       + ", ".join(failed_assets), file=sys.stderr)
             else:
                 from .demucs_onnx import DemucsOnnxAdapter
+                from .bs_roformer import BSRoformerAdapter
+                from .mdx23c import MDX23CAdapter
 
                 manager = ExecutionManager(
                     {
@@ -247,6 +249,8 @@ def main(argv: list[str] | None = None) -> int:
                         "demucs-onnx": lambda: DemucsOnnxAdapter(
                             no_download=args.no_download,
                         ),
+                        "bs-roformer-pymss": BSRoformerAdapter,
+                        "mdx23c-pymss": MDX23CAdapter,
                     },
                     models_root=paths["models"],
                     output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
