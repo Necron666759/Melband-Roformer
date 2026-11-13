@@ -123,3 +123,40 @@ def test_cli_honors_models_dir_override(tmp_path, monkeypatch):
     custom_models = tmp_path / "custom-models"
     assert main([str(source), "--analysis-only", "--models-dir", str(custom_models)]) == 0
     assert custom_models.is_dir()
+
+
+
+def test_cli_prepare_models_offline_reports_missing_asset(tmp_path, monkeypatch, capsys):
+    source = _write_wav(tmp_path / "prepare.wav")
+    state = tmp_path / "state"
+    registry_dir = state / "registry"
+    registry_dir.mkdir(parents=True)
+    registry = [{
+        "model_id": "fixture-model",
+        "name": "Fixture Model",
+        "architecture": "test",
+        "backend": "test",
+        "source_url": "https://example.invalid/project",
+        "license": "MIT",
+        "license_url": "https://example.invalid/license",
+        "license_status": "verified",
+        "status": "available",
+        "assets": [{
+            "role": "checkpoint",
+            "url": "https://example.invalid/checkpoint",
+            "relative_path": "model.ckpt",
+            "sha256": "a" * 64,
+            "size_bytes": 10
+        }]
+    }]
+    (registry_dir / "models.json").write_text(json.dumps(registry), encoding="utf-8")
+    monkeypatch.setenv("MSEPARATE_HOME", str(state))
+
+    rc = main([str(source), "--prepare-models", "--no-download",
+               "--report", str(tmp_path / "asset-report.json")])
+    assert rc == 0
+    output = capsys.readouterr().out
+    assert "fixture-model / checkpoint: missing" in output
+    payload = json.loads((tmp_path / "asset-report.json").read_text())
+    assert payload["asset_results"][0]["status"] == "missing"
+    assert payload["inference_performed"] is False
