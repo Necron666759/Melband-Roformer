@@ -25,7 +25,12 @@ class _InitialTqdmProgressFilter:
         if not isinstance(value, str):
             raise TypeError("write() argument must be str")
         for char in value:
-            if char in "\\r\\n":
+            if char == "\r" and not self._pending:
+                # tqdm may begin an update with CR; hold it until we know
+                # whether this is the initial placeholder being suppressed.
+                self._pending_cr = True
+                continue
+            if char in "\r\n":
                 line = self._pending
                 self._pending = ""
                 prefix = line.split("|", 1)[0].rstrip()
@@ -38,12 +43,10 @@ class _InitialTqdmProgressFilter:
                     self._suppressed = True
                 else:
                     if self._pending_cr:
-                        self._stream.write("\\r")
+                        self._stream.write("\r")
                     self._stream.write(line + char)
                 self._pending_cr = False
             else:
-                if not self._pending and not self._pending_cr:
-                    self._pending_cr = False
                 self._pending += char
         return len(value)
 
@@ -51,6 +54,9 @@ class _InitialTqdmProgressFilter:
         self._stream.flush()
 
     def finish(self) -> None:
+        if self._pending_cr:
+            self._stream.write("\r")
+            self._pending_cr = False
         if self._pending:
             self._stream.write(self._pending)
             self._pending = ""
@@ -58,7 +64,6 @@ class _InitialTqdmProgressFilter:
 
     def __getattr__(self, name):
         return getattr(self._stream, name)
-
 
 class PymssAdapter:
     """Run one MSST-format model through pymss with explicit local assets."""
