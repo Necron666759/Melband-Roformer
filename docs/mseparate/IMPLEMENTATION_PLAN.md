@@ -107,3 +107,12 @@ Exit criteria: tests and hardware actually exercised are recorded; no unsupporte
 - [x] Keep warning-level outputs (including silence/clipping warnings) visible rather than silently discarding them.
 - [x] Add CPU-only executor tests for valid output, structural mismatch and warning retention.
 - [ ] Extend perceptual artifact/leakage heuristics only when a defensible, testable method is available; do not substitute heuristic scores for reference-based metrics.
+
+
+### Cross-stem diagnostics and conservative refinement gate
+
+- [x] Compare compatible output stems in bounded-memory blocks and flag near-identical copies with comparable RMS levels.
+- [x] Preserve warning status and diagnostic text in executor task reports without discarding the audio.
+- [x] Add a conservative refinement decision API: accept only when a warning-bearing parent is replaced by a fully valid, warning-free candidate.
+- [x] Test duplicate and distinct signals, refinement acceptance/rejection, and executor propagation.
+- [ ] Do not enable automatic refinement until a real model-backed comparison demonstrates a defensible improvement criterion; pairwise correlation is only a duplicate-content hint, not a general leakage metric.
