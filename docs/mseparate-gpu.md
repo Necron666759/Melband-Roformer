@@ -33,6 +33,8 @@ use, and applies share-alike terms to adaptations/redistributions. The MDX23C
 config is pinned to the ZFTurbo `v1.0.0` commit `6190c903f353715b9d2f53bb40b0ff7145a13b72`. The registry also pins
 config SHA-256 and byte size for both models.
 
+Both vocal models can also return an `instrumental.wav` residual computed exactly as input mixture minus the model's vocals estimate. The manifest marks this as a derived stem, not a native network prediction. When `--prefer-model` selects BS-RoFormer or MDX23C, the same model produces both the vocals and its complementary residual.
+
 The inference library code (`pymss`) is MIT-licensed, but its code license does
 not replace the separate licenses of the downloaded model weights. Review the
 model license before using or redistributing the corresponding checkpoint.
