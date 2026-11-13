@@ -52,7 +52,8 @@
         "size_bytes": 728,
         "required": true
       }
-    ]
+    ],
+    "planner_priority": 100
   },
   {
     "model_id": "demucs-onnx-htdemucs-6s",
@@ -99,7 +100,8 @@
       "The model emits six estimates from the full mix: drums, bass, other, vocals, guitar and piano.",
       "mseparate converts input audio to 44100 Hz before inference and converts every output stem back to the original input sample rate; the original source file is never modified."
     ],
-    "assets": []
+    "assets": [],
+    "planner_priority": 0
   },
   {
     "model_id": "bs-roformer-anvuew-vocals",
@@ -150,7 +152,8 @@
         "size_bytes": 1969,
         "required": true
       }
-    ]
+    ],
+    "planner_priority": 50
   },
   {
     "model_id": "mdx23c-zfturbo-vocals",
@@ -202,6 +205,7 @@
         "size_bytes": 1164,
         "required": true
       }
-    ]
+    ],
+    "planner_priority": 25
   }
 ]
