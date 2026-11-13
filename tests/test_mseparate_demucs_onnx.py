@@ -288,4 +288,5 @@ def test_chunk_progress_stream_flushes_after_each_progress_event():
     progress.write("    chunk 3/10: 2.1s elapsed\n")
 
     assert target.flush_count == 1
-    assert "progress: 3/10 chunks (30%)" in target.getvalue()
+    assert "] 30%" in target.getvalue()
+    assert "chunks processed: 3/10" in target.getvalue()
