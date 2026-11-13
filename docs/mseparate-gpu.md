@@ -47,6 +47,19 @@ MelBand backend ahead of the newly added alternatives until comparable
 benchmarking has been performed. CLAP/acoustic scores are not estimates of
 model quality.
 
+Use `--prefer-model MODEL_ID` to explicitly select one of the vocal alternatives
+for overlapping routes. For example:
+
+```bash
+mseparate input.wav --plan-only --prefer-model bs-roformer-anvuew-vocals
+mseparate input.wav --execute --device cuda --prefer-model mdx23c-zfturbo-vocals
+```
+
+The preference changes routing only; it does not change the model's license or
+skip asset verification. Use `mseparate --list-models` to see model IDs and
+their declared licenses. The default priority keeps the established MelBand
+route first until equivalent reference-set benchmarks are available.
+
 The current general-purpose model separates a supported audio file into:
 
 - `vocals.wav`
