@@ -60,12 +60,10 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
         def separate(self, mix, *, pbar, stems):
             state["mix_shape"] = mix.shape
             state["stems"] = tuple(stems)
-            # tqdm may write progress to stdout while runtime warnings use stderr.
-            sys.stdout.write("\r")
-            sys.stdout.write("Processing audio: 0%|          | 0/48")
-            sys.stdout.write("\r")
-            sys.stdout.write("Processing audio: 50%|█████     | 24/48")
-            sys.stdout.write("\r")
+            state["pbar"] = pbar
+            callback = state["kwargs"]["progress_callback"]
+            callback(0, 48, "Processing audio")
+            callback(24, 48, "Processing audio")
             sys.stderr.write("\nRuntime warning: fixture warning\n")
             return {stem: np.full((mix.shape[1], mix.shape[0]), 0.125, dtype=np.float32)
                     for stem in stems}
@@ -84,8 +82,12 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
     outputs = adapter.infer(source, tmp_path / "out", ("vocals", "instrumental"))
 
     captured = capsys.readouterr()
-    assert captured.out == "Processing audio: 50%|█████     | 24/48\r"
-    assert captured.err == "\nRuntime warning: fixture warning\n"
+    assert captured.out == ""
+    assert "Processing audio:" in captured.err
+    assert "50%" in captured.err
+    assert "0%" not in captured.err
+    assert "Runtime warning: fixture warning" in captured.err
+    assert state["pbar"] is False
     assert state["kwargs"]["model_type"] == "bs_roformer"
     assert state["kwargs"]["device"] == "cpu"
     assert state["stems"] == ("vocals",)
