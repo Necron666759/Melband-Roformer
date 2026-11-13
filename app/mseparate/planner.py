@@ -61,6 +61,25 @@ def _model_outputs(model: ModelManifest) -> tuple[str, ...]:
     return tuple(stem for stem in declared if stem not in model.dummy_stems)
 
 
+def _model_specialization(stem: str, model: ModelManifest) -> int:
+    """Prefer a declared specialist over a general-purpose model for that stem.
+
+    This is a capability-routing rule, not a claim about perceptual model
+    quality. Unknown and multi-stem categories remain neutral.
+    """
+    category = (model.category or "").strip().lower().replace("_", "-")
+    aliases = {
+        "vocals": {"vocal", "vocals", "voice"},
+        "instrumental": {"instrumental", "accompaniment"},
+        "drums": {"drum", "drums", "percussion"},
+        "bass": {"bass"},
+        "guitar": {"guitar"},
+        "piano": {"piano", "keyboard"},
+    }
+    accepted = aliases.get(stem.lower(), {stem.lower()})
+    return 1 if category in accepted else 0
+
+
 def build_plan(
     max_depth: int = 3,
     analysis: AnalysisReport | None = None,
@@ -94,22 +113,25 @@ def build_plan(
         notes.extend(rejected)
         return ExecutionPlan(1, (), tuple(notes), max_depth)
 
-    ranked: dict[str, list[tuple[float, ModelManifest, str]]] = defaultdict(list)
+    ranked: dict[str, list[tuple[int, float, ModelManifest, str]]] = defaultdict(list)
     for model in compatible:
         for stem in _model_outputs(model):
             score, reason = _stem_score(stem, features, analysis.predictions if analysis else None)
-            ranked[stem].append((score, model, reason))
+            specialization = _model_specialization(stem, model)
+            ranked[stem].append((specialization, score, model, reason))
 
     selected: dict[str, dict] = {}
     for stem, entries in ranked.items():
-        entries.sort(key=lambda item: (-item[0], item[1].model_id))
-        score, model, reason = entries[0]
-        margin = score - entries[1][0] if len(entries) > 1 else 0.25
-        confidence = max(0.1, min(0.75, 0.35 + margin))
+        # CLAP/acoustic scores describe source salience, not model quality.
+        # Resolve overlapping capabilities by explicit manifest specialization
+        # first, then by source salience, with model_id as a stable final tie-break.
+        entries.sort(key=lambda item: (-item[0], -item[1], item[2].model_id))
+        specialization, score, model, reason = entries[0]
         bucket = selected.setdefault(model.model_id, {"model": model, "stems": [], "scores": [], "reasons": []})
         bucket["stems"].append(stem)
         bucket["scores"].append(score)
-        bucket["reasons"].append(f"{stem}: {reason}")
+        route = "manifest-declared specialist" if specialization else "general-purpose capability"
+        bucket["reasons"].append(f"{stem}: {route}; {reason}")
 
     tasks = []
     for index, model_id in enumerate(sorted(selected), start=1):
@@ -125,7 +147,7 @@ def build_plan(
     notes = [
         "Hard sample-rate/channel constraints were checked before model ranking.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
-        "Scores rank declared stem routes using CLAP relative similarities when available, otherwise acoustic heuristics; they are not calibrated source-presence probabilities.",
+        "Overlapping routes prefer a manifest-declared stem specialist before general-purpose models; CLAP/acoustic scores rank source salience, not model quality or calibrated source presence.",
         "CLAP detects broad semantic audio-text matches; it cannot reliably identify every individual synthesizer patch or guarantee clean isolation.",
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
