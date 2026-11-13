@@ -74,7 +74,7 @@ def build_plan(
     ranked: dict[str, list[tuple[float, ModelManifest, str]]] = defaultdict(list)
     for model in compatible:
         for stem in _model_outputs(model):
-            score, reason = _stem_score(stem, features)
+            score, reason = _stem_score(stem, features, analysis.predictions if analysis else None)
             ranked[stem].append((score, model, reason))
 
     selected: dict[str, dict] = {}
@@ -102,7 +102,8 @@ def build_plan(
     notes = [
         "Hard sample-rate/channel constraints were checked before model ranking.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
-        "Scores rank declared stem routes using acoustic heuristics; they are not model-quality estimates or source-presence probabilities.",
+        "Scores rank declared stem routes using CLAP relative similarities when available, otherwise acoustic heuristics; they are not calibrated source-presence probabilities.",
+        "CLAP detects broad semantic audio-text matches; it cannot reliably identify every individual synthesizer patch or guarantee clean isolation.",
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
     notes.extend(rejected)
