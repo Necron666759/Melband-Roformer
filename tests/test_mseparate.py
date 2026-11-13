@@ -500,3 +500,102 @@ def test_cli_rejects_execute_with_analysis_only():
     with pytest.raises(SystemExit) as exc:
         main(["input.wav", "--execute", "--analysis-only"])
     assert exc.value.code == 2
+
+
+def test_demucs_strict_cuda_accepts_cpu_provider_registered_after_cuda(tmp_path):
+    from mseparate.demucs_onnx import _prewarm_strict_cuda
+
+    class FakeSession:
+        def __init__(self):
+            self.fallback_disabled = False
+
+        def get_providers(self):
+            return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+
+        def disable_fallback(self):
+            self.fallback_disabled = True
+
+    class FakePool:
+        def __init__(self):
+            self.session = FakeSession()
+            self.requested = None
+
+        def get(self, model_path, providers):
+            self.requested = (model_path, providers)
+            return self.session
+
+    class FakeRuntime:
+        def __init__(self):
+            self.pool = FakePool()
+            self.prewarm_args = None
+
+        def prewarm(self, **kwargs):
+            self.prewarm_args = kwargs
+            return {"htdemucs_6s": tmp_path / "htdemucs_6s.onnx"}
+
+        def session_pool(self):
+            return self.pool
+
+    runtime = FakeRuntime()
+    paths = _prewarm_strict_cuda(runtime, tmp_path, "fp16weights")
+
+    assert paths["htdemucs_6s"] == tmp_path / "htdemucs_6s.onnx"
+    assert runtime.pool.session.fallback_disabled is True
+    assert runtime.pool.requested == (
+        tmp_path / "htdemucs_6s.onnx", ["CUDAExecutionProvider"]
+    )
+
+
+@pytest.mark.parametrize(
+    "providers",
+    [
+        ["CPUExecutionProvider", "CUDAExecutionProvider"],
+        ["CPUExecutionProvider"],
+        [],
+    ],
+)
+def test_demucs_strict_cuda_rejects_cuda_missing_or_not_first(tmp_path, providers):
+    from mseparate.demucs_onnx import _prewarm_strict_cuda
+
+    class FakeSession:
+        def get_providers(self):
+            return providers
+
+        def disable_fallback(self):
+            raise AssertionError("fallback must not be disabled for an invalid session")
+
+    class FakePool:
+        def get(self, model_path, requested):
+            return FakeSession()
+
+    class FakeRuntime:
+        def prewarm(self, **kwargs):
+            return {"htdemucs_6s": tmp_path / "htdemucs_6s.onnx"}
+
+        def session_pool(self):
+            return FakePool()
+
+    with pytest.raises(RuntimeError, match="CUDAExecutionProvider first"):
+        _prewarm_strict_cuda(FakeRuntime(), tmp_path, "fp16weights")
+
+
+def test_demucs_strict_cuda_requires_disable_fallback_support(tmp_path):
+    from mseparate.demucs_onnx import _prewarm_strict_cuda
+
+    class FakeSession:
+        def get_providers(self):
+            return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+
+    class FakePool:
+        def get(self, model_path, requested):
+            return FakeSession()
+
+    class FakeRuntime:
+        def prewarm(self, **kwargs):
+            return {"htdemucs_6s": tmp_path / "htdemucs_6s.onnx"}
+
+        def session_pool(self):
+            return FakePool()
+
+    with pytest.raises(RuntimeError, match="disable_fallback"):
+        _prewarm_strict_cuda(FakeRuntime(), tmp_path, "fp16weights")
