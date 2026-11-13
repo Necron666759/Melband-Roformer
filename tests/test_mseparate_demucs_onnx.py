@@ -297,4 +297,5 @@ def test_chunk_progress_stream_flushes_after_each_progress_event():
 
     assert target.flush_count == 1
     assert "30%|" in target.getvalue()
-    assert "Обрабатывается фрагмент: 3 / 10" in target.getvalue()
+    assert "3/10" in target.getvalue()
+    assert "\\x1b[" not in target.getvalue()
