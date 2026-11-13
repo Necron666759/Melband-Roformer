@@ -84,6 +84,7 @@ def build_plan(
     max_depth: int = 3,
     analysis: AnalysisReport | None = None,
     registry: dict[str, ModelManifest] | None = None,
+    preferred_model_id: str | None = None,
 ) -> ExecutionPlan:
     """Choose eligible, input-compatible models using transparent acoustic routing.
 
@@ -113,25 +114,33 @@ def build_plan(
         notes.extend(rejected)
         return ExecutionPlan(1, (), tuple(notes), max_depth)
 
-    ranked: dict[str, list[tuple[int, int, float, ModelManifest, str]]] = defaultdict(list)
+    if preferred_model_id is not None and preferred_model_id not in {model.model_id for model in compatible}:
+        raise ValueError(
+            f"Preferred model {preferred_model_id!r} is not eligible or compatible with this input"
+        )
+
+    ranked: dict[str, list[tuple[int, int, int, float, ModelManifest, str]]] = defaultdict(list)
     for model in compatible:
         for stem in _model_outputs(model):
             score, reason = _stem_score(stem, features, analysis.predictions if analysis else None)
             specialization = _model_specialization(stem, model)
-            ranked[stem].append((specialization, model.planner_priority, score, model, reason))
+            preferred = int(model.model_id == preferred_model_id)
+            ranked[stem].append((specialization, preferred, model.planner_priority, score, model, reason))
 
     selected: dict[str, dict] = {}
     for stem, entries in ranked.items():
         # CLAP/acoustic scores describe source salience, not model quality.
         # Route by declared specialization, then operator-set manifest priority,
         # then source salience; model_id is only the stable final tie-break.
-        entries.sort(key=lambda item: (-item[0], -item[1], -item[2], item[3].model_id))
-        specialization, priority, score, model, reason = entries[0]
+        entries.sort(key=lambda item: (-item[0], -item[1], -item[2], -item[3], item[4].model_id))
+        specialization, preferred, priority, score, model, reason = entries[0]
         bucket = selected.setdefault(model.model_id, {"model": model, "stems": [], "scores": [], "reasons": []})
         bucket["stems"].append(stem)
         bucket["scores"].append(score)
         route = "manifest-declared specialist" if specialization else "general-purpose capability"
-        if priority:
+        if preferred:
+            route += " (explicitly preferred)"
+        elif priority:
             route += f" (planner priority {priority})"
         bucket["reasons"].append(f"{stem}: {route}; {reason}")
 
@@ -149,7 +158,7 @@ def build_plan(
     notes = [
         "Hard sample-rate/channel constraints were checked before model ranking.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
-        "Overlapping routes prefer a manifest-declared specialist, then the explicit planner_priority in the model manifest; that priority is an operator routing preference, not a measured quality score. CLAP/acoustic scores rank source salience, not model quality or calibrated source presence.",
+        "Overlapping routes prefer a manifest-declared specialist, then an explicitly preferred model, then manifest planner_priority and source salience. Priority is an operator routing preference, not a measured quality score; CLAP/acoustic scores do not estimate model quality or calibrated source presence.",
         "CLAP detects broad semantic audio-text matches; it cannot reliably identify every individual synthesizer patch or guarantee clean isolation.",
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
