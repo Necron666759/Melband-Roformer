@@ -116,3 +116,20 @@ Exit criteria: tests and hardware actually exercised are recorded; no unsupporte
 - [x] Add a conservative refinement decision API: accept only when a warning-bearing parent is replaced by a fully valid, warning-free candidate.
 - [x] Test duplicate and distinct signals, refinement acceptance/rejection, and executor propagation.
 - [ ] Do not enable automatic refinement until a real model-backed comparison demonstrates a defensible improvement criterion; pairwise correlation is only a duplicate-content hint, not a general leakage metric.
+
+
+### Verified model catalog and capability-aware planning
+
+- [x] Inspect the exact `melband-roformer-infer==0.1.5` release rather than assuming the latest upstream API.
+- [x] Add a bundled Kim vocals manifest with pinned checkpoint/config SHA-256 values and byte sizes.
+- [x] Verify the checkpoint repository's MIT license metadata and distinguish native vocals from residual instrumental.
+- [x] Add model metadata for category, upstream version, supported container formats, sample rate and channel policy.
+- [x] Reject incompatible audio formats/sample rates/channel counts before heuristic ranking.
+- [x] Add `mseparate --list-models`, bundled registry packaging and explicit/local registry override precedence.
+- [ ] Run a controlled real-checkpoint inference on the target Debian/GPU machine before enabling actual execution.
+- [ ] Audit additional models one by one; do not bulk-import the upstream catalog because it contains dead URLs and entries without complete verified assets.
+
+The first bundled model is eligible for planning and explicit asset preparation,
+but the `mseparate` CLI still does not execute neural inference. Its 913 MB
+checkpoint is downloaded only when the user explicitly invokes
+`--prepare-models` without `--no-download`.
