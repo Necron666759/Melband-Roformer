@@ -172,6 +172,46 @@ def test_incompatible_audio_does_not_schedule_model():
     assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
 
+def test_planner_can_opt_into_melband_sample_rate_conversion():
+    from mseparate.types import AnalysisReport, AudioMetadata
+
+    registry = load_registry(bundled_registry_path())
+    audio = AnalysisReport(
+        schema_version=2,
+        audio=AudioMetadata("mix.wav", 1.0, 48000, 2, 48000, "PCM_16"),
+    )
+
+    default_plan = build_plan(analysis=audio, registry=registry)
+    assert "melband-roformer-kim-vocals" not in {
+        task.model_id for task in default_plan.tasks
+    }
+
+    converted_plan = build_plan(
+        analysis=audio, registry=registry, allow_resample=True,
+    )
+    by_model = {task.model_id: task for task in converted_plan.tasks}
+    assert "melband-roformer-kim-vocals" in by_model
+    assert any("Sample-rate conversion is enabled" in note for note in converted_plan.notes)
+
+
+def test_cli_plan_only_can_enable_sample_rate_conversion(tmp_path, monkeypatch):
+    source = _write_wav(tmp_path / "input-48k.wav", sample_rate=48000)
+    report = tmp_path / "plan.json"
+    monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
+
+    rc = main([
+        str(source), "--plan-only", "--allow-resample",
+        "--report", str(report),
+    ])
+
+    assert rc == 0
+    payload = json.loads(report.read_text())
+    assert payload["allow_resample"] is True
+    assert "melband-roformer-kim-vocals" in {
+        task["model_id"] for task in payload["plan"]["tasks"]
+    }
+
+
 def test_storage_layout_and_atomic_json(tmp_path):
     paths = ensure_layout(tmp_path / "state")
     assert paths["models"].is_dir()
