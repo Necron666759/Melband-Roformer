@@ -118,9 +118,7 @@ def build_plan(
         compatible.append(model)
     if not compatible:
         notes = ["No eligible model accepts the input audio format; no inference was scheduled."]
-        if allow_resample:
-        notes.append("Sample-rate conversion is enabled: the execution manager uses a temporary model-rate WAV and restores output stems to the input sample rate.")
-    notes.extend(rejected)
+        notes.extend(rejected)
         return ExecutionPlan(1, (), tuple(notes), max_depth)
 
     if preferred_model_id is not None and preferred_model_id not in {model.model_id for model in compatible}:
@@ -171,6 +169,11 @@ def build_plan(
         "CLAP detects broad semantic audio-text matches; it cannot reliably identify every individual synthesizer patch or guarantee clean isolation.",
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
+    if allow_resample:
+        notes.append(
+            "Sample-rate conversion is enabled: the execution manager uses a temporary model-rate WAV "
+            "and restores output stems to the input sample rate."
+        )
     notes.extend(rejected)
     if not tasks:
         notes.append("Eligible manifests declared no usable output stems.")
