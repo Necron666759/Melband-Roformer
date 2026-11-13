@@ -61,11 +61,7 @@ def analyze_sources(path: str | Path, *, device: str = "auto",
     similarities = np.zeros(len(SOURCES), dtype=np.float64)
     count = 0
     labels = [f"The recording contains {description}." for description in SOURCES.values()]
-    text_inputs = processor(text=labels, return_tensors="pt", padding=True, truncation=True)
-    text_inputs = {key: value.to(target_device) for key, value in text_inputs.items()}
     with torch.inference_mode():
-        text_features = model.get_text_features(**text_inputs)
-        text_features = torch.nn.functional.normalize(text_features, dim=-1)
         with sf.SoundFile(str(source), "r") as audio:
             # Seeking lets us keep memory bounded for long recordings.
             start = 0
@@ -81,12 +77,11 @@ def analyze_sources(path: str | Path, *, device: str = "auto",
                     resampled = np.pad(resampled, (0, window - len(resampled)))
                 else:
                     resampled = resampled[:window]
-                inputs = processor(audio=[resampled], sampling_rate=sample_rate,
-                                   return_tensors="pt", padding=True)
+                inputs = processor(text=labels, audio=resampled,
+                                   sampling_rate=sample_rate, return_tensors="pt", padding=True)
                 inputs = {key: value.to(target_device) for key, value in inputs.items()}
-                audio_features = model.get_audio_features(**inputs)
-                audio_features = torch.nn.functional.normalize(audio_features, dim=-1)
-                scores = (audio_features @ text_features.T).squeeze(0)
+                outputs = model(**inputs)
+                scores = outputs.logits_per_audio.squeeze(0)
                 similarities += scores.detach().float().cpu().numpy()
                 count += 1
                 start += max(1, int(hop_seconds * info.samplerate))
