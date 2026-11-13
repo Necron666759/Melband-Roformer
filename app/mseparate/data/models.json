@@ -101,68 +101,107 @@
     ],
     "assets": []
   },
-{
-  "model_id": "bs-roformer-vocals-candidate",
-  "name": "BS-RoFormer | Vocals (research candidate)",
-  "architecture": "Band-Split RoFormer",
-  "backend": "pending-adapter",
-  "source_url": "https://github.com/lucidrains/BS-RoFormer",
-  "license": null,
-  "license_url": "https://github.com/lucidrains/BS-RoFormer",
-  "license_status": "review_required",
-  "category": "vocals",
-  "status": "candidate",
-  "sample_rate": null,
-  "channels": null,
-  "input_formats": [
-    "wav"
-  ],
-  "native_stems": [
-    "vocals"
-  ],
-  "derived_stems": [],
-  "target_stems": [
-    "vocals"
-  ],
-  "dummy_stems": [],
-  "refinement_targets": [],
-  "notes": [
-    "Research candidate only; not eligible for automatic download or execution.",
-    "The linked repository provides an implementation reference, not a pinned production checkpoint for this application.",
-    "Checkpoint provenance, exact model configuration, redistribution terms, checksum, inference API, sample-rate contract and output validation must be established before enabling."
-  ],
-  "assets": []
-},
-{
-  "model_id": "mdx23c-vocals-candidate",
-  "name": "MDX23C | Vocals (research candidate)",
-  "architecture": "MDX-Net / MDX23C",
-  "backend": "pending-adapter",
-  "source_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training",
-  "license": null,
-  "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training",
-  "license_status": "review_required",
-  "category": "vocals",
-  "status": "candidate",
-  "sample_rate": null,
-  "channels": null,
-  "input_formats": [
-    "wav"
-  ],
-  "native_stems": [
-    "vocals"
-  ],
-  "derived_stems": [],
-  "target_stems": [
-    "vocals"
-  ],
-  "dummy_stems": [],
-  "refinement_targets": [],
-  "notes": [
-    "Research candidate only; not eligible for automatic download or execution.",
-    "The upstream training repository contains multiple architectures and checkpoints; a specific model artifact and its terms have not been selected or verified.",
-    "Checkpoint provenance, exact configuration, redistribution terms, checksum, inference API, sample-rate contract and output validation must be established before enabling."
-  ],
-  "assets": []
-}
+  {
+    "model_id": "bs-roformer-anvuew-vocals",
+    "name": "BS-RoFormer Anvuew | Vocals",
+    "architecture": "Band-Split RoFormer",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/anvuew/BS-RoFormer/tree/7e4e5669cad8a8810983e02fa25294229246d374",
+    "license": "GPL-3.0",
+    "license_url": "https://huggingface.co/anvuew/BS-RoFormer",
+    "license_status": "verified",
+    "upstream_version": "pymss==2.3.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "vocals"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "vocals"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Checkpoint and config are pinned to Hugging Face revision 7e4e5669cad8a8810983e02fa25294229246d374; both SHA-256 digests and byte sizes are recorded.",
+      "The Hugging Face model repository declares GPL-3.0 for this checkpoint and its configuration. Preserve GPL-3.0 notices and terms when redistributing the model assets.",
+      "The model is configured for 44100 Hz stereo processing; mseparate resamples model-facing audio to 44100 Hz and restores output to the original sample rate.",
+      "Only the native vocals estimate is exposed to the planner. The model's secondary instrument estimate is not relabelled as a full instrumental stem."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/anvuew/BS-RoFormer/resolve/7e4e5669cad8a8810983e02fa25294229246d374/bs_roformer_anvuew_sdr_12.45.ckpt",
+        "relative_path": "bs_roformer_anvuew_sdr_12.45.ckpt",
+        "sha256": "8d0f72ad0ac4154f5f4c3cdf230880bbb9a5bd01dc610241a2abfe787f0d7784",
+        "size_bytes": 204485563,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/anvuew/BS-RoFormer/resolve/7e4e5669cad8a8810983e02fa25294229246d374/config.yaml",
+        "relative_path": "config.yaml",
+        "sha256": "033e57abee226a480ef410e0631b9fe00e8b7bc9a3bb5fe55659d0b43a238701",
+        "size_bytes": 1969,
+        "required": true
+      }
+    ]
+  },
+  {
+    "model_id": "mdx23c-zfturbo-vocals",
+    "name": "MDX23C ZFTurbo | Vocals",
+    "architecture": "MDX23C / TFC-TDF",
+    "backend": "mdx23c-pymss",
+    "source_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.0",
+    "license": "CC-BY-NC-SA-4.0",
+    "license_url": "https://huggingface.co/Sucial/MSST-WebUI/tree/55155c4e2f99d0ca94d24fce88d6dc25711a9252",
+    "license_status": "verified",
+    "upstream_version": "pymss==2.3.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "vocals"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "vocals"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "The checkpoint is the ZFTurbo MDX23C vocals model from release v1.0.0, mirrored at the pinned Sucial/MSST-WebUI revision 55155c4e2f99d0ca94d24fce88d6dc25711a9252.",
+      "The mirror repository declares CC-BY-NC-SA-4.0 for the model assets: attribution is required, commercial use is not permitted, and adaptations or redistributions are subject to the share-alike terms.",
+      "The matching config is pinned to the ZFTurbo v1.0.0 source tag. Both checkpoint and config have recorded SHA-256 digests and byte sizes.",
+      "The model is configured for 44100 Hz stereo input and predicts vocals/other. Only the native vocals estimate is exposed to the planner; other is not treated as an independent instrumental estimate.",
+      "The pymss runtime code is MIT-licensed; that code license does not replace the separate checkpoint license."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/Sucial/MSST-WebUI/resolve/55155c4e2f99d0ca94d24fce88d6dc25711a9252/All_Models/vocal_models/model_vocals_mdx23c_sdr_10.17.ckpt",
+        "relative_path": "model_vocals_mdx23c_sdr_10.17.ckpt",
+        "sha256": "49d51472769e34a2501cd1da782346a3212555c3a5619fc2c53507445528d816",
+        "size_bytes": 448101203,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://raw.githubusercontent.com/ZFTurbo/Music-Source-Separation-Training/v1.0.0/configs/config_vocals_mdx23c.yaml",
+        "relative_path": "config_vocals_mdx23c.yaml",
+        "sha256": "a2b9724a1a15522dc3478a0eff4e052492ab186c03981e38b1197a7b38204687",
+        "size_bytes": 1164,
+        "required": true
+      }
+    ]
+  }
 ]
