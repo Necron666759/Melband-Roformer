@@ -50,6 +50,7 @@ class ModelManifest:
     license_status: str
     assets: tuple[ModelAsset, ...]
     native_stems: tuple[str, ...] = ()
+    derived_stems: tuple[str, ...] = ()
     target_stems: tuple[str, ...] = ()
     dummy_stems: tuple[str, ...] = ()
     refinement_targets: tuple[str, ...] = ()
