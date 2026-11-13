@@ -17,7 +17,6 @@ from .execution import BackendInfo, StemArtifact
 from .types import ModelManifest
 
 
-
 class _ChunkProgressStream:
     """Convert demucs-onnx verbose chunk messages into flushed percentages.
 
@@ -28,7 +27,7 @@ class _ChunkProgressStream:
     a machine-readable percentage without estimating progress by elapsed time.
     """
 
-    _CHUNK_LINE = re.compile(r"^\\s*chunk\\s+(\\d+)/(\\d+):\\s*(.*?)\\s*$")
+    _CHUNK_LINE = re.compile(r"^\s*chunk\s+(\d+)/(\d+):\s*(.*?)\s*$")
 
     def __init__(self, stream):
         self._stream = stream
@@ -36,8 +35,8 @@ class _ChunkProgressStream:
 
     def write(self, value: str) -> int:
         self._pending += value
-        while "\\n" in self._pending:
-            line, self._pending = self._pending.split("\\n", 1)
+        while "\n" in self._pending:
+            line, self._pending = self._pending.split("\n", 1)
             match = self._CHUNK_LINE.match(line)
             if match:
                 completed, total = int(match.group(1)), int(match.group(2))
@@ -47,7 +46,7 @@ class _ChunkProgressStream:
                         f"    progress: {completed}/{total} chunks "
                         f"({percent}%) | {match.group(3)}"
                     )
-                    self._stream.write(line + "\\n")
+                    self._stream.write(line + "\n")
                     self._stream.flush()
                     continue
             self._stream.write(line + "\\n")
@@ -61,6 +60,8 @@ class _ChunkProgressStream:
 
     def __getattr__(self, name):
         return getattr(self._stream, name)
+
+
 
 def _prewarm_strict_cuda(runtime, cache_dir: Path, precision: str) -> dict[str, Path]:
     """Prewarm HT-Demucs and disable ONNX Runtime's CPU retry fallback."""
