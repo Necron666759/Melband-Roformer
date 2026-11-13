@@ -143,8 +143,10 @@ def test_incompatible_audio_does_not_schedule_model():
         audio=AudioMetadata("mix.wav", 1.0, 48000, 2, 48000, "PCM_16"),
     )
     plan = build_plan(analysis=audio, registry=registry)
-    assert plan.tasks == ()
-    assert any("requires 44100 Hz" in note for note in plan.notes)
+    assert len(plan.tasks) == 1
+    assert plan.tasks[0].model_id == "demucs-onnx-htdemucs-6s"
+    assert set(plan.tasks[0].target_stems) == {"drums", "bass", "other", "vocals", "guitar", "piano"}
+    assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
 
 def test_storage_layout_and_atomic_json(tmp_path):
@@ -293,11 +295,16 @@ def test_cli_execute_runs_plan_only_after_assets_are_verified(tmp_path, monkeypa
     assert state["assets"] == ["melband-roformer-kim-vocals"]
     factories, manager_kwargs = state["manager_args"]
     assert "melband-roformer" in factories
+    assert "demucs-onnx" in factories
     assert manager_kwargs["device"] == "cpu"
     assert manager_kwargs["output_root"] == output / "mseparate-stems"
     plan, manifests, inputs = state["execute_args"]
-    assert plan.tasks[0].target_stems == ("instrumental", "vocals")
+    assert plan.tasks[0].model_id == "demucs-onnx-htdemucs-6s"
+    assert set(plan.tasks[0].target_stems) == {"drums", "bass", "other", "vocals", "guitar", "piano"}
+    assert plan.tasks[1].model_id == "melband-roformer-kim-vocals"
+    assert plan.tasks[1].target_stems == ("instrumental",)
     assert "melband-roformer-kim-vocals" in manifests
+    assert "demucs-onnx-htdemucs-6s" in manifests
     assert inputs["mix"] == source.resolve()
     payload = json.loads(report.read_text())
     assert payload["inference_attempted"] is True
