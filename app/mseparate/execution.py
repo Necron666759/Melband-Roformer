@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping, Protocol
 
-from .quality import StemQualityReport, inspect_stem
+from .quality import StemQualityReport, inspect_stem, inspect_stem_set
 from .types import ExecutionPlan, ExecutionTask, ModelManifest
 
 
@@ -212,6 +212,10 @@ class ExecutionManager:
                     reports = tuple(
                         inspect_stem(artifact.path, reference=input_path)
                         for artifact in validated
+                    )
+                    reports = inspect_stem_set(
+                        tuple((artifact.stem, artifact.path) for artifact in validated),
+                        reports,
                     )
                     quality_reports = reports
                     invalid = [
