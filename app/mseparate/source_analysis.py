@@ -92,7 +92,10 @@ def analyze_sources(path: str | Path, *, device: str = "auto",
         for name, score in zip(SOURCES, mean_scores):
             result.append({"source": name, "score": round(float(score), 6),
                            "windows": count, "model": MODEL_ID})
-    del model, processor, outputs, inputs, frames, mono, resampled, scores
+    # Function-local tensors and arrays are released on return. Avoid an
+    # unconditional del of per-window locals: an empty valid stream may not
+    # have created those names, and that must not mask the analysis result.
+    del model, processor
     if target_device == "cuda":
         torch.cuda.empty_cache()
     gc.collect()
