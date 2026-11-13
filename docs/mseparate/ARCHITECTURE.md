@@ -114,3 +114,16 @@ Every stage emits structured events with timestamp, job ID, stage, status, elaps
 ## Audio feature analysis and routing
 
 `analyze_audio` streams the input in bounded blocks and computes frame-level RMS, crest factor, silence/clipping indicators, dynamic range, spectral centroid, 85% rolloff, spectral flatness, low/mid/high band energy ratios, a conservative transient-activity heuristic, and stereo correlation/side energy when available. These are acoustic measurements, not instrument/source recognition. The planner ranks only license-verified, enabled registry entries and uses declared stem names plus these measurements to route candidate models. The score is a routing heuristic, not a quality estimate or probability that a source exists. Tasks are emitted in deterministic serial order; refinement remains disabled until parent/child quality can be compared.
+
+
+## Executor-integrated output validation
+
+After each backend returns its declared stems, the executor decodes every output
+and compares it with the exact task input. Duration, sample rate and channel
+mismatches are structural failures: the task is marked failed and its outputs
+are not exposed as successful artifacts. Unreadable files and non-finite samples
+also fail validation. Silence and substantial clipping are warnings; the
+artifacts remain available with their quality reports so a caller can decide
+whether to keep or inspect them. Quality reports are retained on failed tasks
+when inspection completed. These checks are technical integrity checks, not
+perceptual quality scores; no reference-free SDR/SI-SDR is calculated.
