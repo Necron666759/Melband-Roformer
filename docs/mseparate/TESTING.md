@@ -66,3 +66,8 @@ The CPU-only asset tests use a local HTTP server and cover verified download/reu
 ## Sequential backend execution tests
 
 The execution-manager tests use fake CPU-only adapters. They verify that a second model is not loaded until the first adapter has unloaded and the resource check has run; output stems are checked against the task contract; failed tasks do not abort independent tasks; and dependent tasks are skipped when prerequisites fail. These tests do not claim GPU memory reclamation or real backend inference.
+
+
+## MelBand adapter tests
+
+The adapter tests mock the existing wrapper executable and child-process return codes. They verify required manifest roles, explicit checkpoint/config arguments, device forwarding and output-stem mapping. They do not load PyTorch, download a checkpoint or establish compatibility with the installed pinned upstream wheel; that remains an integration test on the target system.
