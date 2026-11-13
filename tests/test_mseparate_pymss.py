@@ -39,7 +39,8 @@ def _manifest(tmp_path: Path, backend: str) -> ModelManifest:
         license_status="verified",
         assets=tuple(assets),
         native_stems=("vocals",),
-        target_stems=("vocals",),
+        derived_stems=("instrumental",),
+        target_stems=("vocals", "instrumental"),
         sample_rate=44100,
         channels="stereo",
         input_formats=("wav",),
@@ -73,17 +74,21 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
     adapter = BSRoformerAdapter()
     assert adapter.compatibility(manifest) == (True, "")
     adapter.load(manifest, tmp_path, "cpu")
-    outputs = adapter.infer(source, tmp_path / "out", ("vocals",))
+    outputs = adapter.infer(source, tmp_path / "out", ("vocals", "instrumental"))
 
     assert state["kwargs"]["model_type"] == "bs_roformer"
     assert state["kwargs"]["device"] == "cpu"
     assert state["stems"] == ("vocals",)
     assert state["mix_shape"] == (2, 4096)
-    assert len(outputs) == 1
-    samples, rate = sf.read(outputs[0].path, dtype="float32", always_2d=True)
-    assert rate == 44100
-    assert samples.shape == (4096, 2)
+    assert len(outputs) == 2
+    samples, rate = sf.read(tmp_path / "out" / "vocals.wav", dtype="float32", always_2d=True)
+    residual, residual_rate = sf.read(
+        tmp_path / "out" / "instrumental.wav", dtype="float32", always_2d=True
+    )
+    assert rate == residual_rate == 44100
+    assert samples.shape == residual.shape == (4096, 2)
     assert np.allclose(samples, 0.125)
+    assert np.allclose(residual, -0.075, atol=1e-6)
     adapter.unload()
     assert state["closed"] is True
 
@@ -109,10 +114,10 @@ def test_mdx23c_adapter_uses_mdx23c_runtime_type(tmp_path, monkeypatch):
 
     adapter = MDX23CAdapter()
     adapter.load(manifest, tmp_path, "cpu")
-    outputs = adapter.infer(source, tmp_path / "mdx-out", ("vocals",))
+    outputs = adapter.infer(source, tmp_path / "mdx-out", ("vocals", "instrumental"))
 
     assert state["kwargs"]["model_type"] == "mdx23c"
-    assert len(outputs) == 1
+    assert len(outputs) == 2
     adapter.unload()
     assert state["closed"] is True
 
