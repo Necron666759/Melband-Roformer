@@ -249,26 +249,32 @@ def test_RUN_GPU_demucs_onnx_cuda_integration(tmp_path):
 
 
 
-def test_chunk_progress_stream_reports_real_completed_chunk_percentage():
+def test_chunk_progress_stream_uses_native_tqdm_bar_and_redraws_chunk_counter():
+    import re
     from mseparate.demucs_onnx import _ChunkProgressStream
 
     target = io.StringIO()
     progress = _ChunkProgressStream(target)
-    progress.write("  input:  12,151,885 samples\n")
-    progress.write("    chunk 1/48: 0.8s elapsed\n")
-    progress.write("    chunk 24/48: 12.4s elapsed\n")
-    progress.write("    chunk 48/48: 25.0s elapsed\n")
-    progress.flush()
+    progress.write("  input:  12,151,885 samples\\n")
+    progress.write("    chunk 1/48: 0.8s elapsed\\n")
+    progress.write("    chunk 24/48: 12.4s elapsed\\n")
+    progress.write("    chunk 48/48: 25.0s elapsed\\n")
+    progress.finish()
 
-    output = target.getvalue()
-    assert "  input:  12,151,885 samples\n" in output
-    assert "progress: [█" in output
-    assert "] 2%" in output
-    assert "] 50%" in output
-    assert "] 100%" in output
-    assert "chunks processed: 1/48 | first chunk + warm-up: 1s | total: 1s" in output
-    assert "chunks processed: 24/48 | last chunk: 12s | total: 12s" in output
-    assert "chunks processed: 48/48 | last chunk: 13s | total: 25s" in output
+    raw = target.getvalue()
+    output = re.sub(r"\\x1b\\[[0-9;]*[A-Za-z]", "", raw)
+    assert "  input:  12,151,885 samples\\n" in output
+    assert "Processing audio:" in output
+    assert "2%|" in output
+    assert "50%|" in output
+    assert "100%|" in output
+    assert "Обрабатывается фрагмент: 1 / 48" in output
+    assert "Обрабатывается фрагмент: 24 / 48" in output
+    assert "Обработано фрагментов: 48 / 48" in output
+    assert "first chunk + warm-up" not in output
+    assert "last chunk:" not in output
+    assert "\\x1b[1A" in raw  # later updates redraw the two-line display in place
+    assert raw.endswith("\\n")
 
 
 def test_chunk_progress_stream_flushes_after_each_progress_event():
@@ -285,8 +291,8 @@ def test_chunk_progress_stream_flushes_after_each_progress_event():
 
     target = FlushTrackingStream()
     progress = _ChunkProgressStream(target)
-    progress.write("    chunk 3/10: 2.1s elapsed\n")
+    progress.write("    chunk 3/10: 2.1s elapsed\\n")
 
     assert target.flush_count == 1
-    assert "] 30%" in target.getvalue()
-    assert "chunks processed: 3/10" in target.getvalue()
+    assert "30%|" in target.getvalue()
+    assert "Обрабатывается фрагмент: 3 / 10" in target.getvalue()
