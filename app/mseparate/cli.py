@@ -190,7 +190,8 @@ def main(argv: list[str] | None = None) -> int:
     elif execution_blocked:
         print("Inference was not started because required assets are unavailable.")
 
-    inference_performed = execution_attempted
+    inference_attempted = execution_attempted
+    inference_performed = bool(execution_summary and execution_summary.succeeded)
     if args.report:
         report_path = Path(args.report).expanduser()
         if not report_path.is_absolute():
@@ -199,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
             "schema_version": 1, "analysis": to_jsonable(report),
             "plan": None if args.analysis_only else to_jsonable(plan),
             "registry_path": str(registry_path), "models_root": str(paths["models"]),
+            "inference_attempted": inference_attempted,
             "inference_performed": inference_performed,
             "execution": to_jsonable(execution_summary) if execution_summary is not None else None,
             "execution_blocked": execution_blocked,
@@ -216,7 +218,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Registry entries: {len(registry)}")
         print(f"Prepared assets: {len(asset_results)}")
         print(f"Device preference: {args.device}")
-        print(f"Inference attempted: {inference_performed}")
+        print(f"Inference attempted: {inference_attempted}")
+        print(f"At least one task succeeded: {inference_performed}")
     if execution_blocked:
         return 1
     if execution_summary is not None and execution_summary.failed:
