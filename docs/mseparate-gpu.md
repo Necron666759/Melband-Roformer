@@ -107,3 +107,14 @@ specialist models with verified model files, licenses, input/output
 contracts, and quality checks. They should be added as separate sequential
 backends/tasks rather than relabeling the existing `other` residual as
 specific instruments.
+
+
+## Sample-rate conversion
+
+Input WAV files at 48, 88.2, 96, 176.4 or 192 kHz can be used with models
+whose manifest declares a 44.1 kHz working rate. The original file is never
+modified. Conversion uses SOXR before model inference, and every output stem
+is converted back to the original sample rate before quality validation and
+reporting. This preserves the output file's declared sample rate and duration,
+but it cannot restore ultrasonic content removed by downsampling; the actual
+separation is performed at the model's supported working rate.
