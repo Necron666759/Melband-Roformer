@@ -165,3 +165,35 @@ def test_cli_prepare_models_offline_reports_missing_asset(tmp_path, monkeypatch,
     payload = json.loads((tmp_path / "asset-report.json").read_text())
     assert payload["asset_results"][0]["status"] == "missing"
     assert payload["inference_performed"] is False
+
+
+def test_feature_guided_planner_selects_models_from_declared_stems():
+    from mseparate.types import AnalysisReport, AudioMetadata
+    from mseparate.planner import build_plan
+
+    def manifest(model_id, stems):
+        return parse_manifest({
+            "model_id": model_id, "name": model_id, "architecture": "test",
+            "backend": "test", "source_url": "https://example.invalid",
+            "license": "MIT", "license_status": "verified", "status": "available",
+            "assets": [{"role": "checkpoint", "url": "https://example.invalid/a",
+                        "relative_path": model_id + ".ckpt", "sha256": "a" * 64}],
+            "native_stems": stems,
+        })
+
+    audio = AnalysisReport(
+        schema_version=2,
+        audio=AudioMetadata("mix.wav", 1.0, 44100, 2, 44100, "PCM_16"),
+        measurements={"low_band_energy_ratio": 0.8, "mid_band_energy_ratio": 0.1,
+                      "high_band_energy_ratio": 0.1, "transient_activity": 0.05,
+                      "spectral_flatness": 0.2},
+    )
+    bass = manifest("bass-model", ["bass"])
+    vocal = manifest("vocal-model", ["vocals"])
+    plan = build_plan(analysis=audio, registry={bass.model_id: bass, vocal.model_id: vocal})
+    validate_plan(plan)
+    assert len(plan.tasks) == 2
+    by_model = {task.model_id: task for task in plan.tasks}
+    assert by_model["bass-model"].target_stems == ("bass",)
+    assert by_model["bass-model"].rationale
+    assert 0 <= by_model["bass-model"].confidence <= 1
