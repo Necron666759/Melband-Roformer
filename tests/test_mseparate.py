@@ -165,7 +165,7 @@ def test_incompatible_audio_does_not_schedule_model():
         "demucs-onnx-htdemucs-6s",
     }
     by_model = {task.model_id: task for task in plan.tasks}
-    assert by_model["bs-roformer-anvuew-vocals"].target_stems == ("vocals",)
+    assert by_model["bs-roformer-anvuew-vocals"].target_stems == ("instrumental", "vocals")
     assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
         "drums", "bass", "other", "guitar", "piano",
     }
@@ -338,9 +338,8 @@ def test_planner_explicit_model_preference_overrides_default_priority():
     by_model = {task.model_id: task for task in plan.tasks}
 
     assert "mdx23c-zfturbo-vocals" in by_model
-    assert by_model["mdx23c-zfturbo-vocals"].target_stems == ("vocals",)
-    # MelBand remains selected for its separate derived instrumental output.
-    assert by_model["melband-roformer-kim-vocals"].target_stems == ("instrumental",)
+    assert by_model["mdx23c-zfturbo-vocals"].target_stems == ("instrumental", "vocals")
+    assert "melband-roformer-kim-vocals" not in by_model
     assert "explicitly preferred" in by_model["mdx23c-zfturbo-vocals"].rationale
 
 
