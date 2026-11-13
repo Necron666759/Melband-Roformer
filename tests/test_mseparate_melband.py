@@ -22,7 +22,8 @@ def _manifest():
             ModelAsset("checkpoint", "https://example.invalid/model", "model.ckpt", checkpoint_sha),
             ModelAsset("config", "https://example.invalid/config", "config.yaml", config_sha),
         ),
-        native_stems=("vocals",), derived_stems=("instrumental",),\n        target_stems=("vocals", "instrumental"),
+        native_stems=("vocals",), derived_stems=("instrumental",),
+        target_stems=("vocals", "instrumental"),
         status="available",
     )
 
