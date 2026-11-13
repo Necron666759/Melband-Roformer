@@ -108,3 +108,17 @@ def test_no_download_uses_huggingface_offline_mode(tmp_path, monkeypatch):
     assert state["offline"] == "1"
     assert "HF_HUB_OFFLINE" not in os.environ
     adapter.unload()
+
+def test_planner_schedules_all_six_demucs_stems():
+    from mseparate.planner import build_plan
+    from mseparate.types import AnalysisReport, AudioMetadata
+
+    model = _manifest()
+    analysis = AnalysisReport(
+        schema_version=2,
+        audio=AudioMetadata("mix.wav", 12.0, 48000, 2, 576000, "PCM_16"),
+    )
+    plan = build_plan(analysis=analysis, registry={model.model_id: model})
+    assert len(plan.tasks) == 1
+    assert plan.tasks[0].model_id == model.model_id
+    assert set(plan.tasks[0].target_stems) == set(DemucsOnnxAdapter.STEMS)
