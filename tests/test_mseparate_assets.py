@@ -214,8 +214,9 @@ def test_verified_partial_file_is_promoted_without_network(tmp_path, asset_serve
     assert _AssetHandler.range_requests == []
 
 
-def test_http_404_is_reported_without_installing_bad_asset(tmp_path, asset_server):
-    _AssetHandler.status_code = 404
+@pytest.mark.parametrize("status_code", [403, 404, 500])
+def test_http_errors_are_reported_without_installing_bad_asset(tmp_path, asset_server, status_code):
+    _AssetHandler.status_code = status_code
     asset = _asset(asset_server)
     with pytest.raises(AssetError, match="Could not install asset"):
         ensure_asset(tmp_path / "model-a", asset, retries=1)
