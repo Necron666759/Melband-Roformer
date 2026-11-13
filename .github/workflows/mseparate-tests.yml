@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/mseparate-foundation
+      - feature/mseparate-6stem-gpu
   pull_request:
     branches:
       - main
