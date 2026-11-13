@@ -146,9 +146,9 @@ def main(argv: list[str] | None = None) -> int:
 
         input_path = Path(args.input).expanduser().resolve()
         report = analyze_audio(input_path)
-        if args.execute or args.prepare_models:
-            # Semantic source recognition is part of the normal execution path.
-            # It runs before the planner and releases its model before separation.
+        if args.execute:
+            # Semantic source recognition is an execution-time routing aid only.
+            # Asset preparation must remain independent of the optional CLAP stack.
             from .source_analysis import analyze_sources
             predictions = analyze_sources(
                 input_path, device=args.device,
