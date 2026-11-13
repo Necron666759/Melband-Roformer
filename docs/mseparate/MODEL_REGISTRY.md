@@ -42,3 +42,20 @@ Each asset record includes relative local path, URL, expected byte size where kn
 Potential research candidates include MelBand RoFormer, BS-RoFormer, RoFormer, HTDemucs, Demucs, MDX23C, SCNet, Swin Upernet, BandIt, Apollo, BSMamba, Conformer and DTTNet.
 
 This is a research list, not a support statement. Each checkpoint is a separate review item because licenses, configuration formats, output stems, weights availability and runtime constraints can differ even within one architecture family.
+
+
+## Asset manager behaviour
+
+The first asset manager implementation is in `app/mseparate/assets.py` and uses only the Python standard library.
+
+- A checkpoint is downloaded only when a manifest supplies a pinned SHA-256.
+- Downloads stream in bounded 1 MiB chunks to a sibling `.part` file.
+- Existing partial files resume with HTTP Range when the server returns a valid 206/Content-Range response. If the server ignores Range and returns 200, the partial is overwritten from byte zero.
+- A completed partial file is re-hashed and size-checked before atomic replacement into its final name. A verified partial left by a previous interrupted process can be promoted without another download.
+- A verified final file is reused. A corrupt pre-existing final file is preserved with a `.corrupt-<id>` suffix before replacement.
+- Each asset is handled independently; failures are recorded and do not prevent checking other assets.
+- `--prepare-models` explicitly starts model asset preparation. `--no-download` restricts it to local verification.
+- Only HTTP(S) URLs are accepted. Downloaded files are never executed.
+- The current implementation uses an exclusive lock file to avoid concurrent writers to the same asset.
+
+The asset manager does not yet populate the registry with production checkpoints. Registry entries remain opt-in and must be independently reviewed for license, URL, checksum, output semantics and backend compatibility.
