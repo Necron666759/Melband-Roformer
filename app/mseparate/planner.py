@@ -1,9 +1,9 @@
-"""Feature-guided, conservative sequential plan construction."""
+"""Feature-guided, capability-aware conservative plan construction."""
 from __future__ import annotations
 
 from collections import defaultdict
 
-from .registry import eligible_models
+from .registry import eligible_models, model_audio_compatibility
 from .types import AnalysisReport, ExecutionPlan, ExecutionTask, ModelManifest
 
 
@@ -43,10 +43,10 @@ def build_plan(
     analysis: AnalysisReport | None = None,
     registry: dict[str, ModelManifest] | None = None,
 ) -> ExecutionPlan:
-    """Choose the strongest eligible model per declared stem, in serial order.
+    """Choose eligible, input-compatible models using transparent acoustic routing.
 
-    Scores are routing heuristics based on measured audio properties, not
-    estimates of model quality. Only reviewed, available manifests participate.
+    Hard format constraints are applied before heuristic ranking. Routing scores
+    are not model-quality estimates and cannot establish that a source exists.
     """
     if max_depth < 0:
         raise ValueError("max_depth must be zero or greater")
@@ -56,8 +56,23 @@ def build_plan(
             "No verified, enabled model manifests are available; neural inference was not scheduled.",
         ), max_depth)
     features = analysis.measurements if analysis else {}
-    ranked: dict[str, list[tuple[float, ModelManifest, str]]] = defaultdict(list)
+    audio = analysis.audio if analysis else None
+    compatible: list[ModelManifest] = []
+    rejected: list[str] = []
     for model in candidates:
+        if audio is not None:
+            ok, reason = model_audio_compatibility(model, audio)
+            if not ok:
+                rejected.append(f"{model.model_id}: {reason}")
+                continue
+        compatible.append(model)
+    if not compatible:
+        notes = ["No eligible model accepts the input audio format; no inference was scheduled."]
+        notes.extend(rejected)
+        return ExecutionPlan(1, (), tuple(notes), max_depth)
+
+    ranked: dict[str, list[tuple[float, ModelManifest, str]]] = defaultdict(list)
+    for model in compatible:
         for stem in _model_outputs(model):
             score, reason = _stem_score(stem, features)
             ranked[stem].append((score, model, reason))
@@ -85,10 +100,12 @@ def build_plan(
             rationale="; ".join(item["reasons"]),
         ))
     notes = [
+        "Hard sample-rate/channel constraints were checked before model ranking.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
         "Scores rank declared stem routes using acoustic heuristics; they are not model-quality estimates or source-presence probabilities.",
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
+    notes.extend(rejected)
     if not tasks:
         notes.append("Eligible manifests declared no usable output stems.")
     return ExecutionPlan(1, tuple(tasks), tuple(notes), max_depth)
