@@ -7,9 +7,13 @@ from __future__ import annotations
 
 import fcntl
 import threading
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping, Protocol
+
+import soundfile as sf
+import soxr
 
 from .quality import StemQualityReport, inspect_stem, inspect_stem_set
 from .types import ExecutionPlan, ExecutionTask, ModelManifest
@@ -191,7 +195,34 @@ class ExecutionManager:
                     backend.load(manifest, model_dir, self.device)
                     task_output_dir = self.output_root / task.task_id
                     task_output_dir.mkdir(parents=True, exist_ok=True)
-                    produced = backend.infer(input_path, task_output_dir, task.target_stems)
+                    source_info = sf.info(str(input_path))
+                    target_rate = manifest.sample_rate
+                    if target_rate and source_info.samplerate != target_rate:
+                        # Convert only the model-facing working copy. Keep the
+                        # original untouched and restore every stem to its rate.
+                        with tempfile.TemporaryDirectory(prefix="mseparate-rate-") as temp:
+                            temp_root = Path(temp)
+                            model_input = temp_root / "input.wav"
+                            model_output = temp_root / "outputs"
+                            model_output.mkdir()
+                            audio, source_rate = sf.read(str(input_path), dtype="float32", always_2d=True)
+                            converted = soxr.resample(audio, source_rate, target_rate, axis=0)
+                            sf.write(str(model_input), converted, target_rate, subtype="PCM_24")
+                            staged = backend.infer(model_input, model_output, task.target_stems)
+                            produced = []
+                            for artifact in staged:
+                                samples, stem_rate = sf.read(str(artifact.path), dtype="float32", always_2d=True)
+                                if stem_rate != target_rate:
+                                    raise RuntimeError(
+                                        f"Model output {artifact.path.name} is {stem_rate} Hz; expected {target_rate} Hz"
+                                    )
+                                restored = soxr.resample(samples, stem_rate, source_info.samplerate, axis=0)
+                                final_path = task_output_dir / f"{artifact.stem}.wav"
+                                sf.write(str(final_path), restored, source_info.samplerate,
+                                         subtype=source_info.subtype or "PCM_24")
+                                produced.append(StemArtifact(artifact.stem, final_path))
+                    else:
+                        produced = backend.infer(input_path, task_output_dir, task.target_stems)
                     seen: set[str] = set()
                     validated: list[StemArtifact] = []
                     for artifact in produced:
