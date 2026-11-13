@@ -1,6 +1,7 @@
 """Tests for the isolated MelBand wrapper adapter; no Torch import or GPU."""
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -10,14 +11,16 @@ from mseparate.types import ModelAsset, ModelManifest
 
 
 def _manifest():
+    checkpoint_sha = hashlib.sha256(b"checkpoint").hexdigest()
+    config_sha = hashlib.sha256(b"training: {}").hexdigest()
     return ModelManifest(
         model_id="melband-fixture", name="MelBand fixture",
         architecture="MelBand RoFormer", backend="melband-roformer",
         source_url="https://example.invalid/project", license="MIT",
         license_url=None, license_status="verified",
         assets=(
-            ModelAsset("checkpoint", "https://example.invalid/model", "model.ckpt", "a" * 64),
-            ModelAsset("config", "https://example.invalid/config", "config.yaml", "b" * 64),
+            ModelAsset("checkpoint", "https://example.invalid/model", "model.ckpt", checkpoint_sha),
+            ModelAsset("config", "https://example.invalid/config", "config.yaml", config_sha),
         ),
         native_stems=("vocals", "instrumental"), target_stems=("vocals", "instrumental"),
         status="available",
