@@ -1,0 +1,67 @@
+.TH MSEPARATE 1 "November 2026" "mseparate" "User Commands"
+.SH NAME
+mseparate \- analyze audio and prepare a multi-model separation plan
+.SH SYNOPSIS
+.B mseparate
+.I input
+.RI [ options ]
+.SH DESCRIPTION
+.B mseparate
+is an independent command for technical audio analysis and preparation of a future multi-model source-separation plan. This foundation release performs signal measurements only. It does not run neural inference and does not modify the input audio.
+.PP
+The existing
+.B melband-roformer
+and
+.B separate
+workflows are unchanged.
+.SH OPTIONS
+.TP
+.B --analysis-only
+Analyze the input without displaying an execution plan.
+.TP
+.B --plan-only
+Analyze the input and display the currently available execution plan.
+.TP
+.B --output-dir DIR
+Directory used for a requested report file.
+.TP
+.B --report [PATH]
+Write a JSON report. If PATH is omitted, use mseparate-report.json in the output directory.
+.TP
+.B --models-dir DIR
+Override the local model storage directory.
+.TP
+.B --device auto|cuda|cpu
+Record the intended compute device. Neural inference is not enabled in this release.
+.TP
+.B --no-download
+Guarantee that the command does not access the network. No model downloads are implemented in this foundation release.
+.TP
+.B --max-depth N
+Set the maximum refinement depth for the execution plan.
+.TP
+.B --verbose
+Print additional diagnostics.
+.TP
+.B --version
+Print the mseparate version.
+.SH DATA
+By default, persistent data is stored under
+.I ~/.local/share/mseparate/
+with separate models, registry, cache and jobs directories. The
+.B MSEPARATE_HOME
+environment variable overrides the root directory.
+.SH EXIT STATUS
+.TP
+.B 0
+Analysis completed successfully.
+.TP
+.B 1
+Report could not be written.
+.TP
+.B 2
+Invalid arguments or input/registry error.
+.SH NOTES
+The initial registry is empty by design. A model must have reviewed license metadata, verified assets and a compatible backend before it can be scheduled. No model quality or separation result is implied by this analysis-only foundation.
+.SH SEE ALSO
+.BR melband-roformer (1)
