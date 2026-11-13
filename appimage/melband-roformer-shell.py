@@ -167,7 +167,7 @@ class MelbandRoformerShell(cmd.Cmd):
         self._dispatch("separate", arg)
 
     def do_mseparate(self, arg):
-        "mseparate <file> [--analysis-only] [--plan-only] [--report [PATH]]\\n" \\
+        "mseparate <file> [--analysis-only] [--plan-only] [--report [PATH]]\n" \\
         "    Analyze audio and prepare a safe multi-model separation plan."
         self._dispatch("mseparate", arg)
 
