@@ -127,3 +127,22 @@ artifacts remain available with their quality reports so a caller can decide
 whether to keep or inspect them. Quality reports are retained on failed tasks
 when inspection completed. These checks are technical integrity checks, not
 perceptual quality scores; no reference-free SDR/SI-SDR is calculated.
+
+
+## Cross-stem diagnostics and refinement gate
+
+After individual integrity checks, the executor compares every compatible output
+pair using a bounded-memory sample correlation calculation. Near-identical
+signals with comparable RMS levels are marked with a warning for possible
+duplicated content. This is intentionally narrow: it can catch obvious copies
+or polarity-inverted copies, but it is not a general source-leakage detector.
+Correlated musical sources, shared ambience and bleed cannot be reliably
+classified without suitable references or a validated separation metric.
+
+The quality module also exposes a conservative refinement decision function.
+It accepts a candidate only when the parent has technical warnings and the
+candidate is structurally valid with no remaining warnings. It rejects
+candidates that are invalid, still warn, or show no resolved parent warning.
+This gate is not yet used to schedule automatic refinement: the current planner
+does not create refinement tasks, and reference-free technical cleanliness is
+not evidence of perceptual improvement. Parent artifacts must remain preserved.
