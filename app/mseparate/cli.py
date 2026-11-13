@@ -27,7 +27,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--analysis-only", action="store_true", help="Analyze audio without planning inference")
     parser.add_argument("--plan-only", action="store_true", help="Analyze audio and print the execution plan")
     parser.add_argument("--no-download", action="store_true", help="Do not access the network")
-    parser.add_argument("--force-download", action="store_true", help="Reserved for a future asset-manager release")
     parser.add_argument("--max-depth", type=int, default=3, help="Maximum refinement depth for future plans")
     parser.add_argument("--verbose", action="store_true", help="Print additional diagnostics")
     parser.add_argument("--report", nargs="?", const="mseparate-report.json",
@@ -44,17 +43,18 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.max_depth < 0:
         parser.error("--max-depth must be zero or greater")
-    if args.force_download and args.no_download:
-        parser.error("--force-download cannot be combined with --no-download")
 
     try:
         report = analyze_audio(args.input)
         paths = ensure_layout()
+        if args.models_dir:
+            paths["models"] = Path(args.models_dir).expanduser()
+            paths["models"].mkdir(parents=True, exist_ok=True)
         registry_path = paths["registry"] / "models.json"
         registry = load_registry(registry_path)
-        plan = build_plan()
+        plan = build_plan(max_depth=args.max_depth)
         validate_plan(plan)
-    except (OSError, ValueError, RegistryError) as exc:
+    except (OSError, ValueError, RuntimeError, RegistryError) as exc:
         print(f"mseparate: {exc}", file=sys.stderr)
         return 2
 
