@@ -1,3 +1,22 @@
+melband-roformer (0.1.15) unstable; urgency=medium
+
+  * Add the independent mseparate command as a separate package and
+    console entry point; the existing melband-roformer/separate path
+    remains unchanged.
+  * Add a typed, backend-neutral foundation for audio metadata, model
+    manifests, analysis reports and execution plans. The first analysis
+    pass reports duration, sample rate, channels, peak, RMS and a clipping
+    risk indicator using bounded-memory audio reads.
+  * Add the per-user ~/.local/share/mseparate/ data layout, validated
+    local registry loading, license/status eligibility gates, atomic JSON
+    reports, and an explicit empty execution plan until model assets and
+    licenses have been reviewed.
+  * Add CPU-only foundation tests and an mseparate manual page. Route the
+    command through the AppImage's explicit restricted-shell allow-list.
+    No neural inference or model downloads are enabled in this slice.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Fri, 13 Nov 2026 12:00:00 +0000
+
 melband-roformer (0.1.14) unstable; urgency=medium
 
   * app/melband_roformer_wrapper/progress.py (new): rewrite the terminal
