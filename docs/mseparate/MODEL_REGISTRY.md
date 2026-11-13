@@ -24,6 +24,7 @@ Status: schema requirements; this file does not certify or enable any model weig
 | `segment_parameters` | Segment size, overlap and model-specific limits |
 | `resource_profile` | Measured VRAM/runtime plus measurement provenance |
 | `status` | `candidate`, `available`, `incompatible`, `unavailable`, or `disabled` |
+| `planner_priority` | Explicit operator routing preference used only after specialist matching; it is not a model-quality score |
 
 Each asset record includes relative local path, URL, expected byte size where known, SHA-256, asset role and required/optional status. A missing checksum or unknown license is not silently treated as verified.
 
@@ -37,11 +38,24 @@ Each asset record includes relative local path, URL, expected byte size where kn
 6. Keep hardware measurements separate from estimates; include device, driver, CUDA/PyTorch and test conditions.
 7. Never infer a model's output capabilities from its architecture name alone; inspect the checkpoint/config and authoritative model documentation.
 
+## Enabled checkpoint records
+
+The bundled registry currently includes the following newly reviewed vocal models:
+
+| Model ID | Architecture | Backend | Weight license | Checkpoint SHA-256 |
+|---|---|---|---|---|
+| `bs-roformer-anvuew-vocals` | BS-RoFormer | `bs-roformer-pymss` | GPL-3.0 | `8d0f72ad0ac4154f5f4c3cdf230880bbb9a5bd01dc610241a2abfe787f0d7784` |
+| `mdx23c-zfturbo-vocals` | MDX23C | `mdx23c-pymss` | CC-BY-NC-SA-4.0 | `49d51472769e34a2501cd1da782346a3212555c3a5619fc2c53507445528d816` |
+
+Both models expose only their native vocals estimate. Their secondary other/instrument estimate is not relabelled as a clean instrumental stem. The BS-RoFormer checkpoint/config are pinned to Hugging Face revision 7e4e5669cad8a8810983e02fa25294229246d374; the MDX23C checkpoint is pinned to Sucial/MSST-WebUI revision 55155c4e2f99d0ca94d24fce88d6dc25711a9252, with its matching configuration pinned to ZFTurbo tag v1.0.0.
+
+The MDX23C model repository declares CC-BY-NC-SA-4.0. It is non-commercial: commercial use is not permitted; attribution and share-alike requirements apply. The BS-RoFormer model repository declares GPL-3.0. These are model-asset licenses, distinct from the MIT license of the pymss inference code.
+
 ## Candidate families to investigate
 
-Potential research candidates include MelBand RoFormer, BS-RoFormer, RoFormer, HTDemucs, Demucs, MDX23C, SCNet, Swin Upernet, BandIt, Apollo, BSMamba, Conformer and DTTNet.
+Potential future families include additional BS/MelBand RoFormer variants, SCNet, Swin Upernet, BandIt, Apollo, BSMamba, Conformer and DTTNet.
 
-This is a research list, not a support statement. Each checkpoint is a separate review item because licenses, configuration formats, output stems, weights availability and runtime constraints can differ even within one architecture family.
+This remains a research list, not a support statement. Each checkpoint is a separate review item because licenses, configuration formats, output stems, weight provenance and runtime constraints can differ even within one architecture family.
 
 
 ## Asset manager behaviour
@@ -58,4 +72,4 @@ The first asset manager implementation is in `app/mseparate/assets.py` and uses 
 - Only HTTP(S) URLs are accepted. Downloaded files are never executed.
 - The current implementation uses an exclusive lock file to avoid concurrent writers to the same asset.
 
-The asset manager does not yet populate the registry with production checkpoints. Registry entries remain opt-in and must be independently reviewed for license, URL, checksum, output semantics and backend compatibility.
+The asset manager now has pinned, license-reviewed model records for MelBand RoFormer, HT-Demucs, BS-RoFormer Anvuew vocals and MDX23C ZFTurbo vocals. Each newly enabled checkpoint and config is SHA-256/size verified before backend loading. Additional models remain candidates until their own license, URL, checksum, output semantics and backend compatibility are reviewed.
