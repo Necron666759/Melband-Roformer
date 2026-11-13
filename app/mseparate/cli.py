@@ -49,9 +49,8 @@ def _print_models(registry) -> None:
 
 def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> dict[str, Path]:
     """Download and prewarm the six-stem ONNX model, then release its session."""
-    import demucs_onnx
     import onnxruntime as ort
-    import numpy as np
+    import demucs_onnx
 
     preload = getattr(ort, "preload_dlls", None)
     if callable(preload):
@@ -94,8 +93,9 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
     """Measure a bounded number of real HT-Demucs ONNX inference chunks."""
     import time
 
-    import onnxruntime as ort
     import demucs_onnx
+    import numpy as np
+    import onnxruntime as ort
     from demucs_onnx.inference import (
         N_SAMPLES, SAMPLE_RATE,
     )
