@@ -39,6 +39,7 @@ def _print_models(registry) -> None:
         print(f"    {model.name}")
         print(f"    Architecture/backend: {model.architecture} / {model.backend}")
         print(f"    Category: {model.category or 'unspecified'}; outputs: {outputs}")
+        print(f"    Planner priority: {model.planner_priority} (routing preference, not quality)")
         print(f"    License: {model.license or 'unknown'} ({model.license_status}); status: {model.status}")
         if model.sample_rate or model.channels:
             print(f"    Input: {model.sample_rate or 'any'} Hz; {model.channels or 'any channels'}")
