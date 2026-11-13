@@ -4,6 +4,9 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
+import numpy as np
+import soundfile as sf
+
 from mseparate.execution import BackendInfo, ExecutionManager, StemArtifact
 from mseparate.types import ExecutionPlan, ExecutionTask, ModelAsset, ModelManifest
 
@@ -30,7 +33,8 @@ class FakeBackend:
         outputs = []
         for stem in target_stems:
             path = output_dir / f"{stem}.wav"
-            path.write_bytes(b"fake wav payload")
+            samples = np.sin(np.linspace(0, 100, 48000, dtype=np.float32)) * 0.2
+            sf.write(path, np.column_stack((samples, samples)), 48000)
             outputs.append(StemArtifact(stem, path))
         return outputs
 
@@ -56,7 +60,7 @@ def _manifest(model_id):
 
 def test_execution_is_strictly_sequential_and_unloads_before_next(tmp_path):
     source = tmp_path / "input.wav"
-    source.write_bytes(b"input")
+    sf.write(source, np.full((48000, 2), 0.1, dtype=np.float32), 48000)
     state = {"active": 0, "max_active": 0, "events": []}
 
     manager = ExecutionManager(
@@ -160,3 +164,87 @@ def test_backend_is_unloaded_even_when_load_raises_part_way(tmp_path):
     assert summary.failed == 1
     assert state["active"] == 0
     assert state["events"] == [("partial-load", "model-a"), ("unload",)]
+
+
+
+def test_executor_attaches_quality_report_for_each_output(tmp_path):
+    source = tmp_path / "input.wav"
+    sf.write(source, np.full((48000, 2), 0.1, dtype=np.float32), 48000)
+    state = {"active": 0, "max_active": 0, "events": []}
+    manager = ExecutionManager(
+        {"fake": lambda: FakeBackend(state)},
+        models_root=tmp_path / "models", output_root=tmp_path / "outputs",
+    )
+    plan = ExecutionPlan(1, (
+        ExecutionTask("task", "model-a", "mix", ("vocals",)),
+    ))
+
+    summary = manager.execute(plan, {"model-a": _manifest("model-a")}, {"mix": source})
+    result = summary.results[0]
+
+    assert result.status == "success"
+    assert len(result.quality_reports) == 1
+    assert result.quality_reports[0].status == "valid"
+    assert result.quality_reports[0].sample_rate == 48000
+    assert result.quality_reports[0].channels == 2
+
+
+def test_executor_fails_structurally_invalid_output_but_keeps_report(tmp_path):
+    source = tmp_path / "input.wav"
+    sf.write(source, np.full((48000, 2), 0.1, dtype=np.float32), 48000)
+
+    class MismatchedBackend(FakeBackend):
+        def infer(self, input_audio, output_dir, target_stems):
+            path = output_dir / "vocals.wav"
+            sf.write(path, np.full((24000, 1), 0.1, dtype=np.float32), 44100)
+            return [StemArtifact("vocals", path)]
+
+    state = {"active": 0, "max_active": 0, "events": []}
+    manager = ExecutionManager(
+        {"fake": lambda: MismatchedBackend(state)},
+        models_root=tmp_path / "models", output_root=tmp_path / "outputs",
+    )
+    plan = ExecutionPlan(1, (
+        ExecutionTask("task", "model-a", "mix", ("vocals",)),
+    ))
+
+    summary = manager.execute(plan, {"model-a": _manifest("model-a")}, {"mix": source})
+    result = summary.results[0]
+
+    assert result.status == "failed"
+    assert result.outputs == ()
+    assert len(result.quality_reports) == 1
+    assert result.quality_reports[0].status == "invalid"
+    assert "Output quality validation failed" in result.message
+
+
+def test_executor_keeps_warning_outputs_available(tmp_path):
+    source = tmp_path / "input.wav"
+    sf.write(source, np.full((48000, 2), 0.1, dtype=np.float32), 48000)
+
+    class SilentBackend(FakeBackend):
+        def infer(self, input_audio, output_dir, target_stems):
+            outputs = []
+            for stem in target_stems:
+                path = output_dir / f"{stem}.wav"
+                sf.write(path, np.zeros((48000, 2), dtype=np.float32), 48000)
+                outputs.append(StemArtifact(stem, path))
+            return outputs
+
+    state = {"active": 0, "max_active": 0, "events": []}
+    manager = ExecutionManager(
+        {"fake": lambda: SilentBackend(state)},
+        models_root=tmp_path / "models", output_root=tmp_path / "outputs",
+    )
+    plan = ExecutionPlan(1, (
+        ExecutionTask("task", "model-a", "mix", ("vocals",)),
+    ))
+
+    result = manager.execute(
+        plan, {"model-a": _manifest("model-a")}, {"mix": source}
+    ).results[0]
+
+    assert result.status == "success"
+    assert len(result.outputs) == 1
+    assert result.quality_reports[0].status == "warning"
+    assert "output is effectively silent" in result.quality_reports[0].issues
