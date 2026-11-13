@@ -242,8 +242,9 @@ def main(argv: list[str] | None = None) -> int:
                 model_dir = paths["models"] / model.model_id
                 if args.prepare_models:
                     try:
+                        prepare_device = effective_device if execute_requested else args.device
                         prepared = _prepare_demucs_onnx(
-                            model_dir, args.device, no_download=args.no_download,
+                            model_dir, prepare_device, no_download=args.no_download,
                         )
                         model_asset_status[model.model_id] = bool(prepared)
                         asset_results.extend({
