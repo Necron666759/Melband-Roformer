@@ -87,6 +87,42 @@ def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> 
             else:
                 os.environ["HF_HUB_OFFLINE"] = old_offline
 
+
+def _resolve_auto_device() -> tuple[str, str | None]:
+    """Probe both CUDA runtimes before selecting a device for the whole plan."""
+    failures: list[str] = []
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            failures.append("PyTorch reports that CUDA is unavailable")
+        else:
+            torch.cuda.init()
+            probe = torch.empty(1, device="cuda")
+            torch.cuda.synchronize()
+            del probe
+    except Exception as exc:
+        failures.append(f"PyTorch CUDA initialization failed: {type(exc).__name__}: {exc}")
+
+    try:
+        import onnxruntime as ort
+
+        preload = getattr(ort, "preload_dlls", None)
+        if callable(preload):
+            preload(directory="")
+        providers = set(ort.get_available_providers())
+        if "CUDAExecutionProvider" not in providers:
+            failures.append(
+                "ONNX Runtime CUDAExecutionProvider is unavailable "
+                f"(available: {', '.join(sorted(providers)) or 'none'})"
+            )
+    except Exception as exc:
+        failures.append(f"ONNX Runtime CUDA initialization failed: {type(exc).__name__}: {exc}")
+
+    if failures:
+        return "cpu", "; ".join(failures) + "; switching to CPU."
+    return "cuda", None
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mseparate",
@@ -102,7 +138,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--analysis-only", action="store_true", help="Analyze audio without planning or inference")
     parser.add_argument("--plan-only", action="store_true", help="Analyze audio and print the plan without inference")
     parser.add_argument("--execute", action="store_true",
-                        help="Explicitly run the planned separation tasks (may use CUDA and download model assets)")
+                        help="Run the planned separation tasks (default unless --analysis-only, --plan-only or --prepare-models is used)")
     parser.add_argument("--no-download", action="store_true",
                         help="Never access the network; execution requires all model assets to be verified locally")
     parser.add_argument("--prepare-models", action="store_true",
@@ -131,8 +167,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--download-retries must be at least one")
     if args.inference_timeout < 0:
         parser.error("--inference-timeout must be zero or greater")
-    if args.execute and (args.analysis_only or args.plan_only):
-        parser.error("--execute cannot be combined with --analysis-only or --plan-only")
+    if args.execute and (args.analysis_only or args.plan_only or args.prepare_models):
+        parser.error("--execute cannot be combined with --analysis-only, --plan-only or --prepare-models")
 
     try:
         paths = ensure_layout()
@@ -150,8 +186,15 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         input_path = Path(args.input).expanduser().resolve()
+        execute_requested = args.execute or not (args.analysis_only or args.plan_only or args.prepare_models)
+        effective_device = args.device
+        device_fallback_reason = None
+        if execute_requested and args.device == "auto":
+            effective_device, device_fallback_reason = _resolve_auto_device()
+            if device_fallback_reason:
+                print("Warning: " + device_fallback_reason, file=sys.stderr)
         report = analyze_audio(input_path)
-        if args.execute:
+        if execute_requested:
             # Semantic source recognition is an execution-time routing aid only.
             # Asset preparation must remain independent of the optional CLAP stack.
             from .source_analysis import analyze_sources
@@ -168,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         asset_results: list[dict] = []
         prepared_models: set[str] = set()
         models_to_prepare = eligible_models(registry) if args.prepare_models else []
-        if args.execute:
+        if execute_requested:
             by_id = {model.model_id: model for model in eligible_models(registry)}
             for task in plan.tasks:
                 model = by_id.get(task.model_id)
@@ -231,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
         execution_summary = None
         execution_attempted = False
         execution_blocked = False
-        if args.execute and plan.tasks:
+        if execute_requested and plan.tasks:
             selected_ids = {task.model_id for task in plan.tasks}
             failed_assets = sorted(model_id for model_id in selected_ids
                                    if not model_asset_status.get(model_id, False))
@@ -257,19 +300,55 @@ def main(argv: list[str] | None = None) -> int:
                     },
                     models_root=paths["models"],
                     output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
-                    device=args.device,
+                    device=effective_device,
                 )
                 execution_attempted = True
                 execution_summary = manager.execute(
                     plan, registry, {"mix": input_path},
                 )
+                # A CUDA provider may pass the initial probe but fail during
+                # model loading or inference. ExecutionManager has unloaded
+                # every adapter before returning, so a fresh CPU pass is safe.
+                # Explicit --device cuda remains strict and never falls back.
+                if (args.device == "auto" and effective_device == "cuda"
+                        and execution_summary.failed):
+                    failed_tasks = [item for item in execution_summary.results
+                                    if item.status == "failed"]
+                    device_fallback_reason = "; ".join(
+                        f"{item.task_id}: {item.message or 'CUDA task failed'}"
+                        for item in failed_tasks
+                    )
+                    print(
+                        "Warning: CUDA inference failed; retrying the complete plan on CPU. "
+                        + device_fallback_reason,
+                        file=sys.stderr,
+                    )
+                    effective_device = "cpu"
+                    cpu_manager = ExecutionManager(
+                        {
+                            "melband-roformer": lambda: MelBandCLIAdapter(
+                                timeout=args.inference_timeout or None
+                            ),
+                            "demucs-onnx": lambda: DemucsOnnxAdapter(
+                                no_download=args.no_download,
+                            ),
+                            "bs-roformer-pymss": BSRoformerAdapter,
+                            "mdx23c-pymss": MDX23CAdapter,
+                        },
+                        models_root=paths["models"],
+                        output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
+                        device="cpu",
+                    )
+                    execution_summary = cpu_manager.execute(
+                        plan, registry, {"mix": input_path},
+                    )
 
     except (OSError, ValueError, RuntimeError, RegistryError) as exc:
         print(f"mseparate: {exc}", file=sys.stderr)
         return 2
 
     print_analysis(report)
-    if args.prepare_models or args.execute:
+    if args.prepare_models or execute_requested:
         print("Model asset preparation")
         if not asset_results:
             print("  No model assets needed to be prepared.")
@@ -285,7 +364,7 @@ def main(argv: list[str] | None = None) -> int:
         print_execution_summary(execution_summary)
         if execution_summary.succeeded:
             print("Separated stems: " + str(Path(args.output_dir).expanduser() / "mseparate-stems"))
-    elif args.execute and not plan.tasks:
+    elif execute_requested and not plan.tasks:
         print("Execution not started: the planner produced no compatible inference tasks.")
     elif execution_blocked:
         print("Inference was not started because required assets are unavailable.")
@@ -304,6 +383,9 @@ def main(argv: list[str] | None = None) -> int:
             "inference_performed": inference_performed,
             "execution": to_jsonable(execution_summary) if execution_summary is not None else None,
             "execution_blocked": execution_blocked,
+            "requested_device": args.device,
+            "effective_device": effective_device,
+            "device_fallback_reason": device_fallback_reason,
             "asset_results": asset_results,
         }
         try:
@@ -318,6 +400,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Registry entries: {len(registry)}")
         print(f"Prepared assets: {len(asset_results)}")
         print(f"Device preference: {args.device}")
+        print(f"Effective device: {effective_device}")
+        if device_fallback_reason:
+            print(f"Device fallback: {device_fallback_reason}")
         print(f"Inference attempted: {inference_attempted}")
         print(f"At least one task succeeded: {inference_performed}")
     if execution_blocked:
