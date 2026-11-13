@@ -23,7 +23,7 @@ def analyze_audio(path: str | Path) -> AnalysisReport:
     if info.frames <= 0 or info.samplerate <= 0 or info.channels <= 0:
         raise ValueError(f"Audio file has invalid stream metadata: {source}")
 
-    frame_size = 2048
+    frame_size = 1024
     peak_value = sum_squares = 0.0
     sample_count = clipped_count = silent_count = 0
     frame_rms: list[float] = []
