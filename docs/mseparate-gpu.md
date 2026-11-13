@@ -32,6 +32,7 @@ CC-BY-NC-SA-4.0. The latter license requires attribution, prohibits commercial
 use, and applies share-alike terms to adaptations/redistributions. The MDX23C
 config is pinned to the ZFTurbo `v1.0.0` commit `6190c903f353715b9d2f53bb40b0ff7145a13b72`. The registry also pins
 config SHA-256 and byte size for both models.
+The CC-BY-NC-SA-4.0 declaration is from the Sucial/MSST-WebUI mirror hosting the checkpoint; a separate weight-specific license grant from the original ZFTurbo release author was not located. The application treats the mirror's declaration as a restriction, but this is not independent legal confirmation of the uploader's rights. Avoid redistributing the MDX23C checkpoint unless its provenance is confirmed.
 
 Both vocal models can also return an `instrumental.wav` residual computed exactly as input mixture minus the model's vocals estimate. The manifest marks this as a derived stem, not a native network prediction. When `--prefer-model` selects BS-RoFormer or MDX23C, the same model produces both the vocals and its complementary residual.
 
