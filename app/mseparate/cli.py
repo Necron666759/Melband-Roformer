@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from dataclasses import replace
 import sys
 from pathlib import Path
 
@@ -145,6 +146,16 @@ def main(argv: list[str] | None = None) -> int:
 
         input_path = Path(args.input).expanduser().resolve()
         report = analyze_audio(input_path)
+        if args.execute:
+            # Semantic source recognition is part of the normal execution path.
+            # It runs before the planner and releases its model before separation.
+            from .source_analysis import analyze_sources
+            predictions = analyze_sources(
+                input_path, device=args.device,
+                cache_dir=paths["models"] / "source-analysis",
+                no_download=args.no_download,
+            )
+            report = replace(report, predictions=predictions)
         plan = build_plan(max_depth=args.max_depth, analysis=report, registry=registry)
         validate_plan(plan)
 
