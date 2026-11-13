@@ -1,0 +1,4 @@
+#!/bin/sh
+# Independent multi-model analysis/separation CLI inside the bundled venv.
+set -e
+exec /usr/lib/melband-roformer/venv/bin/python3 -m mseparate.cli "$@"

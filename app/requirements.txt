@@ -61,3 +61,17 @@ soundfile>=0.12,<0.13
 # progress-bar rewrite), not just pulled in transitively via
 # melband-roformer-infer's own dependency on it.
 tqdm>=4.64
+
+# Six-stem Demucs ONNX inference. ORT 1.27+ is built for CUDA 13.0 /
+# cuDNN 9, matching the existing torch 2.13.0+cu130 runtime. The CUDA
+# and cuDNN extras install the NVIDIA runtime wheels inside the AppImage.
+onnxruntime-gpu[cuda,cudnn]>=1.27,<1.31
+huggingface-hub>=0.24
+soxr>=0.3
+
+# CLAP-based semantic instrument/source ranking (downloaded model on first run).
+transformers>=4.45,<5
+librosa>=0.10.2,<1
+
+# MSST-format BS-RoFormer and MDX23C inference runtime (torch>=2.7.1; pinned 2.13.0 satisfies it).
+pymss==2.3.5

@@ -1,0 +1,218 @@
+[
+  {
+    "model_id": "melband-roformer-kim-vocals",
+    "name": "MelBand RoFormer Kim | Vocals (Kimberley Jensen)",
+    "architecture": "Mel-Band RoFormer",
+    "backend": "melband-roformer",
+    "source_url": "https://huggingface.co/KimberleyJSN/melbandroformer",
+    "license": "MIT",
+    "license_url": "https://huggingface.co/KimberleyJSN/melbandroformer",
+    "license_status": "verified",
+    "upstream_version": "melband-roformer-infer==0.1.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "vocals"
+    ],
+    "derived_stems": [
+      "instrumental"
+    ],
+    "target_stems": [
+      "vocals",
+      "instrumental"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Checkpoint SHA-256 and byte size are pinned from the upstream v0.1.5 checksum manifest.",
+      "Configuration is pinned to the upstream v0.1.5 source tag.",
+      "The model emits vocals; instrumental is computed as mixture minus vocals and is not a native model prediction.",
+      "Upstream inference does not resample input audio; this manifest therefore requires 44100 Hz input.",
+      "The upstream inference implementation duplicates mono input to stereo for inference and writes the vocal output back as mono."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/KimberleyJSN/melbandroformer/resolve/main/MelBandRoformer.ckpt",
+        "relative_path": "MelBandRoformer.ckpt",
+        "sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e",
+        "size_bytes": 913106900,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://raw.githubusercontent.com/openmirlab/melband-roformer-infer/v0.1.5/src/mel_band_roformer/configs/config_vocals_mel_band_roformer.yaml",
+        "relative_path": "config_vocals_mel_band_roformer.yaml",
+        "sha256": "5e380dfa5d5757ac4c2b7f6ef607b93d5058ecff805e7b05ed730a47b90d103c",
+        "size_bytes": 728,
+        "required": true
+      }
+    ],
+    "planner_priority": 100
+  },
+  {
+    "model_id": "demucs-onnx-htdemucs-6s",
+    "name": "HT-Demucs 6-stem (ONNX, StemSplit)",
+    "architecture": "Hybrid Transformer Demucs v4 / ONNX",
+    "backend": "demucs-onnx",
+    "source_url": "https://huggingface.co/StemSplitio/htdemucs-6s-onnx",
+    "license": "MIT",
+    "license_url": "https://github.com/StemSplit/demucs-onnx/blob/main/LICENSE",
+    "license_status": "verified",
+    "category": "multi-stem",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": null,
+    "input_formats": [
+      "wav",
+      "flac",
+      "ogg",
+      "mp3"
+    ],
+    "native_stems": [
+      "drums",
+      "bass",
+      "other",
+      "vocals",
+      "guitar",
+      "piano"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "drums",
+      "bass",
+      "other",
+      "vocals",
+      "guitar",
+      "piano"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Model assets are managed and cached by demucs-onnx through Hugging Face Hub; they are not downloaded through mseparate's SHA-pinned asset manager.",
+      "Explicit --device cuda validates a CUDA-only ONNX Runtime session and disables runtime retry fallback; auto mode may include CPU as a fallback.",
+      "The piano stem is experimental and may contain substantial bleed or artifacts; audition before relying on it.",
+      "The model emits six estimates from the full mix: drums, bass, other, vocals, guitar and piano.",
+      "mseparate converts input audio to 44100 Hz before inference and converts every output stem back to the original input sample rate; the original source file is never modified."
+    ],
+    "assets": [],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "bs-roformer-anvuew-vocals",
+    "name": "BS-RoFormer Anvuew | Vocals",
+    "architecture": "Band-Split RoFormer",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/anvuew/BS-RoFormer/tree/7e4e5669cad8a8810983e02fa25294229246d374",
+    "license": "GPL-3.0",
+    "license_url": "https://huggingface.co/anvuew/BS-RoFormer",
+    "license_status": "verified",
+    "upstream_version": "pymss==2.3.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "vocals"
+    ],
+    "derived_stems": [
+      "instrumental"
+    ],
+    "target_stems": [
+      "vocals",
+      "instrumental"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Checkpoint and config are pinned to Hugging Face revision 7e4e5669cad8a8810983e02fa25294229246d374; both SHA-256 digests and byte sizes are recorded.",
+      "The Hugging Face model repository declares GPL-3.0 for this checkpoint and its configuration. Preserve GPL-3.0 notices and terms when redistributing the model assets.",
+      "The model is configured for 44100 Hz stereo processing; mseparate resamples model-facing audio to 44100 Hz and restores output to the original sample rate.",
+      "The native vocals estimate is exposed; the optional instrumental output is derived as mixture-minus-vocals residual, not a native model estimate."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/anvuew/BS-RoFormer/resolve/7e4e5669cad8a8810983e02fa25294229246d374/bs_roformer_anvuew_sdr_12.45.ckpt",
+        "relative_path": "bs_roformer_anvuew_sdr_12.45.ckpt",
+        "sha256": "8d0f72ad0ac4154f5f4c3cdf230880bbb9a5bd01dc610241a2abfe787f0d7784",
+        "size_bytes": 204485563,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/anvuew/BS-RoFormer/resolve/7e4e5669cad8a8810983e02fa25294229246d374/config.yaml",
+        "relative_path": "config.yaml",
+        "sha256": "033e57abee226a480ef410e0631b9fe00e8b7bc9a3bb5fe55659d0b43a238701",
+        "size_bytes": 1969,
+        "required": true
+      }
+    ],
+    "planner_priority": 50
+  },
+  {
+    "model_id": "mdx23c-zfturbo-vocals",
+    "name": "MDX23C ZFTurbo | Vocals",
+    "architecture": "MDX23C / TFC-TDF",
+    "backend": "mdx23c-pymss",
+    "source_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.0",
+    "license": "CC-BY-NC-SA-4.0",
+    "license_url": "https://huggingface.co/Sucial/MSST-WebUI/tree/55155c4e2f99d0ca94d24fce88d6dc25711a9252",
+    "license_status": "verified",
+    "upstream_version": "pymss==2.3.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "vocals"
+    ],
+    "derived_stems": [
+      "instrumental"
+    ],
+    "target_stems": [
+      "vocals",
+      "instrumental"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "The checkpoint is the ZFTurbo MDX23C vocals model from release v1.0.0, mirrored at the pinned Sucial/MSST-WebUI revision 55155c4e2f99d0ca94d24fce88d6dc25711a9252.",
+      "The mirror repository declares CC-BY-NC-SA-4.0 for the model assets: attribution is required, commercial use is not permitted, and adaptations or redistributions are subject to the share-alike terms.",
+      "The matching config is pinned to the ZFTurbo v1.0.0 commit 6190c903f353715b9d2f53bb40b0ff7145a13b72. Both checkpoint and config have recorded SHA-256 digests and byte sizes.",
+      "The native vocals estimate is exposed; the optional instrumental output is derived as mixture-minus-vocals residual, not a native model estimate.",
+      "The pymss runtime code is MIT-licensed; that code license does not replace the separate checkpoint license.",
+      "CC-BY-NC-SA-4.0 is the license declared by the Sucial/MSST-WebUI mirror hosting this exact checkpoint. A separate weight-specific grant from the original ZFTurbo release author was not located; treat the mirror declaration as a restriction, and do not redistribute the checkpoint if provenance/rights need formal confirmation."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/Sucial/MSST-WebUI/resolve/55155c4e2f99d0ca94d24fce88d6dc25711a9252/All_Models/vocal_models/model_vocals_mdx23c_sdr_10.17.ckpt",
+        "relative_path": "model_vocals_mdx23c_sdr_10.17.ckpt",
+        "sha256": "49d51472769e34a2501cd1da782346a3212555c3a5619fc2c53507445528d816",
+        "size_bytes": 448101203,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://raw.githubusercontent.com/ZFTurbo/Music-Source-Separation-Training/6190c903f353715b9d2f53bb40b0ff7145a13b72/configs/config_vocals_mdx23c.yaml",
+        "relative_path": "config_vocals_mdx23c.yaml",
+        "sha256": "a2b9724a1a15522dc3478a0eff4e052492ab186c03981e38b1197a7b38204687",
+        "size_bytes": 1164,
+        "required": true
+      }
+    ],
+    "planner_priority": 25
+  }
+]

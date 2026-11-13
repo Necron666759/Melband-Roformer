@@ -45,6 +45,7 @@ it, but it wasn't what "no curl|bash at install" pointed to.
 ```
 /usr/bin/melband-roformer               -> thin dispatcher, execs the venv's python
 /usr/bin/melband-roformer-gui           -> thin dispatcher for the GTK4 GUI (optional)
+/usr/bin/mseparate                      -> independent audio-analysis CLI
 /usr/lib/melband-roformer/venv/         -> self-contained venv (python3, pip-installed deps, incl. torch+cuda)
 /usr/lib/melband-roformer/app/          -> our wrapper package (melband_roformer_wrapper/*.py), pip-installed
                                             into the same venv in editable-less (built wheel) form
@@ -52,6 +53,7 @@ it, but it wasn't what "no curl|bash at install" pointed to.
 /usr/share/icons/hicolor/scalable/apps/melband-roformer.svg
 /usr/share/doc/melband-roformer/{README.md,README.debian.md,changelog.Debian.gz,copyright}
 /usr/share/man/man1/melband-roformer.1.gz
+/usr/share/man/man1/mseparate.1.gz
 ```
 
 The venv is created with `--system-site-packages`, for one specific reason:
@@ -72,9 +74,9 @@ symlinks to a build-machine python) and its shebangs are rewritten to the
 final `/usr/lib/melband-roformer/venv` path before packaging, so it works
 regardless of what Python the host's `/usr/bin/python3` is.
 
-`/usr/bin/melband-roformer` does **not** put the venv's `bin/` on `PATH`
+`/usr/bin/melband-roformer` and `/usr/bin/mseparate` do **not** put the venv's `bin/` on `PATH`
 system-wide; it simply execs
-`/usr/lib/melband-roformer/venv/bin/python -m melband_roformer_wrapper.cli "$@"`.
+`/usr/lib/melband-roformer/venv/bin/python -m melband_roformer_wrapper.cli "$@"` (the mseparate launcher invokes `-m mseparate.cli`).
 This is the standard "vendored venv behind a thin launcher" pattern used by
 tools like `mypy`, `black`, etc. when installed via pipx-style isolation —
 it cannot collide with the system Python or any other Python application,

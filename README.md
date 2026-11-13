@@ -261,6 +261,31 @@ shared with the `.deb` (see §5), so delete
 `~/.cache/melband-roformer-infer/` yourself if you no longer want the
 downloaded weights either.
 
+## Intelligent multi-model analysis (mseparate)
+
+The independent `mseparate` command analyzes a track, selects compatible models from the reviewed registry, verifies or downloads the required assets, and performs multi-stem separation. A normal run needs only one command:
+
+```bash
+mseparate input.wav
+```
+
+By default, separation uses CUDA when both the PyTorch and ONNX Runtime CUDA stacks initialize correctly. If NVIDIA/CUDA is unavailable, or a CUDA inference task fails, mseparate warns and retries on CPU after releasing model resources. Use `--device cuda` to require GPU execution without fallback, or `--device cpu` to force CPU execution.
+
+Optional analysis and preparation commands:
+
+```bash
+mseparate input.wav --analysis-only
+mseparate input.wav --plan-only --report
+mseparate input.wav --prepare-models
+mseparate input.wav --prepare-models --no-download
+mseparate input.wav --prefer-model mdx23c-zfturbo-vocals
+mseparate input.wav --plan-only --allow-resample
+```
+
+When a model's required sample rate differs from the input, `--allow-resample` lets the planner schedule models that otherwise reject that rate. Execution converts only a temporary WAV for model inference; separated stems retain the model's output sample rate. The source file is never modified. Backends that already declare sample-rate conversion support continue to use the execution manager's conversion path without this opt-in.
+
+The model registry and persistent model cache are stored under `~/.local/share/mseparate/`. Normal execution downloads only assets required by the selected plan and reuses verified cached files on later runs. `--prepare-models` without `--execute` explicitly verifies or downloads all eligible model assets without running inference; `--no-download` checks local files only. The optional `--execute` flag remains accepted for compatibility. The existing `separate` command remains the original Mel-Band RoFormer workflow.
+
 ## 4. Basic usage
 
 ### `.deb`: direct CLI

@@ -1,0 +1,36 @@
+name: mseparate foundation tests
+
+on:
+  push:
+    branches:
+      - feature/mseparate-foundation
+      - feature/mseparate-6stem-gpu
+      - feature/mseparate-gpu-foundation-sync
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  cpu-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CPU-only test dependencies
+        run: python -m pip install --upgrade pytest numpy soundfile tqdm soxr
+      - name: Build wrapper wheel and validate packaging metadata
+        run: |
+          python -m pip install --upgrade "setuptools>=77.0.0" wheel build
+          python -m build --wheel --no-isolation app
+      - name: Compile AppImage entry-point Python scripts
+        run: python -m py_compile appimage/melband-roformer-shell.py appimage/melband-roformer-hud-term.py
+      - name: Run AppImage restricted-shell regression tests
+        env:
+          PYTHONPATH: app
+        run: python -m pytest -q tests/test_appimage_shell.py
+      - name: Run project tests without model downloads or GPU
+        env:
+          PYTHONPATH: app
+        run: python -m pytest -q tests/test_mseparate.py tests/test_mseparate_assets.py tests/test_mseparate_execution.py tests/test_mseparate_melband.py tests/test_mseparate_quality.py tests/test_mseparate_demucs_onnx.py tests/test_mseparate_pymss.py

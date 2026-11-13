@@ -279,6 +279,9 @@ substep "installing pinned requirements (torch, torchaudio, melband-roformer-inf
     --extra-index-url "$PYPI_INDEX" \
     -r app/requirements.txt
 substep "installing the wrapper package itself"
+# demucs-onnx declares CPU onnxruntime generically; install without
+# dependencies because onnxruntime-gpu is its mutually exclusive CUDA replacement.
+"$VENV/bin/python3" -m pip install --no-deps "demucs-onnx==0.3.4"
 "$VENV/bin/python3" -m pip install --no-deps ./app
 
 # pyte (pure-Python VT100/xterm terminal-state emulation) and Pillow

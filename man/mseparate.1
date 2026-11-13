@@ -1,0 +1,112 @@
+.TH MSEPARATE 1 "November 2026" "mseparate" "User Commands"
+.SH NAME
+mseparate \- analyze audio and execute multi-model source-separation plans
+.SH SYNOPSIS
+.B mseparate
+.RI [ input ]
+.RI [ options ]
+.SH DESCRIPTION
+.B mseparate
+analyzes audio, builds a plan from the enabled model registry and executes compatible source-separation tasks by default. The optional
+.B --execute
+flag remains available as a compatibility alias. The current registry includes HT-Demucs six-stem ONNX, MelBand RoFormer, BS-RoFormer and MDX23C vocal separation. The input file is not modified.
+.PP
+The existing
+.B melband-roformer
+and
+.B separate
+workflows are unchanged.
+.SH OPTIONS
+.TP
+.B --analysis-only
+Analyze the input without displaying an execution plan.
+.TP
+.B --plan-only
+Analyze the input and display the currently available execution plan without inference.
+.TP
+.B --output-dir DIR
+Directory used for separated stems and a requested report file.
+.TP
+.B --report [PATH]
+Write a JSON report. If PATH is omitted, use mseparate-report.json in the output directory.
+.TP
+.B --models-dir DIR
+Override the local model storage directory.
+.TP
+.B --device auto|cuda|cpu
+Select the inference device. The auto mode probes PyTorch CUDA and ONNX Runtime CUDA before execution; if either is unavailable, it warns and uses CPU. If a CUDA inference task fails, the complete plan is retried on CPU after adapter cleanup. The explicit cuda mode is strict and never falls back. The cpu mode forces CPU execution.
+.TP
+.B --execute
+Explicitly request execution; normally unnecessary because execution is the default. This can download only the model assets selected by the plan and use the selected compute device.
+.PP
+With an input file and no mode-selection option, the normal command is:
+.PP
+.nf
+mseparate input.wav
+.fi
+.PP
+Use
+.B --analysis-only
+or
+.B --plan-only
+to suppress inference. Use
+.B --prepare-models
+without
+.B --execute
+to prepare eligible model assets without separating audio.
+.TP
+.B --prepare-models
+Download and prewarm eligible model assets. For the ONNX model, this uses the Hugging Face Hub cache.
+.TP
+.B --no-download
+Never access the network. Execution requires all model assets to be available locally.
+.TP
+.B --download-timeout SECONDS
+Per-request network timeout for SHA-pinned assets (default 30 seconds).
+.TP
+.B --download-retries N
+Maximum attempts per SHA-pinned asset (default 3).
+.TP
+.B --inference-timeout SECONDS
+Per-task inference timeout; zero disables the timeout.
+.TP
+.B --max-depth N
+Set the maximum refinement depth for the execution plan.
+.TP
+.B --prefer-model MODEL_ID
+Prefer the named eligible model when multiple models can produce the same stem. Use --list-models to see model IDs. The preference changes routing only and does not bypass asset or license checks.
+.TP
+.B --list-models
+List registry models and their eligibility.
+.TP
+.B --verbose
+Print additional diagnostics.
+.TP
+.B --version
+Print the mseparate version.
+.SH DATA
+By default, persistent data is stored under
+.I ~/.local/share/mseparate/
+with separate models, registry, cache and jobs directories. The
+.B MSEPARATE_HOME
+environment variable overrides the root directory.
+.SH EXIT STATUS
+.TP
+.B 0
+Analysis or requested execution completed successfully.
+.TP
+.B 1
+Model preparation or inference failed, or a report could not be written.
+.TP
+.B 2
+Invalid arguments or input/registry error.
+.SH NOTES
+The HT-Demucs ONNX backend downloads its model through Hugging Face Hub. The upstream package manages this cache independently of mseparate's SHA-pinned asset manager. The six output stems are drums, bass, other, vocals, guitar and piano; guitar and piano are estimates and may contain bleed or artifacts. The fp16weights option reduces download and storage size, not inference memory use.
+.PP
+The BS-RoFormer model weights declare GPL-3.0. The MDX23C model repository declares CC-BY-NC-SA-4.0, which prohibits commercial use and requires attribution and share-alike compliance. Check the model license before use or redistribution.
+.PP
+Passing
+.B --device cuda
+requires a working CUDA Execution Provider and does not fall back. Automatic CPU fallback is reported in the console and JSON report. No actual GPU inference or quality result is implied by CPU-only tests.
+.SH SEE ALSO
+.BR melband-roformer (1)

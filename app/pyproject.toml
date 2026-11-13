@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "melband-roformer-wrapper"
 version = "0.1.0"
 description = "Debian-packaging CLI/GUI wrapper around upstream melband-roformer-infer"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     # Pinned to a CUDA 13.0 build compatible with RTX 3060 Ti (Ampere, sm_86).
     # Installed from the PyTorch wheel index, not PyPI's default index -- see
@@ -26,17 +27,36 @@ dependencies = [
     # rewritten terminal progress bar (not only pulled in transitively
     # via melband-roformer-infer's own dependency on it).
     "tqdm>=4.64",
+    # ONNX Runtime GPU uses CUDA 13.0 / cuDNN 9, matching torch 2.13+cu130.
+    "onnxruntime-gpu[cuda,cudnn]>=1.27,<1.31",
+    "huggingface-hub>=0.24",
+    "soxr>=0.3",
+    # Optional semantic instrument/source ranking, loaded only for separation.
+    "transformers>=4.45,<5",
+    "librosa>=0.10.2,<1",
+    # MSST-format BS-RoFormer and MDX23C inference adapters. Requires torch>=2.7.1; the pinned 2.13.0 build satisfies it.
+    "pymss==2.3.5",
 ]
+
+[project.optional-dependencies]
+# Install demucs-onnx without dependencies when using onnxruntime-gpu; its
+# upstream generic dependency selects CPU onnxruntime, which conflicts with
+# the CUDA-enabled runtime bundled by this application.
+demucs-onnx = ["demucs-onnx==0.3.4"]
 
 [project.scripts]
 melband-roformer = "melband_roformer_wrapper.cli:main"
 melband-roformer-gui = "melband_roformer_wrapper.gui:main"
+mseparate = "mseparate.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 
-# sitecustomize.py must install as a top-level module (NOT nested inside
-# the melband_roformer_wrapper package) so Python's `site` machinery
+[tool.setuptools.package-data]
+mseparate = ["data/*.json"]
+
+# sitecustomize.py must install as a top-level module (NOT nested inside the
+# melband_roformer_wrapper package) so Python's `site` machinery
 # auto-imports it at interpreter start-up for every process using this
 # venv -- including the upstream `melband-roformer-infer` console-script,
 # which runs as its own subprocess/interpreter and never imports anything
