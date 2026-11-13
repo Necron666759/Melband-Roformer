@@ -31,6 +31,7 @@ def inspect_stem(
     *,
     reference: str | Path | None = None,
     block_frames: int = 262144,
+    allow_sample_rate_mismatch: bool = False,
 ) -> StemQualityReport:
     """Inspect an output in bounded-memory blocks and optionally compare alignment."""
     audio_path = Path(path)
@@ -78,7 +79,7 @@ def inspect_stem(
                 issues.append(
                     f"duration mismatch ({duration:.3f}s vs {ref_duration:.3f}s)"
                 )
-            if info.samplerate != ref.samplerate:
+            if info.samplerate != ref.samplerate and not allow_sample_rate_mismatch:
                 issues.append(
                     f"sample-rate mismatch ({info.samplerate} Hz vs {ref.samplerate} Hz)"
                 )
