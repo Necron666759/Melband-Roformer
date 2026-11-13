@@ -161,16 +161,20 @@ class PymssAdapter:
         # Keep tqdm's carriage returns intact for in-place HUD updates, but
         # omit its initial 0% placeholder. The first useful update follows
         # model setup and is more informative than a transient empty bar.
-        progress_stream = _InitialTqdmProgressFilter(sys.stderr)
-        from contextlib import redirect_stderr
+        stdout_filter = _InitialTqdmProgressFilter(sys.stdout)
+        stderr_filter = _InitialTqdmProgressFilter(sys.stderr)
+        from contextlib import redirect_stderr, redirect_stdout
 
         try:
-            with redirect_stderr(progress_stream):
+            # pymss/tqdm output streams can differ between runtime versions.
+            # Filter both while preserving each stream's original destination.
+            with redirect_stdout(stdout_filter), redirect_stderr(stderr_filter):
                 separated = self._separator.separate(
                     mixture.T, pbar=True, stems=native_targets
                 )
         finally:
-            progress_stream.finish()
+            stdout_filter.finish()
+            stderr_filter.finish()
         output_dir.mkdir(parents=True, exist_ok=True)
         artifacts: list[StemArtifact] = []
         for stem in target_stems:
