@@ -71,3 +71,8 @@ The execution-manager tests use fake CPU-only adapters. They verify that a secon
 ## MelBand adapter tests
 
 The adapter tests mock the existing wrapper executable and child-process return codes. They verify required manifest roles, explicit checkpoint/config arguments, device forwarding and output-stem mapping. They do not load PyTorch, download a checkpoint or establish compatibility with the installed pinned upstream wheel; that remains an integration test on the target system.
+
+
+## Stem integrity tests
+
+Quality tests create small WAV fixtures and verify decoding, finite-sample handling, silence warnings, clipping measurement, and duration/sample-rate/channel alignment. The checks are technical integrity gates, not a perceptual source-separation score; no SDR/SI-SDR is inferred without a reference stem.
