@@ -30,8 +30,9 @@ def _stem_score(stem: str, features: dict, predictions: list[dict] | None = None
             matched = max(candidates, key=lambda key: lookup[key])
             ordered = sorted(lookup.values())
             matched_score = lookup[matched]
-            rank = (sum(value < matched_score for value in ordered)
-                    + 0.5 * sum(value == matched_score for value in ordered)) / max(1, len(ordered) - 1)
+            less = sum(value < matched_score for value in ordered)
+            equal = sum(value == matched_score for value in ordered)
+            rank = (less + 0.5 * max(0, equal - 1)) / max(1, len(ordered) - 1)
             return max(0.0, min(1.0, rank)), (
                 f"CLAP relative similarity for {matched}: {lookup[matched]:.4f}; "
                 "not a calibrated source-presence probability"
