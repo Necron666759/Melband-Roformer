@@ -161,11 +161,11 @@ def test_pymss_tqdm_carriage_returns_become_flushed_log_lines():
 
     target = FlushTrackingStream()
     progress = _TqdmLineStream(target)
-    progress.write("Processing audio: 0%|          | 0/48\\r")
-    progress.write("Processing audio: 50%|█████     | 24/48\\r")
+    progress.write("Processing audio: 0%|          | 0/48\r")
+    progress.write("Processing audio: 50%|█████     | 24/48\r")
     progress.flush()
 
     output = target.getvalue()
-    assert "Processing audio: 0%|          | 0/48\\n" in output
-    assert "Processing audio: 50%|█████     | 24/48\\n" in output
+    assert "Processing audio: 0%|          | 0/48\n" in output
+    assert "Processing audio: 50%|█████     | 24/48\n" in output
     assert target.flush_count == 2
