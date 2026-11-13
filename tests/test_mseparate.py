@@ -114,18 +114,21 @@ def test_bundled_registry_contains_pinned_kim_vocals_model():
     assert model.derived_stems == ("instrumental",)
 
 
-def test_research_candidates_are_catalogued_but_not_eligible():
+def test_new_pymss_models_are_pinned_and_license_reviewed():
     registry = load_registry(bundled_registry_path())
     eligible = {model.model_id for model in eligible_models(registry)}
 
-    assert "bs-roformer-vocals-candidate" in registry
-    assert "mdx23c-vocals-candidate" in registry
-    for model_id in ("bs-roformer-vocals-candidate", "mdx23c-vocals-candidate"):
-        model = registry[model_id]
-        assert model.status == "candidate"
-        assert model.license_status == "review_required"
-        assert model.backend == "pending-adapter"
-        assert model_id not in eligible
+    bs = registry["bs-roformer-anvuew-vocals"]
+    mdx = registry["mdx23c-zfturbo-vocals"]
+    assert bs.model_id in eligible and mdx.model_id in eligible
+    assert bs.license == "GPL-3.0"
+    assert mdx.license == "CC-BY-NC-SA-4.0"
+    assert bs.backend == "bs-roformer-pymss"
+    assert mdx.backend == "mdx23c-pymss"
+    assert bs.native_stems == ("vocals",)
+    assert mdx.native_stems == ("vocals",)
+    assert all(asset.sha256 and asset.size_bytes for asset in (*bs.assets, *mdx.assets))
+    assert bs.planner_priority > mdx.planner_priority
 
 
 def test_model_audio_compatibility_enforces_sample_rate_and_channels():
@@ -157,10 +160,14 @@ def test_incompatible_audio_does_not_schedule_model():
         audio=AudioMetadata("mix.wav", 1.0, 48000, 2, 48000, "PCM_16"),
     )
     plan = build_plan(analysis=audio, registry=registry)
-    assert len(plan.tasks) == 1
-    assert plan.tasks[0].model_id == "demucs-onnx-htdemucs-6s"
-    assert set(plan.tasks[0].target_stems) == {
-        "drums", "bass", "other", "vocals", "guitar", "piano",
+    assert {task.model_id for task in plan.tasks} == {
+        "bs-roformer-anvuew-vocals",
+        "demucs-onnx-htdemucs-6s",
+    }
+    by_model = {task.model_id: task for task in plan.tasks}
+    assert by_model["bs-roformer-anvuew-vocals"].target_stems == ("vocals",)
+    assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
+        "drums", "bass", "other", "guitar", "piano",
     }
     assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
@@ -311,6 +318,15 @@ def test_planner_prefers_vocal_specialist_over_general_demucs_route():
     assert "manifest-declared specialist" in by_model[
         "melband-roformer-kim-vocals"
     ].rationale
+
+
+def test_pymss_models_allow_manager_sample_rate_conversion():
+    from mseparate.types import AudioMetadata
+
+    registry = load_registry(bundled_registry_path())
+    audio = AudioMetadata("mix.wav", 1.0, 48000, 2, 48000, "PCM_16")
+    for model_id in ("bs-roformer-anvuew-vocals", "mdx23c-zfturbo-vocals"):
+        assert model_audio_compatibility(registry[model_id], audio) == (True, "")
 
 
 def test_planner_uses_semantic_source_rankings_when_available():
