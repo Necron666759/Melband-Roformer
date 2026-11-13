@@ -56,6 +56,7 @@ class ModelManifest:
     refinement_targets: tuple[str, ...] = ()
     sample_rate: int | None = None
     channels: str | None = None
+    input_formats: tuple[str, ...] = ()
     category: str | None = None
     upstream_version: str | None = None
     notes: tuple[str, ...] = ()
