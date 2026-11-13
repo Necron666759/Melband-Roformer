@@ -72,10 +72,15 @@ class DemucsOnnxAdapter:
                 "Check the NVIDIA driver and bundled CUDA/cuDNN runtime; "
                 f"available providers: {sorted(available)}"
             )
-        self._provider = (
-            "cuda" if device == "cuda" or (device == "auto" and "CUDAExecutionProvider" in available)
-            else "cpu"
-        )
+        if device == "cuda":
+            # The upstream "cuda" alias appends CPUExecutionProvider as a
+            # fallback. Use the explicit EP name for strict mode so ORT cannot
+            # silently assign unsupported nodes to CPU.
+            self._provider = "CUDAExecutionProvider"
+        elif device == "auto" and "CUDAExecutionProvider" in available:
+            self._provider = "cuda"
+        else:
+            self._provider = "cpu"
         self._cache_dir = model_dir
         self._runtime = demucs_onnx
         self._model_id = manifest.model_id
