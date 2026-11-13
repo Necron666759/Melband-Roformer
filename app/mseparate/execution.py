@@ -127,7 +127,9 @@ class ExecutionManager:
         results: list[TaskResult] = []
         states: dict[str, str] = {}
 
-        lock_path = self.models_root.parent / ".mseparate-execution.lock"
+        # Keep one per-user lock regardless of --models-dir so jobs using
+        # different model caches still obey the global sequential invariant.
+        lock_path = Path.home() / ".local" / "share" / "mseparate" / ".execution.lock"
         with _EXECUTION_LOCK, _SystemExecutionLock(lock_path):
             for task in plan.tasks:
                 failed_dependencies = [
@@ -174,6 +176,13 @@ class ExecutionManager:
                         raise RuntimeError(reason or "Backend reports model incompatible")
                     if not input_path.is_file():
                         raise FileNotFoundError(f"Input stem does not exist: {input_path}")
+                    declared_outputs = set(manifest.native_stems) | set(manifest.derived_stems)
+                    unsupported = set(task.target_stems) - declared_outputs
+                    if unsupported:
+                        raise RuntimeError(
+                            "Task requests stems not declared as native or derived by the manifest: "
+                            + ", ".join(sorted(unsupported))
+                        )
                     model_dir = self.models_root / manifest.model_id
                     load_attempted = True
                     backend.load(manifest, model_dir, self.device)
