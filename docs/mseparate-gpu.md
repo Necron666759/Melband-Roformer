@@ -13,6 +13,21 @@ name every individual synth patch or guarantee a clean stem. The planner can
 only select models actually present in the registry; a source label without a
 compatible specialist model remains part of a broader stem such as other.
 
+The bundled registry now also tracks two research candidates: BS-RoFormer
+(vocal-focused) and MDX23C (vocal-focused). They are deliberately marked
+`candidate`, `review_required`, and `pending-adapter`. They appear in
+`--list-models` for visibility but are not eligible for planning, downloading,
+or inference. Their exact checkpoint artifacts, redistribution terms,
+configuration/API contracts and checksums must be verified before they can be
+be enabled. A repository containing model code is not by itself proof that a
+particular checkpoint is licensed for redistribution.
+
+For overlapping output capabilities, the planner now prefers an explicitly
+declared specialist category (for example, the MelBand vocals model) over a
+general-purpose model (HT-Demucs). CLAP/acoustic scores still describe source
+salience; they are not estimates of model quality. This prevents the general
+Demucs route from winning a tie merely because its model ID sorts first.
+
 The current general-purpose model separates a supported audio file into:
 
 - `vocals.wav`
