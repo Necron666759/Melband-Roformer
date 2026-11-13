@@ -103,6 +103,16 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
 
     from .demucs_onnx import _prewarm_strict_cuda
 
+    preload = getattr(ort, "preload_dlls", None)
+    if callable(preload):
+        try:
+            preload(directory="")
+        except Exception as exc:
+            if device == "cuda":
+                raise RuntimeError(
+                    f"Could not preload CUDA/cuDNN libraries for ONNX Runtime: {exc}"
+                ) from exc
+
     model_dir.mkdir(parents=True, exist_ok=True)
     old_offline = os.environ.get("HF_HUB_OFFLINE")
     if no_download:
