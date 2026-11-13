@@ -114,6 +114,20 @@ def test_bundled_registry_contains_pinned_kim_vocals_model():
     assert model.derived_stems == ("instrumental",)
 
 
+def test_research_candidates_are_catalogued_but_not_eligible():
+    registry = load_registry(bundled_registry_path())
+    eligible = {model.model_id for model in eligible_models(registry)}
+
+    assert "bs-roformer-vocals-candidate" in registry
+    assert "mdx23c-vocals-candidate" in registry
+    for model_id in ("bs-roformer-vocals-candidate", "mdx23c-vocals-candidate"):
+        model = registry[model_id]
+        assert model.status == "candidate"
+        assert model.license_status == "review_required"
+        assert model.backend == "pending-adapter"
+        assert model_id not in eligible
+
+
 def test_model_audio_compatibility_enforces_sample_rate_and_channels():
     from mseparate.types import AudioMetadata
     model = load_registry(bundled_registry_path())["melband-roformer-kim-vocals"]
