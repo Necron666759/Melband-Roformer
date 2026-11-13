@@ -294,7 +294,7 @@ def test_executor_propagates_cross_stem_duplicate_warning(tmp_path):
 
 
 
-def test_execution_resamples_96k_input_for_model_and_restores_output_rate(tmp_path):
+def test_execution_resamples_input_but_keeps_model_output_rate(tmp_path):
     source = tmp_path / "input-96k.wav"
     signal = np.sin(np.linspace(0, 500, 96000, dtype=np.float32)) * 0.2
     sf.write(source, np.column_stack((signal, signal)), 96000)
@@ -324,5 +324,7 @@ def test_execution_resamples_96k_input_for_model_and_restores_output_rate(tmp_pa
     result = manager.execute(plan, {"model-44k": manifest}, {"mix": source}).results[0]
     assert result.status == "success", result.message
     assert state["model_input_rate"] == 44100
-    assert sf.info(str(result.outputs[0].path)).samplerate == 96000
-    assert result.quality_reports[0].sample_rate == 96000
+    assert sf.info(str(source)).samplerate == 96000
+    assert sf.info(str(result.outputs[0].path)).samplerate == 44100
+    assert result.quality_reports[0].sample_rate == 44100
+    assert result.quality_reports[0].status == "valid"
