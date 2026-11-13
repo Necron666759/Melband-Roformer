@@ -154,8 +154,9 @@ def model_audio_compatibility(model: ModelManifest, audio: AudioMetadata) -> tup
             allowed = ", ".join(model.input_formats)
             actual = extension or "(no extension)"
             return False, f"requires {allowed} input; got .{actual}"
-    if model.sample_rate is not None and audio.sample_rate != model.sample_rate:
-        return False, f"requires {model.sample_rate} Hz input; got {audio.sample_rate} Hz (resampling is not implicit)"
+    if (model.sample_rate is not None and audio.sample_rate != model.sample_rate
+            and model.backend != "demucs-onnx"):
+        return False, f"requires {model.sample_rate} Hz input; got {audio.sample_rate} Hz (resampling is not supported by this backend)"
     if model.channels == "stereo" and audio.channels != 2:
         return False, f"requires stereo input; got {audio.channels} channel(s)"
     if model.channels == "mono" and audio.channels != 1:
