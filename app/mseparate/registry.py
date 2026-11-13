@@ -110,7 +110,8 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         native_stems=strings("native_stems"), derived_stems=strings("derived_stems"),
         target_stems=strings("target_stems"), dummy_stems=strings("dummy_stems"),
         refinement_targets=strings("refinement_targets"), sample_rate=sample_rate,
-        channels=channels, category=data.get("category"),
+        channels=channels, input_formats=tuple(x.lower().lstrip(".") for x in strings("input_formats")),
+        category=data.get("category"),
         upstream_version=data.get("upstream_version"), notes=notes, status=status,
     )
 
@@ -147,6 +148,12 @@ def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
 
 def model_audio_compatibility(model: ModelManifest, audio: AudioMetadata) -> tuple[bool, str]:
     """Check hard input constraints before acoustic ranking or inference."""
+    if model.input_formats:
+        extension = Path(audio.path).suffix.lower().lstrip(".")
+        if extension not in model.input_formats:
+            allowed = ", ".join(model.input_formats)
+            actual = extension or "(no extension)"
+            return False, f"requires {allowed} input; got .{actual}"
     if model.sample_rate is not None and audio.sample_rate != model.sample_rate:
         return False, f"requires {model.sample_rate} Hz input; got {audio.sample_rate} Hz (resampling is not implicit)"
     if model.channels == "stereo" and audio.channels != 2:
