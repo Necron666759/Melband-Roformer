@@ -72,3 +72,6 @@ soxr>=0.3
 # CLAP-based semantic instrument/source ranking (downloaded model on first run).
 transformers>=4.45,<5
 librosa>=0.10.2,<1
+
+# MSST-format BS-RoFormer and MDX23C inference runtime (torch>=2.7.1; pinned 2.13.0 satisfies it).
+pymss==2.3.5
