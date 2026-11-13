@@ -10,6 +10,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from .assets import verify_asset
 from .execution import BackendInfo, StemArtifact
 from .types import ModelManifest
 
@@ -35,6 +36,9 @@ class MelBandCLIAdapter:
             return False, "Manifest is missing required asset roles: " + ", ".join(sorted(missing))
         if not manifest.native_stems:
             return False, "Manifest must declare native_stems before this adapter can run"
+        required_assets = {asset.role: asset for asset in manifest.assets if asset.role in {"checkpoint", "config"}}
+        if any(not required_assets[role].sha256 for role in ("checkpoint", "config")):
+            return False, "Checkpoint and config must both have pinned SHA-256 digests"
         return True, ""
 
     def load(self, manifest: ModelManifest, model_dir: Path, device: str) -> None:
@@ -50,8 +54,9 @@ class MelBandCLIAdapter:
         checkpoint = assets["checkpoint"]
         config = assets["config"]
         for role, path in (("checkpoint", checkpoint), ("config", config)):
-            if not path.is_file():
-                raise FileNotFoundError(f"Verified {role} asset is not present: {path}")
+            asset = next(item for item in manifest.assets if item.role == role)
+            if not verify_asset(path, asset):
+                raise RuntimeError(f"{role} asset is missing or failed SHA-256/size verification: {path}")
         if device not in {"auto", "cuda", "cpu"}:
             raise ValueError(f"Unsupported device: {device!r}")
         self._command = command
