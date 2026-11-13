@@ -133,3 +133,24 @@ The first bundled model is eligible for planning and explicit asset preparation,
 but the `mseparate` CLI still does not execute neural inference. Its 913 MB
 checkpoint is downloaded only when the user explicitly invokes
 `--prepare-models` without `--no-download`.
+
+
+### First explicit inference path
+
+- [x] Add an opt-in `mseparate --execute` command path using `ExecutionManager`.
+- [x] Prepare only models selected by the plan and refuse inference unless every required asset is verified.
+- [x] Invoke the existing wrapper in a child process with explicit model/config paths.
+- [x] Add per-task timeout control, output directory convention and JSON execution report.
+- [x] Add CPU-only orchestration tests for successful dispatch, offline asset blocking and incompatible flag combinations.
+- [ ] Run a real 44.1 kHz WAV through the pinned wrapper with the official checkpoint on the target Debian 13 machine.
+- [ ] Verify GPU memory release, output audio listening/measurement and runtime under the RTX 3060 Ti 8 GB profile.
+
+Example (explicit execution, downloads only after planning):
+```bash
+mseparate input.wav --execute --device cuda --output-dir ./separated --report
+```
+
+Offline execution with previously verified assets:
+```bash
+mseparate input.wav --execute --device cpu --no-download --output-dir ./separated
+```
