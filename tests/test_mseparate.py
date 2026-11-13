@@ -195,6 +195,9 @@ def test_cli_list_models_does_not_require_audio(tmp_path, monkeypatch, capsys):
     assert main(["--list-models"]) == 0
     output = capsys.readouterr().out
     assert "melband-roformer-kim-vocals [eligible]" in output
+    assert "bs-roformer-anvuew-vocals [eligible]" in output
+    assert "mdx23c-zfturbo-vocals [eligible]" in output
+    assert "Planner priority: 50" in output
     assert "Registry source:" in output
 
 
