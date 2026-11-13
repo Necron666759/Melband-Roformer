@@ -419,6 +419,56 @@ def test_cli_execute_runs_plan_only_after_assets_are_verified(tmp_path, monkeypa
     assert "Execution results" in capsys.readouterr().out
 
 
+
+def test_cli_executes_by_default_and_retries_cuda_failure_on_cpu(tmp_path, monkeypatch, capsys):
+    from mseparate.assets import AssetResult
+    from mseparate.execution import ExecutionSummary, TaskResult
+
+    source = _write_wav(tmp_path / "default.wav", sample_rate=44100)
+    calls = []
+
+    monkeypatch.setattr(
+        "mseparate.cli.ensure_model_assets",
+        lambda model, root, **kwargs: [
+            AssetResult("checkpoint", "cached", str(root / model.model_id / "model.ckpt")),
+            AssetResult("config", "cached", str(root / model.model_id / "config.yaml")),
+        ],
+    )
+    monkeypatch.setattr("mseparate.source_analysis.analyze_sources", lambda *a, **k: [])
+    monkeypatch.setattr("mseparate.cli._resolve_auto_device", lambda: ("cuda", None))
+    monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
+
+    class FakeManager:
+        def __init__(self, factories, **kwargs):
+            self.device = kwargs["device"]
+            calls.append(self.device)
+
+        def execute(self, plan, manifests, inputs):
+            if self.device == "cuda":
+                return ExecutionSummary((
+                    TaskResult("separate-01", "melband-roformer-kim-vocals",
+                               "failed", message="CUDA initialization failed"),
+                ))
+            return ExecutionSummary((
+                TaskResult("separate-01", "melband-roformer-kim-vocals", "success"),
+            ))
+
+    monkeypatch.setattr("mseparate.cli.ExecutionManager", FakeManager)
+    report = tmp_path / "default-report.json"
+    rc = main([str(source), "--report", str(report)])
+
+    assert rc == 0
+    assert calls == ["cuda", "cpu"]
+    output = capsys.readouterr()
+    assert "retrying the complete plan on CPU" in output.err
+    assert "Execution results" in output.out
+    payload = json.loads(report.read_text())
+    assert payload["inference_performed"] is True
+    assert payload["requested_device"] == "auto"
+    assert payload["effective_device"] == "cpu"
+    assert "CUDA initialization failed" in payload["device_fallback_reason"]
+
+
 def test_cli_execute_is_blocked_when_assets_are_not_verified(tmp_path, monkeypatch, capsys):
     from mseparate.assets import AssetResult
 
