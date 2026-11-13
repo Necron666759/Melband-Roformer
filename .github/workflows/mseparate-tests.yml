@@ -18,6 +18,12 @@ jobs:
           python-version: "3.12"
       - name: Install CPU-only test dependencies
         run: python -m pip install --upgrade pytest numpy soundfile tqdm
+      - name: Compile AppImage entry-point Python scripts
+        run: python -m py_compile appimage/melband-roformer-shell.py appimage/melband-roformer-hud-term.py
+      - name: Run AppImage restricted-shell regression tests
+        env:
+          PYTHONPATH: app
+        run: python -m pytest -q tests/test_appimage_shell.py
       - name: Run project tests without model downloads or GPU
         env:
           PYTHONPATH: app
