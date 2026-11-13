@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -50,7 +49,7 @@ def _manifest(tmp_path: Path, backend: str) -> ModelManifest:
     )
 
 
-def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, monkeypatch):
+def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, monkeypatch, capsys):
     state = {}
 
     class FakeSeparator:
@@ -61,6 +60,12 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
         def separate(self, mix, *, pbar, stems):
             state["mix_shape"] = mix.shape
             state["stems"] = tuple(stems)
+            # Match tqdm's chunked stderr writes, then an ordinary warning.
+            sys.stderr.write("Processing audio: 0%|          | 0/48")
+            sys.stderr.write("\\r")
+            sys.stderr.write("Processing audio: 50%|█████     | 24/48")
+            sys.stderr.write("\\r")
+            sys.stderr.write("\\nRuntime warning: fixture warning\\n")
             return {stem: np.full((mix.shape[1], mix.shape[0]), 0.125, dtype=np.float32)
                     for stem in stems}
 
@@ -77,6 +82,12 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
     adapter.load(manifest, tmp_path, "cpu")
     outputs = adapter.infer(source, tmp_path / "out", ("vocals", "instrumental"))
 
+    stderr = capsys.readouterr().err
+    assert stderr == (
+        "Processing audio: 0%|          | 0/48\\r"
+        "Processing audio: 50%|█████     | 24/48\\r"
+        "\\nRuntime warning: fixture warning\\n"
+    )
     assert state["kwargs"]["model_type"] == "bs_roformer"
     assert state["kwargs"]["device"] == "cpu"
     assert state["stems"] == ("vocals",)
@@ -145,27 +156,3 @@ def test_pymss_adapter_rejects_corrupt_or_unpinned_asset(tmp_path, monkeypatch):
     else:
         raise AssertionError("corrupt checkpoint must not reach pymss")
 
-
-
-def test_pymss_tqdm_carriage_returns_become_flushed_log_lines():
-    from mseparate.pymss_adapter import _TqdmLineStream
-
-    class FlushTrackingStream(io.StringIO):
-        def __init__(self):
-            super().__init__()
-            self.flush_count = 0
-
-        def flush(self):
-            self.flush_count += 1
-            super().flush()
-
-    target = FlushTrackingStream()
-    progress = _TqdmLineStream(target)
-    progress.write("Processing audio: 0%|          | 0/48\r")
-    progress.write("Processing audio: 50%|█████     | 24/48\r")
-    progress.flush()
-
-    output = target.getvalue()
-    assert "Processing audio: 0%|          | 0/48\n" in output
-    assert "Processing audio: 50%|█████     | 24/48\n" in output
-    assert target.flush_count == 3
