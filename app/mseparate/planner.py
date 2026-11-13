@@ -7,29 +7,46 @@ from .registry import eligible_models, model_audio_compatibility
 from .types import AnalysisReport, ExecutionPlan, ExecutionTask, ModelManifest
 
 
-def _stem_score(stem: str, features: dict) -> tuple[float, str]:
-    """Score acoustic relevance heuristically; never claim source detection."""
+def _stem_score(stem: str, features: dict, predictions: list[dict] | None = None) -> tuple[float, str]:
+    """Use semantic source rankings when available, else conservative signal heuristics."""
     name = stem.lower()
+    aliases = {
+        "vocals": ("vocals",), "voice": ("vocals",),
+        "drums": ("drums",), "percussion": ("drums",),
+        "bass": ("bass",), "guitar": ("guitar",),
+        "piano": ("piano",), "keyboard": ("piano",),
+        "synth": ("synthesizer",), "strings": ("strings",),
+        "brass": ("brass",), "woodwind": ("woodwinds",),
+        "effect": ("sound_effects",),
+        "other": ("synthesizer", "strings", "brass", "woodwinds", "sound_effects"),
+    }
+    if predictions:
+        lookup = {str(item.get("source")): float(item.get("score", 0.0)) for item in predictions}
+        matched = next((key for token, values in aliases.items() if token in name
+                        for key in values if key in lookup), None)
+        if matched is not None:
+            ordered = sorted(lookup.values())
+            rank = ordered.index(lookup[matched]) / max(1, len(ordered) - 1)
+            return max(0.0, min(1.0, rank)), (
+                f"CLAP relative similarity for {matched}: {lookup[matched]:.4f}; "
+                "not a calibrated source-presence probability"
+            )
+
     low = float(features.get("low_band_energy_ratio") or 0.0)
     mid = float(features.get("mid_band_energy_ratio") or 0.0)
     high = float(features.get("high_band_energy_ratio") or 0.0)
     transient = float(features.get("transient_activity") or 0.0)
     flatness = float(features.get("spectral_flatness") or 0.0)
     if any(token in name for token in ("drum", "percussion")):
-        score = 0.35 + 0.35 * min(transient / 0.35, 1.0) + 0.2 * high
-        reason = f"transient activity {transient:.3f} and high-band energy {high:.3f}"
+        score, reason = 0.35 + 0.35 * min(transient / 0.35, 1.0) + 0.2 * high, "transient/high-band heuristic"
     elif any(token in name for token in ("bass", "low")):
-        score = 0.35 + 0.45 * low + 0.1 * (1.0 - flatness)
-        reason = f"low-band energy {low:.3f}"
+        score, reason = 0.35 + 0.45 * low + 0.1 * (1.0 - flatness), "low-band heuristic"
     elif any(token in name for token in ("vocal", "voice")):
-        score = 0.35 + 0.3 * mid + 0.15 * (1.0 - abs(0.5 - mid) * 2)
-        reason = f"mid-band energy {mid:.3f}; this is not voice recognition"
+        score, reason = 0.35 + 0.3 * mid + 0.15 * (1.0 - abs(0.5 - mid) * 2), "mid-band heuristic"
     elif any(token in name for token in ("guitar", "other", "instrument")):
-        score = 0.35 + 0.25 * mid + 0.2 * high
-        reason = f"mid/high-band energy {mid:.3f}/{high:.3f}"
+        score, reason = 0.35 + 0.25 * mid + 0.2 * high, "mid/high-band heuristic"
     else:
-        score = 0.5
-        reason = "no stem-specific acoustic heuristic is defined"
+        score, reason = 0.5, "no stem-specific acoustic heuristic"
     return max(0.0, min(1.0, score)), reason
 
 
