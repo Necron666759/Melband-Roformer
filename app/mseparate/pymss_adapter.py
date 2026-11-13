@@ -22,7 +22,7 @@ class _TqdmLineStream:
 
     def write(self, value: str) -> int:
         normalized = value.replace("\r\n", "\n").replace("\r", "\n")
-        written = self._stream.write(normalized)
+        self._stream.write(normalized)
         if "\r" in value:
             self._stream.flush()
         return len(value)
