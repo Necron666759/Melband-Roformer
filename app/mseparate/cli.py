@@ -49,8 +49,9 @@ def _print_models(registry) -> None:
 
 def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> dict[str, Path]:
     """Download and prewarm the six-stem ONNX model, then release its session."""
-    import onnxruntime as ort
     import demucs_onnx
+    import onnxruntime as ort
+    import numpy as np
 
     preload = getattr(ort, "preload_dlls", None)
     if callable(preload):
@@ -120,7 +121,7 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
             )
             providers = ["CUDAExecutionProvider"]
         else:
-            provider = "cuda" if device == "cuda" else device
+            provider = device
             model_paths = demucs_onnx.prewarm(
                 models=["htdemucs_6s"], precision="fp16weights",
                 providers=provider, cache_dir=str(model_dir),
@@ -175,7 +176,6 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
             end = min(start + N_SAMPLES, total_samples)
             chunk = audio[:, start:end]
             if chunk.shape[1] < N_SAMPLES:
-                import numpy as np
                 chunk = np.pad(
                     chunk, ((0, 0), (0, N_SAMPLES - chunk.shape[1])),
                     mode="constant",
