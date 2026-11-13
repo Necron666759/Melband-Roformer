@@ -30,7 +30,7 @@ GPL-3.0. The MDX23C checkpoint is pinned to Sucial/MSST-WebUI revision
 `55155c4e2f99d0ca94d24fce88d6dc25711a9252`; that model repository declares
 CC-BY-NC-SA-4.0. The latter license requires attribution, prohibits commercial
 use, and applies share-alike terms to adaptations/redistributions. The MDX23C
-config is pinned to the ZFTurbo `v1.0.0` source tag. The registry also pins
+config is pinned to the ZFTurbo `v1.0.0` commit `6190c903f353715b9d2f53bb40b0ff7145a13b72`. The registry also pins
 config SHA-256 and byte size for both models.
 
 The inference library code (`pymss`) is MIT-licensed, but its code license does
