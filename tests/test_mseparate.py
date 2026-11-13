@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 import wave
@@ -112,6 +111,15 @@ def test_cli_no_input_returns_usage(capsys):
     assert "usage:" in capsys.readouterr().err
 
 
-def test_cli_rejects_conflicting_download_flags():
-    with pytest.raises(SystemExit):
-        main(["input.wav", "--no-download", "--force-download"])
+def test_cli_accepts_no_download_flag(tmp_path, monkeypatch):
+    source = _write_wav(tmp_path / "offline.wav")
+    monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
+    assert main([str(source), "--analysis-only", "--no-download"]) == 0
+
+
+def test_cli_honors_models_dir_override(tmp_path, monkeypatch):
+    source = _write_wav(tmp_path / "custom.wav")
+    monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
+    custom_models = tmp_path / "custom-models"
+    assert main([str(source), "--analysis-only", "--models-dir", str(custom_models)]) == 0
+    assert custom_models.is_dir()
