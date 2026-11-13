@@ -34,7 +34,7 @@ The names below describe responsibilities; exact filenames may be adjusted to fi
 - `mseparate.planner`: candidate scoring, dependency graph, depth/branch limits, VRAM and availability constraints.
 - `mseparate.backends.base`: backend protocol and common result types.
 - `mseparate.backends.melband`, `msst`, `pymss`: optional adapters, loaded lazily and isolated where dependency conflicts require it.
-- `mseparate.execution`: global sequential model lifecycle and plan executor.
+- `mseparate.execution`: global sequential model lifecycle and plan executor.\n- `mseparate.quality`: bounded-memory integrity, silence, clipping and alignment checks; no reference-free SDR claims.
 - `mseparate.quality`: stem integrity, leakage/artifact heuristics, refinement acceptance.
 - `mseparate.reporting`: human-readable terminal events and machine-readable report.
 - `mseparate.storage`: job workspace, intermediate stems and final output persistence.
@@ -49,13 +49,13 @@ Each model entry should describe at least:
 - backend adapter and backend-specific configuration;
 - checkpoint and config asset URLs, expected SHA-256 and expected byte size when known;
 - license identifier, license URL, redistribution/use notes and verification status;
-- native output stems, meaningful target stems, dummy/placeholder stems;
+- native output stems, derived/residual outputs, meaningful target stems, dummy/placeholder stems;
 - supported refinement targets and input/output constraints;
 - sample rate, channel policy, segment/overlap requirements and inference parameters;
 - measured VRAM and runtime observations, with hardware/software provenance;
 - availability and compatibility status, including reasons for rejection.
 
-Unknown values remain unknown. A model is not eligible for automatic use until its source, license, required files, and output semantics have been reviewed. Dummy outputs must never be advertised as independent source separation.
+Unknown values remain unknown. Derived/residual stems (for example mixture-minus-vocals instrumental output) must be explicitly distinguished from native model outputs. A model is not eligible for automatic use until its source, license, required files, and output semantics have been reviewed. Dummy outputs must never be advertised as independent source separation.
 
 ## 5. Asset store
 
