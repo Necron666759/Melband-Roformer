@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 import wave
 from pathlib import Path
 
@@ -65,7 +63,10 @@ def test_registry_only_exposes_verified_enabled_entries():
         "model_id":"candidate-a","name":"Candidate","architecture":"test",
         "backend":"test","source_url":"https://example.invalid",
         "license":"MIT","license_url":"https://example.invalid/license",
-        "license_status":"verified","status":"available","assets":[],
+        "license_status":"verified","status":"available","assets":[{
+            "role":"checkpoint","url":"https://example.invalid/a","relative_path":"a.ckpt",
+            "sha256":"a" * 64
+        }],
     }
     manifest = parse_manifest(raw)
     assert eligible_models({manifest.model_id: manifest}) == [manifest]
