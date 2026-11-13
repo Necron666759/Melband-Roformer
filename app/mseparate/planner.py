@@ -99,18 +99,14 @@ def validate_plan(plan: ExecutionPlan) -> None:
     if len(ids) != len(set(ids)):
         raise ValueError("Execution plan contains duplicate task IDs")
     known: set[str] = set()
-    model_ids: set[str] = set()
     for task in plan.tasks:
         if task.depth < 0:
             raise ValueError(f"Task {task.task_id} has negative depth")
         missing = set(task.depends_on) - known
         if missing:
             raise ValueError(f"Task {task.task_id} has dependencies not scheduled earlier: {sorted(missing)}")
-        if task.model_id in model_ids:
-            raise ValueError("A model may appear only once in a sequential plan")
         if not 0.0 <= task.confidence <= 1.0 or not 0.0 <= task.score <= 1.0:
             raise ValueError(f"Task {task.task_id} has invalid score or confidence")
-        model_ids.add(task.model_id)
         known.add(task.task_id)
     if plan.tasks and max(task.depth for task in plan.tasks) > plan.max_depth:
         raise ValueError("Execution plan exceeds its declared max_depth")
