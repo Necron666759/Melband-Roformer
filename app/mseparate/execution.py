@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping, Protocol
 
+from .quality import StemQualityReport, inspect_stem
 from .types import ExecutionPlan, ExecutionTask, ModelManifest
 
 
@@ -54,6 +55,7 @@ class TaskResult:
     model_id: str
     status: str
     outputs: tuple[StemArtifact, ...] = ()
+    quality_reports: tuple[StemQualityReport, ...] = ()
     message: str | None = None
 
 
@@ -168,6 +170,7 @@ class ExecutionManager:
 
                 backend = factory()
                 outputs: tuple[StemArtifact, ...] = ()
+                quality_reports: tuple[StemQualityReport, ...] = ()
                 error: str | None = None
                 load_attempted = False
                 try:
@@ -203,6 +206,23 @@ class ExecutionManager:
                     missing = set(task.target_stems) - seen
                     if missing:
                         raise RuntimeError(f"Backend did not produce requested stems: {sorted(missing)}")
+                    # Validate every decoded artifact against the exact input
+                    # supplied to this task. Warnings (e.g. silence/clipping)
+                    # remain visible; structural invalidity fails this task.
+                    reports = tuple(
+                        inspect_stem(artifact.path, reference=input_path)
+                        for artifact in validated
+                    )
+                    quality_reports = reports
+                    invalid = [
+                        report for report in reports if report.status == "invalid"
+                    ]
+                    if invalid:
+                        details = "; ".join(
+                            f"{Path(report.path).name}: {', '.join(report.issues)}"
+                            for report in invalid
+                        )
+                        raise RuntimeError("Output quality validation failed: " + details)
                     outputs = tuple(validated)
                 except Exception as exc:
                     error = f"{type(exc).__name__}: {exc}"
@@ -227,6 +247,7 @@ class ExecutionManager:
                     task.task_id, task.model_id,
                     "failed" if error else "success",
                     outputs=() if error else outputs,
+                    quality_reports=quality_reports,
                     message=error,
                 )
                 results.append(result)
