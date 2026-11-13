@@ -158,13 +158,9 @@ def test_incompatible_audio_does_not_schedule_model():
     )
     plan = build_plan(analysis=audio, registry=registry)
     assert len(plan.tasks) == 1
-    assert len(plan.tasks) == 2
-    by_model = {task.model_id: task for task in plan.tasks}
-    assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
-        "drums", "bass", "other", "guitar", "piano",
-    }
-    assert set(by_model["melband-roformer-kim-vocals"].target_stems) == {
-        "vocals", "instrumental",
+    assert plan.tasks[0].model_id == "demucs-onnx-htdemucs-6s"
+    assert set(plan.tasks[0].target_stems) == {
+        "drums", "bass", "other", "vocals", "guitar", "piano",
     }
     assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
@@ -369,10 +365,14 @@ def test_cli_execute_runs_plan_only_after_assets_are_verified(tmp_path, monkeypa
     assert manager_kwargs["device"] == "cpu"
     assert manager_kwargs["output_root"] == output / "mseparate-stems"
     plan, manifests, inputs = state["execute_args"]
-    assert plan.tasks[0].model_id == "demucs-onnx-htdemucs-6s"
-    assert set(plan.tasks[0].target_stems) == {"drums", "bass", "other", "vocals", "guitar", "piano"}
-    assert plan.tasks[1].model_id == "melband-roformer-kim-vocals"
-    assert plan.tasks[1].target_stems == ("instrumental",)
+    assert len(plan.tasks) == 2
+    by_model = {task.model_id: task for task in plan.tasks}
+    assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
+        "drums", "bass", "other", "guitar", "piano",
+    }
+    assert set(by_model["melband-roformer-kim-vocals"].target_stems) == {
+        "instrumental", "vocals",
+    }
     assert "melband-roformer-kim-vocals" in manifests
     assert "demucs-onnx-htdemucs-6s" in manifests
     assert inputs["mix"] == source.resolve()
