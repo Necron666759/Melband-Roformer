@@ -18,6 +18,10 @@ jobs:
           python-version: "3.12"
       - name: Install CPU-only test dependencies
         run: python -m pip install --upgrade pytest numpy soundfile tqdm
+      - name: Build wrapper wheel and validate packaging metadata
+        run: |
+          python -m pip install --upgrade "setuptools>=77.0.0" wheel build
+          python -m build --wheel --no-isolation app
       - name: Compile AppImage entry-point Python scripts
         run: python -m py_compile appimage/melband-roformer-shell.py appimage/melband-roformer-hud-term.py
       - name: Run AppImage restricted-shell regression tests
