@@ -210,6 +210,14 @@ class ExecutionManager:
                             produced = backend.infer(model_input, task_output_dir, task.target_stems)
                     else:
                         produced = backend.infer(input_path, task_output_dir, task.target_stems)
+                    if resampled_input:
+                        for artifact in produced:
+                            output_rate = sf.info(str(artifact.path)).samplerate
+                            if output_rate != target_rate:
+                                raise RuntimeError(
+                                    f"Model output {artifact.path.name} is {output_rate} Hz; "
+                                    f"expected model rate {target_rate} Hz"
+                                )
                     seen: set[str] = set()
                     validated: list[StemArtifact] = []
                     for artifact in produced:
