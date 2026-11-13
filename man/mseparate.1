@@ -7,9 +7,9 @@ mseparate \- analyze audio and execute multi-model source-separation plans
 .RI [ options ]
 .SH DESCRIPTION
 .B mseparate
-analyzes audio, builds a plan from the enabled model registry and can execute compatible source-separation tasks when
+analyzes audio, builds a plan from the enabled model registry and executes compatible source-separation tasks by default. The optional
 .B --execute
-is explicitly requested. The current registry includes HT-Demucs six-stem ONNX, MelBand RoFormer, BS-RoFormer and MDX23C vocal separation. The input file is not modified.
+flag remains available as a compatibility alias. The current registry includes HT-Demucs six-stem ONNX, MelBand RoFormer, BS-RoFormer and MDX23C vocal separation. The input file is not modified.
 .PP
 The existing
 .B melband-roformer
@@ -34,10 +34,26 @@ Write a JSON report. If PATH is omitted, use mseparate-report.json in the output
 Override the local model storage directory.
 .TP
 .B --device auto|cuda|cpu
-Select the inference device. The explicit cuda mode requires CUDAExecutionProvider and does not permit CPU fallback. The auto mode may fall back to CPU.
+Select the inference device. The auto mode probes PyTorch CUDA and ONNX Runtime CUDA before execution; if either is unavailable, it warns and uses CPU. If a CUDA inference task fails, the complete plan is retried on CPU after adapter cleanup. The explicit cuda mode is strict and never falls back. The cpu mode forces CPU execution.
 .TP
 .B --execute
-Explicitly execute the planned separation tasks. This can download model assets and use the selected compute device.
+Explicitly request execution; normally unnecessary because execution is the default. This can download only the model assets selected by the plan and use the selected compute device.
+.PP
+With an input file and no mode-selection option, the normal command is:
+.PP
+.nf
+mseparate input.wav
+.fi
+.PP
+Use
+.B --analysis-only
+or
+.B --plan-only
+to suppress inference. Use
+.B --prepare-models
+without
+.B --execute
+to prepare eligible model assets without separating audio.
 .TP
 .B --prepare-models
 Download and prewarm eligible model assets. For the ONNX model, this uses the Hugging Face Hub cache.
@@ -91,6 +107,6 @@ The BS-RoFormer model weights declare GPL-3.0. The MDX23C model repository decla
 .PP
 Passing
 .B --device cuda
-requires a working CUDA Execution Provider. No actual GPU inference or quality result is implied by CPU-only tests.
+requires a working CUDA Execution Provider and does not fall back. Automatic CPU fallback is reported in the console and JSON report. No actual GPU inference or quality result is implied by CPU-only tests.
 .SH SEE ALSO
 .BR melband-roformer (1)
