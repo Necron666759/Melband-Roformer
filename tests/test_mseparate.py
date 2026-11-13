@@ -37,6 +37,10 @@ def test_audio_analysis_reports_basic_measurements(tmp_path):
     assert result.audio.peak is not None and result.audio.peak > 0
     assert result.audio.rms is not None and result.audio.rms > 0
     assert result.predictions == []
+    assert 0.0 <= result.measurements["low_band_energy_ratio"] <= 1.0
+    assert 0.0 <= result.measurements["spectral_flatness"] <= 1.0
+    assert result.measurements["spectral_centroid_hz"] > 0
+    assert result.measurements["transient_activity"] >= 0
 
 
 def test_audio_analysis_rejects_missing_file(tmp_path):
