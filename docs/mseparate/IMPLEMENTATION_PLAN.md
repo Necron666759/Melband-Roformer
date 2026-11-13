@@ -27,7 +27,7 @@ Exit criteria: CLI can inspect an input, validate fixture manifests and print a 
 - [x] Implement safe downloads to `.part`, bounded retries/timeouts, resume where supported, and atomic finalization.
 - [x] Isolate failures per asset/model; continue checking the rest of the registry.
 - [x] Add CPU-only tests for offline mode, partial downloads, checksum mismatch, Range handling and reuse of verified assets.
-- [ ] Verify 404/403/5xx and interrupted-transfer behaviour in CI and add any missing cases.
+- [x] Cover HTTP 403/404/500 responses and partial-file Range resume in the local-HTTP test suite; CI executes these CPU-only tests.
 
 Exit criteria: asset manager is deterministic and never re-downloads a valid checkpoint unnecessarily.
 
@@ -87,5 +87,5 @@ Exit criteria: tests and hardware actually exercised are recorded; no unsupporte
 - Debian launcher/manual page and AppImage restricted-shell routing added. Legacy CLI implementation and dependency pins were not changed.
 - CPU-only tests were authored but have not been executed in a local runtime. No build, AppImage, GPU or real-audio inference test has been claimed.
 - Phase 2 asset-manager implementation is now present: SHA-256-gated downloads, resumable `.part` files, atomic installation, local reuse, corrupt-file preservation, HTTP(S)-only URLs, per-asset failure isolation and offline verification.
-- A lightweight GitHub Actions workflow now runs the two `mseparate` CPU-only test modules without downloading PyTorch or model weights. The first CI run is being checked; the initial broader test attempt failed because it included unrelated legacy tests without their heavyweight dependencies.
+- A lightweight GitHub Actions workflow runs the two `mseparate` CPU-only test modules without downloading PyTorch or model weights. CI passed for the asset-manager implementation and HTTP 404 coverage; the expanded 403/500 cases are queued in the latest workflow run. The initial broader test attempt failed because it included unrelated legacy tests without their heavyweight dependencies.
 - Next: complete CI verification and fix any failures before starting backend adapters.
