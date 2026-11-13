@@ -66,10 +66,11 @@ inference, run the same command with `--prepare-models` and without
 `CUDAExecutionProvider`, execution fails with a diagnostic. In strict mode
 mseparate passes the explicit `CUDAExecutionProvider` name rather than the
 upstream `cuda` alias, because that alias appends `CPUExecutionProvider` as a
-fallback. If CUDA cannot initialize or a required operator is unsupported,
-the task must fail instead of silently executing those nodes on CPU.
-`--device auto` may use CPU if CUDA is unavailable and may retain CPU as an
-ONNX Runtime fallback provider.
+fallback. Before inference, mseparate prewarms the graph, verifies that the
+session registered only `CUDAExecutionProvider`, and disables ONNX Runtime's
+retry fallback. If CUDA session creation or inference fails, the task fails
+instead of retrying on CPU. `--device auto` may use CPU if CUDA is unavailable
+and may retain CPU as an ONNX Runtime fallback provider.
 
 The six-stem model uses the `fp16weights` download variant to reduce cache
 size. This only reduces download/storage size; the upstream package states
