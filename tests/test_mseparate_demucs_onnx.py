@@ -62,7 +62,7 @@ def test_adapter_forces_cuda_and_writes_all_requested_outputs(tmp_path, monkeypa
 
     assert state["preload"] == {"directory": ""}
     assert state["call"]["model"] == "htdemucs_6s"
-    assert state["call"]["providers"] == "cuda"
+    assert state["call"]["providers"] == "CUDAExecutionProvider"
     assert state["call"]["precision"] == "fp16weights"
     assert [item.stem for item in artifacts] == ["drums", "guitar", "piano"]
     adapter.unload()
@@ -122,5 +122,4 @@ def test_planner_schedules_all_six_demucs_stems():
     assert len(plan.tasks) == 1
     assert plan.tasks[0].model_id == model.model_id
     assert set(plan.tasks[0].target_stems) == set(DemucsOnnxAdapter.STEMS)
-    assert not any("demucs-onnx-htdemucs-6s: requires 44100 Hz" in note for note in plan.notes)
     assert not any("demucs-onnx-htdemucs-6s: requires 44100 Hz" in note for note in plan.notes)
