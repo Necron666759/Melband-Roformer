@@ -255,15 +255,15 @@ def test_chunk_progress_stream_uses_native_tqdm_bar_and_redraws_chunk_counter():
 
     target = io.StringIO()
     progress = _ChunkProgressStream(target)
-    progress.write("  input:  12,151,885 samples\\n")
-    progress.write("    chunk 1/48: 0.8s elapsed\\n")
-    progress.write("    chunk 24/48: 12.4s elapsed\\n")
-    progress.write("    chunk 48/48: 25.0s elapsed\\n")
+    progress.write("  input:  12,151,885 samples\n")
+    progress.write("    chunk 1/48: 0.8s elapsed\n")
+    progress.write("    chunk 24/48: 12.4s elapsed\n")
+    progress.write("    chunk 48/48: 25.0s elapsed\n")
     progress.finish()
 
     raw = target.getvalue()
-    output = re.sub(r"\\x1b\\[[0-9;]*[A-Za-z]", "", raw)
-    assert "  input:  12,151,885 samples\\n" in output
+    output = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", raw)
+    assert "  input:  12,151,885 samples\n" in output
     assert "Processing audio:" in output
     assert "2%|" in output
     assert "50%|" in output
@@ -273,8 +273,8 @@ def test_chunk_progress_stream_uses_native_tqdm_bar_and_redraws_chunk_counter():
     assert "Обработано фрагментов: 48 / 48" in output
     assert "first chunk + warm-up" not in output
     assert "last chunk:" not in output
-    assert "\\x1b[1A" in raw  # later updates redraw the two-line display in place
-    assert raw.endswith("\\n")
+    assert "\x1b[1A" in raw  # later updates redraw the two-line display in place
+    assert raw.endswith("\n")
 
 
 def test_chunk_progress_stream_flushes_after_each_progress_event():
@@ -291,7 +291,7 @@ def test_chunk_progress_stream_flushes_after_each_progress_event():
 
     target = FlushTrackingStream()
     progress = _ChunkProgressStream(target)
-    progress.write("    chunk 3/10: 2.1s elapsed\\n")
+    progress.write("    chunk 3/10: 2.1s elapsed\n")
 
     assert target.flush_count == 1
     assert "30%|" in target.getvalue()
