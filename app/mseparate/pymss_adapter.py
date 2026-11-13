@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import gc
+import sys
+from contextlib import redirect_stderr
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +12,26 @@ import soundfile as sf
 from .assets import verify_asset
 from .execution import BackendInfo, StemArtifact
 from .types import ModelManifest
+
+
+class _TqdmLineStream:
+    """Make tqdm's carriage-return updates visible in captured GUI logs."""
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, value: str) -> int:
+        normalized = value.replace("\\r\\n", "\\n").replace("\\r", "\\n")
+        written = self._stream.write(normalized)
+        if "\\r" in value:
+            self._stream.flush()
+        return len(value)
+
+    def flush(self) -> None:
+        self._stream.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
 
 
 class PymssAdapter:
@@ -104,9 +126,15 @@ class PymssAdapter:
         # pair for the selected model's vocal estimate.
         if "instrumental" in target_stems and "vocals" not in native_targets:
             native_targets.append("vocals")
-        separated = self._separator.separate(
-            mixture.T, pbar=True, stems=native_targets
-        )
+        # pymss uses tqdm's carriage-return updates on stderr. A captured
+        # GUI log treats those updates as one line and can leave the initial
+        # 0% snapshot on screen. Convert each update to a flushed log line.
+        progress_stream = _TqdmLineStream(sys.stderr)
+        with redirect_stderr(progress_stream):
+            separated = self._separator.separate(
+                mixture.T, pbar=True, stems=native_targets
+            )
+            progress_stream.flush()
         output_dir.mkdir(parents=True, exist_ok=True)
         artifacts: list[StemArtifact] = []
         for stem in target_stems:
