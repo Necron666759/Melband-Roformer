@@ -39,7 +39,7 @@
         "role": "config",
         "url": "https://raw.githubusercontent.com/openmirlab/melband-roformer-infer/v0.1.5/src/mel_band_roformer/configs/config_vocals_mel_band_roformer.yaml",
         "relative_path": "config_vocals_mel_band_roformer.yaml",
-        "sha256": "d0d3fabd87abdbe2f83ed290462ec8f7d821dfcb",
+        "sha256": "5e380dfa5d5757ac4c2b7f6ef607b93d5058ecff805e7b05ed730a47b90d103c",
         "size_bytes": 728,
         "required": true
       }
