@@ -1,7 +1,8 @@
 # GPU multi-stem separation with mseparate
 
 The AppImage includes a six-stem HT-Demucs ONNX backend and a CLAP-based
-semantic source-analysis stage. During --execute, mseparate analyzes the mix
+semantic source-analysis stage. CLAP is loaded only for --execute; model asset
+preparation does not require it. During --execute, mseparate analyzes the mix
 in overlapping 10-second windows and ranks broad source families: voice,
 drums, bass, guitar, piano, synthesizer, strings, brass, woodwinds and
 electronic sound effects.
