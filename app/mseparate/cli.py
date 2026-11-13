@@ -60,11 +60,14 @@ def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> 
             "CUDAExecutionProvider is unavailable; ONNX Runtime providers: "
             + ", ".join(sorted(available))
         )
-    provider = (
-        "cuda" if device == "cuda" or
-        (device == "auto" and "CUDAExecutionProvider" in available)
-        else "cpu"
-    )
+    if device == "cuda":
+        # Avoid the upstream "cuda" alias: it includes CPUExecutionProvider
+        # as a fallback, whereas explicit CUDA mode must not run on CPU.
+        provider = "CUDAExecutionProvider"
+    elif device == "auto" and "CUDAExecutionProvider" in available:
+        provider = "cuda"
+    else:
+        provider = "cpu"
     model_dir.mkdir(parents=True, exist_ok=True)
     old_offline = os.environ.get("HF_HUB_OFFLINE")
     if no_download:
