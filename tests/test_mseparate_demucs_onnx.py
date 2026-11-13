@@ -1,6 +1,7 @@
 """CPU-only contract tests for the optional six-stem ONNX backend."""
 from __future__ import annotations
 
+import os
 import sys
 import types
 from pathlib import Path
@@ -123,3 +124,54 @@ def test_planner_schedules_all_six_demucs_stems():
     assert plan.tasks[0].model_id == model.model_id
     assert set(plan.tasks[0].target_stems) == set(DemucsOnnxAdapter.STEMS)
     assert not any("demucs-onnx-htdemucs-6s: requires 44100 Hz" in note for note in plan.notes)
+
+ 
+def _run_real_demucs_onnx_integration(tmp_path, device):
+    import numpy as np
+    import soundfile as sf
+
+    sample_rate = 44100
+    duration = 10
+    samples = np.arange(sample_rate * duration, dtype=np.float32) / sample_rate
+    audio = np.stack((
+        0.15 * np.sin(2 * np.pi * 220 * samples),
+        0.12 * np.sin(2 * np.pi * 330 * samples),
+    ), axis=1)
+    source = tmp_path / "integration-input.wav"
+    sf.write(source, audio, sample_rate, subtype="PCM_16")
+
+    adapter = DemucsOnnxAdapter(precision="fp16weights")
+    adapter.load(_manifest(), tmp_path / "model-cache", device)
+    try:
+        artifacts = adapter.infer(
+            source, tmp_path / "stems", DemucsOnnxAdapter.STEMS,
+        )
+        assert {item.stem for item in artifacts} == set(DemucsOnnxAdapter.STEMS)
+        for artifact in artifacts:
+            info = sf.info(artifact.path)
+            assert info.samplerate == sample_rate
+            assert info.channels == 2
+            assert info.frames == len(samples)
+            assert info.frames > 0
+    finally:
+        adapter.unload()
+
+
+@pytest.mark.skipif(
+    os.environ.get("MSEPARATE_RUN_DEMUCS_ONNX_INTEGRATION") != "1",
+    reason="set MSEPARATE_RUN_DEMUCS_ONNX_INTEGRATION=1 to download and run the real ONNX model",
+)
+def test_RUN_MODEL_demucs_onnx_cpu_integration(tmp_path):
+    _run_real_demucs_onnx_integration(tmp_path, "cpu")
+
+
+@pytest.mark.skipif(
+    os.environ.get("MSEPARATE_RUN_DEMUCS_ONNX_GPU") != "1",
+    reason="set MSEPARATE_RUN_DEMUCS_ONNX_GPU=1 on a CUDA host to run real GPU inference",
+)
+def test_RUN_GPU_demucs_onnx_cuda_integration(tmp_path):
+    import onnxruntime as ort
+
+    if "CUDAExecutionProvider" not in ort.get_available_providers():
+        pytest.skip("ONNX Runtime CUDAExecutionProvider is not available")
+    _run_real_demucs_onnx_integration(tmp_path, "cuda")
