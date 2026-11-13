@@ -91,31 +91,36 @@ def test_adapter_forces_cuda_and_writes_all_requested_outputs(tmp_path, monkeypa
     assert state["cleared"]
 
 
-def test_strict_cuda_rejects_a_session_with_cpu_provider():
+def test_strict_cuda_accepts_cpu_provider_after_cuda_and_disables_fallback():
     from mseparate.demucs_onnx import _prewarm_strict_cuda
+
+    state = {"fallback_disabled": False}
 
     class Session:
         def get_providers(self):
             return ["CUDAExecutionProvider", "CPUExecutionProvider"]
 
         def disable_fallback(self):
-            raise AssertionError("fallback must not be disabled on a mixed-provider session")
+            state["fallback_disabled"] = True
 
     class Pool:
         def get(self, model_path, providers):
+            assert providers == ["CUDAExecutionProvider"]
             return Session()
 
     class Runtime:
         @staticmethod
         def prewarm(**kwargs):
+            assert kwargs["providers"] == "CUDAExecutionProvider"
             return {"htdemucs_6s": Path("htdemucs_6s.onnx")}
 
         @staticmethod
         def session_pool():
             return Pool()
 
-    with pytest.raises(RuntimeError, match="did not register CUDAExecutionProvider exclusively"):
-        _prewarm_strict_cuda(Runtime, Path("cache"), "fp16weights")
+    paths = _prewarm_strict_cuda(Runtime, Path("cache"), "fp16weights")
+    assert paths["htdemucs_6s"] == Path("htdemucs_6s.onnx")
+    assert state["fallback_disabled"]
 
 
 def test_cuda_mode_fails_instead_of_silently_using_cpu(tmp_path, monkeypatch):
