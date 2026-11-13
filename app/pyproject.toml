@@ -42,6 +42,12 @@ dependencies = [
 # the CUDA-enabled runtime bundled by this application.
 demucs-onnx = ["demucs-onnx==0.3.4"]
 
+[project.optional-dependencies]
+# Install demucs-onnx without dependencies when using onnxruntime-gpu; its
+# upstream generic dependency selects CPU onnxruntime, which conflicts with
+# the CUDA-enabled runtime bundled by this application.
+demucs-onnx = ["demucs-onnx==0.3.4"]
+
 [project.scripts]
 melband-roformer = "melband_roformer_wrapper.cli:main"
 melband-roformer-gui = "melband_roformer_wrapper.gui:main"
