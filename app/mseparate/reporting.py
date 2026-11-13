@@ -20,6 +20,10 @@ def print_analysis(report: AnalysisReport) -> None:
     for key, value in report.measurements.items():
         if value is not None:
             print(f"  {key}: {value:.8g}")
+    if report.predictions:
+        print("  Semantic source ranking (CLAP relative scores; not probabilities):")
+        for item in report.predictions[:10]:
+            print(f"    {item.get('source')}: {float(item.get('score', 0.0)):.4f}")
     for note in report.notes:
         print(f"  Note: {note}")
 
