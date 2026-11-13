@@ -1,6 +1,6 @@
 # mseparate architecture
 
-Status: foundation slice implemented on feature/mseparate-foundation. Neural inference, source prediction and asset downloads are not enabled yet.
+Status: active implementation on feature/mseparate-6stem-gpu. The CLI now includes analysis, CLAP-assisted routing, verified asset downloads, sequential inference adapters for MelBand RoFormer, HT-Demucs ONNX, BS-RoFormer and MDX23C, plus structural output checks. Reference-free perceptual quality evaluation and automatic refinement selection remain future work.
 
 ## 1. Compatibility boundary
 
@@ -33,7 +33,7 @@ The names below describe responsibilities; exact filenames may be adjusted to fi
 - `mseparate.assets`: download, resume, SHA-256 verification, atomic installation, local cache.
 - `mseparate.planner`: candidate scoring, dependency graph, depth/branch limits, VRAM and availability constraints.
 - `mseparate.backends.base`: backend protocol and common result types.
-- `mseparate.backends.melband`, `msst`, `pymss`: optional adapters, loaded lazily and isolated where dependency conflicts require it.
+- `mseparate.melband`, `mseparate.demucs_onnx`, `mseparate.bs_roformer`, `mseparate.mdx23c`: backend adapters. The BS-RoFormer and MDX23C adapters use the pinned `pymss==2.3.5` runtime; all model inference remains sequential.
 - `mseparate.execution`: global sequential model lifecycle and plan executor.\n- `mseparate.quality`: bounded-memory integrity, silence, clipping and alignment checks; no reference-free SDR claims.
 - `mseparate.quality`: stem integrity, leakage/artifact heuristics, refinement acceptance.
 - `mseparate.reporting`: human-readable terminal events and machine-readable report.
@@ -90,7 +90,7 @@ A failed task does not erase its input. If no compatible alternative exists, pre
 
 A backend adapter provides capability discovery, compatibility checks, asset requirements, model load, inference, result normalization, unload/cleanup, and diagnostics. The orchestration layer must not depend on MSST/PyMSS/MelBand-specific classes.
 
-Where backend dependency constraints conflict with the main PyTorch environment, use a separately managed environment or subprocess protocol. Do not upgrade/downgrade the existing application environment merely to accommodate a candidate backend.
+The current BS-RoFormer and MDX23C adapters use `pymss==2.3.5`, whose `torch>=2.7.1` requirement is satisfied by the application's pinned `torch==2.13.0`; the existing Torch and torchaudio pins remain unchanged. Where a future backend dependency conflicts with the main environment, use a separately managed environment or subprocess protocol rather than changing those pins.
 
 ## 8. Analysis and quality semantics
 
