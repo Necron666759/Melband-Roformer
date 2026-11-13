@@ -9,7 +9,6 @@ from types import SimpleNamespace
 import numpy as np
 import soundfile as sf
 
-from mseparate.assets import AssetResult
 from mseparate.bs_roformer import BSRoformerAdapter
 from mseparate.mdx23c import MDX23CAdapter
 from mseparate.types import ModelAsset, ModelManifest
