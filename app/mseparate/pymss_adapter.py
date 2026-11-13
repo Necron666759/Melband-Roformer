@@ -18,6 +18,7 @@ class _InitialTqdmProgressFilter:
     def __init__(self, stream) -> None:
         self._stream = stream
         self._pending = ""
+        self._pending_cr = False
         self._suppressed = False
 
     def write(self, value: str) -> int:
@@ -36,8 +37,13 @@ class _InitialTqdmProgressFilter:
                 if is_initial_progress:
                     self._suppressed = True
                 else:
+                    if self._pending_cr:
+                        self._stream.write("\\r")
                     self._stream.write(line + char)
+                self._pending_cr = False
             else:
+                if not self._pending and not self._pending_cr:
+                    self._pending_cr = False
                 self._pending += char
         return len(value)
 
