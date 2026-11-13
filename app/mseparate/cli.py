@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
             paths["models"].mkdir(parents=True, exist_ok=True)
         registry_path = paths["registry"] / "models.json"
         registry = load_registry(registry_path)
-        plan = build_plan(max_depth=args.max_depth)
+        plan = build_plan(max_depth=args.max_depth, analysis=report, registry=registry)
         validate_plan(plan)
         asset_results = []
         if args.prepare_models:
