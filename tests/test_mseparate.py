@@ -230,6 +230,20 @@ def test_cli_prepare_models_offline_reports_missing_asset(tmp_path, monkeypatch,
     assert payload["inference_performed"] is False
 
 
+def test_other_stem_uses_strongest_matching_clap_source():
+    from mseparate.planner import _stem_score
+
+    score, reason = _stem_score("other", {}, [
+        {"source": "synthesizer", "score": 0.12},
+        {"source": "strings", "score": 0.31},
+        {"source": "brass", "score": 0.24},
+        {"source": "woodwinds", "score": 0.18},
+        {"source": "sound_effects", "score": 0.20},
+    ])
+    assert score == 1.0
+    assert "strings" in reason
+
+
 def test_feature_guided_planner_selects_models_from_declared_stems():
     from mseparate.types import AnalysisReport, AudioMetadata
     from mseparate.planner import build_plan
