@@ -34,8 +34,13 @@ class MelBandCLIAdapter:
         missing = {"checkpoint", "config"} - roles
         if missing:
             return False, "Manifest is missing required asset roles: " + ", ".join(sorted(missing))
-        if not manifest.native_stems:
-            return False, "Manifest must declare native_stems before this adapter can run"
+        # The wrapped MelBand command emits a model-separated vocal stem and
+        # a residual instrumental stem. The latter is derived from mixture
+        # minus vocals; it must not be mislabeled as a native model output.
+        if "vocals" not in manifest.native_stems:
+            return False, "MelBand manifest must declare vocals as a native stem"
+        if "instrumental" not in manifest.derived_stems:
+            return False, "MelBand manifest must declare instrumental as a derived stem"
         required_assets = {asset.role: asset for asset in manifest.assets if asset.role in {"checkpoint", "config"}}
         if any(not required_assets[role].sha256 for role in ("checkpoint", "config")):
             return False, "Checkpoint and config must both have pinned SHA-256 digests"
