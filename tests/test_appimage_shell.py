@@ -24,8 +24,9 @@ def test_mseparate_help_docstring_is_valid_and_visible():
     doc = shell_module.MelbandRoformerShell.do_mseparate.__doc__
     assert doc is not None
     assert "mseparate <file>" in doc
-    assert "--analysis-only" in doc
-    assert "--plan-only" in doc
+    assert "--execute" in doc
+    assert "--device cuda" in doc
+    assert "--prepare-models" in doc
     assert "--report [PATH]" in doc
 
 
