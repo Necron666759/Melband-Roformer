@@ -13,6 +13,7 @@ from typing import Any
 from .types import ModelAsset, ModelManifest
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_MODEL_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _LICENSE_STATES = {"verified", "review_required", "rejected"}
 _MODEL_STATES = {"candidate", "available", "incompatible", "unavailable", "disabled"}
 
@@ -72,8 +73,12 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
     if sample_rate is not None and (not isinstance(sample_rate, int) or sample_rate <= 0):
         raise RegistryError("sample_rate must be a positive integer or null")
 
+    model_id = _required_string(data, "model_id")
+    if not _MODEL_ID.fullmatch(model_id) or model_id in {".", ".."}:
+        raise RegistryError(f"Invalid model_id: {model_id!r}")
+
     return ModelManifest(
-        model_id=_required_string(data, "model_id"),
+        model_id=model_id,
         name=_required_string(data, "name"),
         architecture=_required_string(data, "architecture"),
         backend=_required_string(data, "backend"),
@@ -119,5 +124,8 @@ def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
     """
     return [
         model for model in registry.values()
-        if model.status == "available" and model.license_status == "verified"
+        if model.status == "available"
+        and model.license_status == "verified"
+        and all((not asset.required) or bool(asset.sha256) for asset in model.assets)
+        and bool(model.assets)
     ]
