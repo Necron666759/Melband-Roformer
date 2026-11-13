@@ -12,7 +12,7 @@ import re
 import shutil
 import sys
 import time
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from tqdm import tqdm as _tqdm
@@ -22,8 +22,15 @@ from .types import ModelManifest
 
 
 class _ChunkProgressStream:
-    """Render Demucs chunk updates on one tqdm-style progress line."""
+    """Render Demucs chunk events on one tqdm-style line.
+
+    demucs-onnx writes its native tqdm bar to stderr, while verbose chunk
+    events are written to stdout. Both streams are routed here so neither
+    can bypass the single-line renderer and leak a second progress display.
+    """
+
     _CHUNK_LINE = re.compile(r"^\s*chunk\s+(\d+)/(\d+):\s*(.*?)\s*$")
+    _NATIVE_PROGRESS_LINE = re.compile(r"^\s*Processing audio:\s*\d+%[|].*")
 
     def __init__(self, stream):
         self._stream = stream
@@ -49,6 +56,24 @@ class _ChunkProgressStream:
             bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
         )
 
+    def _handle_line(self, line: str) -> None:
+        if not line:
+            return
+        # Defensive filter for the upstream tqdm bar. It normally should be
+        # disabled with progress=False, but it is emitted on stderr and must
+        # never become a second, scrolling progress display in the HUD.
+        if self._NATIVE_PROGRESS_LINE.match(line):
+            return
+        match = self._CHUNK_LINE.match(line)
+        if match:
+            completed, total = int(match.group(1)), int(match.group(2))
+            self._write_chunk_progress(completed, total)
+            return
+        if self._drawn:
+            self.finish()
+        self._stream.write(line + "\n")
+        self._stream.flush()
+
     def _write_chunk_progress(self, completed: int, total: int) -> None:
         if total <= 0:
             return
@@ -59,22 +84,20 @@ class _ChunkProgressStream:
         self._drawn = True
 
     def write(self, value: str) -> int:
-        self._pending += value
-        while "\n" in self._pending:
-            line, self._pending = self._pending.split("\n", 1)
-            match = self._CHUNK_LINE.match(line)
-            if match:
-                completed, total = int(match.group(1)), int(match.group(2))
-                self._write_chunk_progress(completed, total)
-                continue
-            if self._drawn:
-                self.finish()
-            self._stream.write(line + "\n")
+        # tqdm uses bare carriage returns; verbose chunk messages use newlines.
+        # Treat either as a record boundary, but never pass the native tqdm
+        # records through to the terminal.
+        for char in value:
+            if char in "\r\n":
+                self._handle_line(self._pending)
+                self._pending = ""
+            else:
+                self._pending += char
         return len(value)
 
     def flush(self) -> None:
         if self._pending:
-            self._stream.write(self._pending)
+            self._handle_line(self._pending)
             self._pending = ""
         self._stream.flush()
 
@@ -218,7 +241,7 @@ class DemucsOnnxAdapter:
             # become separate rows in the GUI log. Keep verbose chunk events
             # and render them through our single-line tqdm-compatible stream.
             progress_stream = _ChunkProgressStream(sys.stdout)
-            with redirect_stdout(progress_stream):
+            with redirect_stdout(progress_stream), redirect_stderr(progress_stream):
                 try:
                     self._runtime.separate(
                         str(input_audio), str(output_dir),
