@@ -1,6 +1,7 @@
 """CPU-only contract tests for the optional six-stem ONNX backend."""
 from __future__ import annotations
 
+import io
 import os
 import sys
 import types
@@ -245,3 +246,42 @@ def test_RUN_GPU_demucs_onnx_cuda_integration(tmp_path):
     if "CUDAExecutionProvider" not in ort.get_available_providers():
         pytest.skip("ONNX Runtime CUDAExecutionProvider is not available")
     _run_real_demucs_onnx_integration(tmp_path, "cuda")
+
+
+
+def test_chunk_progress_stream_reports_real_completed_chunk_percentage():
+    from mseparate.demucs_onnx import _ChunkProgressStream
+
+    target = io.StringIO()
+    progress = _ChunkProgressStream(target)
+    progress.write("  input:  12,151,885 samples\\n")
+    progress.write("    chunk 1/48: 0.8s elapsed\\n")
+    progress.write("    chunk 24/48: 12.4s elapsed\\n")
+    progress.write("    chunk 48/48: 25.0s elapsed\\n")
+    progress.flush()
+
+    output = target.getvalue()
+    assert "  input:  12,151,885 samples\\n" in output
+    assert "progress: 1/48 chunks (2%) | 0.8s elapsed" in output
+    assert "progress: 24/48 chunks (50%) | 12.4s elapsed" in output
+    assert "progress: 48/48 chunks (100%) | 25.0s elapsed" in output
+
+
+def test_chunk_progress_stream_flushes_after_each_progress_event():
+    from mseparate.demucs_onnx import _ChunkProgressStream
+
+    class FlushTrackingStream(io.StringIO):
+        def __init__(self):
+            super().__init__()
+            self.flush_count = 0
+
+        def flush(self):
+            self.flush_count += 1
+            super().flush()
+
+    target = FlushTrackingStream()
+    progress = _ChunkProgressStream(target)
+    progress.write("    chunk 3/10: 2.1s elapsed\\n")
+
+    assert target.flush_count == 1
+    assert "progress: 3/10 chunks (30%)" in target.getvalue()
