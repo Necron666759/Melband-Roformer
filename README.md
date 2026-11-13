@@ -268,9 +268,11 @@ The separate `mseparate` command analyzes audio and prepares a model execution p
 ```bash
 mseparate input.wav --analysis-only
 mseparate input.wav --plan-only --report
+mseparate input.wav --prepare-models
+mseparate input.wav --prepare-models --no-download
 ```
 
-The model registry is stored under `~/.local/share/mseparate/`. Only models with reviewed licenses and verified assets will become eligible for automatic planning. The existing `separate` command remains the original Mel-Band RoFormer workflow.
+The model registry is stored under `~/.local/share/mseparate/`. Only models with reviewed licenses and pinned checksums become eligible for preparation. `--prepare-models` explicitly verifies or downloads their assets; `--no-download` checks local files only. The existing `separate` command remains the original Mel-Band RoFormer workflow.
 
 ## 4. Basic usage
 
