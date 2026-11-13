@@ -262,6 +262,20 @@ def test_feature_guided_planner_selects_models_from_declared_stems():
     assert 0 <= by_model["bass-model"].confidence <= 1
 
 
+def test_planner_uses_semantic_source_rankings_when_available():
+    from mseparate.planner import _stem_score
+
+    predictions = [
+        {"source": "vocals", "score": 0.31},
+        {"source": "synthesizer", "score": 0.42},
+        {"source": "drums", "score": 0.27},
+    ]
+    score, reason = _stem_score("vocals", {}, predictions)
+    assert score == 0.5
+    assert "CLAP relative similarity" in reason
+    assert "not a calibrated" in reason
+
+
 def test_cli_execute_runs_plan_only_after_assets_are_verified(tmp_path, monkeypatch, capsys):
     from mseparate.assets import AssetResult
     from mseparate.execution import ExecutionSummary, TaskResult
