@@ -22,13 +22,7 @@ from .types import ModelManifest
 
 
 class _ChunkProgressStream:
-    """Render Demucs chunk progress with the same tqdm meter as the main CLI.
-
-    The percentage is based only on completed chunks. The current chunk
-    number is displayed on the line immediately below the bar. Both lines
-    are redrawn in place; updates do not accumulate as a staircase in logs.
-    """
-
+    """Render Demucs chunk updates on one tqdm-style progress line."""
     _CHUNK_LINE = re.compile(r"^\s*chunk\s+(\d+)/(\d+):\s*(.*?)\s*$")
 
     def __init__(self, stream):
@@ -45,8 +39,6 @@ class _ChunkProgressStream:
             return fallback
 
     def _render(self, completed: int, total: int, elapsed: float) -> str:
-        # Keep tqdm's native meter renderer and the terminal-width behavior
-        # used by app/melband_roformer_wrapper/progress.py on main.
         return _tqdm.format_meter(
             n=max(0, min(completed, total)),
             total=total,
@@ -54,7 +46,7 @@ class _ChunkProgressStream:
             ncols=self._terminal_width(),
             prefix="Processing audio",
             unit="chunk",
-            bar_format="{l_bar}{bar}|",
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
         )
 
     def _write_chunk_progress(self, completed: int, total: int) -> None:
@@ -62,20 +54,9 @@ class _ChunkProgressStream:
             return
         completed = max(0, min(completed, total))
         elapsed = time.monotonic() - self._started_at
-        bar = self._render(completed, total, elapsed)
-        current = f"Обрабатывается фрагмент: {completed} / {total}"
-        if completed >= total:
-            current = f"Обработано фрагментов: {total} / {total}"
-
-        if self._drawn:
-            # Cursor is on the second (counter) line after the previous
-            # update. Move to the bar, clear both rows, and redraw them.
-            self._stream.write("\x1b[1A\r\x1b[2K")
-        else:
-            self._stream.write("\r")
-            self._drawn = True
-        self._stream.write(bar + "\n\r\x1b[2K" + current)
+        self._stream.write("\r" + self._render(completed, total, elapsed))
         self._stream.flush()
+        self._drawn = True
 
     def write(self, value: str) -> int:
         self._pending += value
@@ -106,7 +87,6 @@ class _ChunkProgressStream:
 
     def __getattr__(self, name):
         return getattr(self._stream, name)
-
 
 
 def _prewarm_strict_cuda(runtime, cache_dir: Path, precision: str) -> dict[str, Path]:
@@ -234,11 +214,9 @@ class DemucsOnnxAdapter:
                 _prewarm_strict_cuda(
                     self._runtime, self._cache_dir, self.precision,
                 )
-            # demucs-onnx renders tqdm only when stdout is a TTY. The
-            # application GUI and captured CLI output use pipes instead, so
-            # request its real per-chunk verbose events and translate them to
-            # flushed percentages. This reports completed ONNX chunks only;
-            # it never guesses progress from elapsed time or GPU utilization.
+            # Disable demucs-onnx's own tqdm: its stderr progress updates
+            # become separate rows in the GUI log. Keep verbose chunk events
+            # and render them through our single-line tqdm-compatible stream.
             progress_stream = _ChunkProgressStream(sys.stdout)
             with redirect_stdout(progress_stream):
                 try:
@@ -247,7 +225,7 @@ class DemucsOnnxAdapter:
                         model=self.MODEL_NAME, stems=target_stems,
                         providers=self._provider, precision=self.precision,
                         cache_dir=str(self._cache_dir), verbose=True,
-                        progress=True, output_format="wav",
+                        progress=False, output_format="wav",
                     )
                 finally:
                     progress_stream.finish()
