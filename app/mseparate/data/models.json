@@ -192,7 +192,8 @@
       "The mirror repository declares CC-BY-NC-SA-4.0 for the model assets: attribution is required, commercial use is not permitted, and adaptations or redistributions are subject to the share-alike terms.",
       "The matching config is pinned to the ZFTurbo v1.0.0 commit 6190c903f353715b9d2f53bb40b0ff7145a13b72. Both checkpoint and config have recorded SHA-256 digests and byte sizes.",
       "The native vocals estimate is exposed; the optional instrumental output is derived as mixture-minus-vocals residual, not a native model estimate.",
-      "The pymss runtime code is MIT-licensed; that code license does not replace the separate checkpoint license."
+      "The pymss runtime code is MIT-licensed; that code license does not replace the separate checkpoint license.",
+      "CC-BY-NC-SA-4.0 is the license declared by the Sucial/MSST-WebUI mirror hosting this exact checkpoint. A separate weight-specific grant from the original ZFTurbo release author was not located; treat the mirror declaration as a restriction, and do not redistribute the checkpoint if provenance/rights need formal confirmation."
     ],
     "assets": [
       {
