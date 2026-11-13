@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -143,3 +144,28 @@ def test_pymss_adapter_rejects_corrupt_or_unpinned_asset(tmp_path, monkeypatch):
         assert "failed SHA-256/size verification" in str(exc)
     else:
         raise AssertionError("corrupt checkpoint must not reach pymss")
+
+
+
+def test_pymss_tqdm_carriage_returns_become_flushed_log_lines():
+    from mseparate.pymss_adapter import _TqdmLineStream
+
+    class FlushTrackingStream(io.StringIO):
+        def __init__(self):
+            super().__init__()
+            self.flush_count = 0
+
+        def flush(self):
+            self.flush_count += 1
+            super().flush()
+
+    target = FlushTrackingStream()
+    progress = _TqdmLineStream(target)
+    progress.write("Processing audio: 0%|          | 0/48\\r")
+    progress.write("Processing audio: 50%|█████     | 24/48\\r")
+    progress.flush()
+
+    output = target.getvalue()
+    assert "Processing audio: 0%|          | 0/48\\n" in output
+    assert "Processing audio: 50%|█████     | 24/48\\n" in output
+    assert target.flush_count == 2
