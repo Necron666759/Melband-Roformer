@@ -9,7 +9,7 @@ mseparate \- analyze audio and execute multi-model source-separation plans
 .B mseparate
 analyzes audio, builds a plan from the enabled model registry and can execute compatible source-separation tasks when
 .B --execute
-is explicitly requested. The current registry includes HT-Demucs six-stem ONNX separation and MelBand RoFormer vocals separation. The input file is not modified.
+is explicitly requested. The current registry includes HT-Demucs six-stem ONNX, MelBand RoFormer, BS-RoFormer and MDX23C vocal separation. The input file is not modified.
 .PP
 The existing
 .B melband-roformer
@@ -57,6 +57,9 @@ Per-task inference timeout; zero disables the timeout.
 .B --max-depth N
 Set the maximum refinement depth for the execution plan.
 .TP
+.B --prefer-model MODEL_ID
+Prefer the named eligible model when multiple models can produce the same stem. Use --list-models to see model IDs. The preference changes routing only and does not bypass asset or license checks.
+.TP
 .B --list-models
 List registry models and their eligibility.
 .TP
@@ -83,6 +86,8 @@ Model preparation or inference failed, or a report could not be written.
 Invalid arguments or input/registry error.
 .SH NOTES
 The HT-Demucs ONNX backend downloads its model through Hugging Face Hub. The upstream package manages this cache independently of mseparate's SHA-pinned asset manager. The six output stems are drums, bass, other, vocals, guitar and piano; guitar and piano are estimates and may contain bleed or artifacts. The fp16weights option reduces download and storage size, not inference memory use.
+.PP
+The BS-RoFormer model weights declare GPL-3.0. The MDX23C model repository declares CC-BY-NC-SA-4.0, which prohibits commercial use and requires attribution and share-alike compliance. Check the model license before use or redistribution.
 .PP
 Passing
 .B --device cuda
