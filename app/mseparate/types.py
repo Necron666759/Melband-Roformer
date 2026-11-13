@@ -58,6 +58,7 @@ class ModelManifest:
     channels: str | None = None
     input_formats: tuple[str, ...] = ()
     category: str | None = None
+    planner_priority: int = 0
     upstream_version: str | None = None
     notes: tuple[str, ...] = ()
     status: str = "candidate"
