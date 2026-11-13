@@ -61,10 +61,13 @@ def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> 
             + ", ".join(sorted(available))
         )
     if device == "cuda":
-        # Avoid the upstream "cuda" alias: it includes CPUExecutionProvider
-        # as a fallback, whereas explicit CUDA mode must not run on CPU.
-        provider = "CUDAExecutionProvider"
-    elif device == "auto" and "CUDAExecutionProvider" in available:
+        from .demucs_onnx import _prewarm_strict_cuda
+
+        try:
+            return _prewarm_strict_cuda(demucs_onnx, model_dir, "fp16weights")
+        finally:
+            demucs_onnx.session_pool().clear()
+    if device == "auto" and "CUDAExecutionProvider" in available:
         provider = "cuda"
     else:
         provider = "cpu"
