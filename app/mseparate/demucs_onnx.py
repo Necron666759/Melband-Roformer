@@ -14,6 +14,33 @@ from .execution import BackendInfo, StemArtifact
 from .types import ModelManifest
 
 
+def _prewarm_strict_cuda(runtime, cache_dir: Path, precision: str) -> dict[str, Path]:
+    """Prewarm HT-Demucs and disable ONNX Runtime's CPU retry fallback."""
+    paths = runtime.prewarm(
+        models=["htdemucs_6s"], precision=precision,
+        providers="CUDAExecutionProvider", cache_dir=str(cache_dir),
+    )
+    model_path = paths.get("htdemucs_6s")
+    if model_path is None:
+        raise RuntimeError("demucs-onnx prewarm did not return the htdemucs_6s model path")
+    pool = runtime.session_pool()
+    session = pool.get(model_path, ["CUDAExecutionProvider"])
+    active = tuple(session.get_providers())
+    if active != ("CUDAExecutionProvider",):
+        raise RuntimeError(
+            "Strict CUDA session did not register CUDAExecutionProvider exclusively; "
+            f"active providers: {active}"
+        )
+    disable_fallback = getattr(session, "disable_fallback", None)
+    if not callable(disable_fallback):
+        raise RuntimeError(
+            "ONNX Runtime session does not expose disable_fallback(); "
+            "cannot guarantee strict CUDA execution"
+        )
+    disable_fallback()
+    return paths
+
+
 class DemucsOnnxAdapter:
     """Run the htdemucs_6s ONNX model and materialize six WAV stems."""
 
@@ -24,6 +51,7 @@ class DemucsOnnxAdapter:
         self.no_download = no_download
         self.precision = precision
         self._provider = "auto"
+        self._strict_cuda = False
         self._cache_dir: Path | None = None
         self._runtime = None
         self._model_id: str | None = None
@@ -72,10 +100,10 @@ class DemucsOnnxAdapter:
                 "Check the NVIDIA driver and bundled CUDA/cuDNN runtime; "
                 f"available providers: {sorted(available)}"
             )
+        self._strict_cuda = device == "cuda"
         if device == "cuda":
-            # The upstream "cuda" alias appends CPUExecutionProvider as a
-            # fallback. Use the explicit EP name for strict mode so ORT cannot
-            # silently assign unsupported nodes to CPU.
+            # The upstream "cuda" alias appends CPUExecutionProvider. Strict
+            # mode uses the explicit provider and disables ORT's retry fallback.
             self._provider = "CUDAExecutionProvider"
         elif device == "auto" and "CUDAExecutionProvider" in available:
             self._provider = "cuda"
@@ -101,6 +129,10 @@ class DemucsOnnxAdapter:
         if self.no_download:
             os.environ["HF_HUB_OFFLINE"] = "1"
         try:
+            if self._strict_cuda:
+                _prewarm_strict_cuda(
+                    self._runtime, self._cache_dir, self.precision,
+                )
             self._runtime.separate(
                 str(input_audio), str(output_dir),
                 model=self.MODEL_NAME, stems=target_stems,
@@ -126,6 +158,7 @@ class DemucsOnnxAdapter:
         self._runtime = None
         self._cache_dir = None
         self._model_id = None
+        self._strict_cuda = False
         if runtime is not None:
             try:
                 runtime.session_pool().clear()
