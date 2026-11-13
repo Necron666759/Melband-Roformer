@@ -168,9 +168,11 @@ class MelbandRoformerShell(cmd.Cmd):
 
     def do_mseparate(self, arg):
         """mseparate <file> --execute [--device cuda|auto|cpu] [--output-dir DIR]
+        mseparate <file> --diagnose N [--device cuda|auto|cpu]
         [--prepare-models] [--report [PATH]]
         Analyze audio and optionally execute the multi-model separation plan.
-        Use --execute to create stems; --device cuda requires NVIDIA CUDA."""
+        Use --execute to create stems. Use --diagnose N to benchmark at most N
+        HT-Demucs ONNX chunks without writing stems. --device cuda requires NVIDIA CUDA."""
         self._dispatch("mseparate", arg)
 
     def do_list_models(self, arg):
