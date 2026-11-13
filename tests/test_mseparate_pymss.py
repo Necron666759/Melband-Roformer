@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -85,7 +86,7 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
     assert captured.out == ""
     assert "Processing audio:" in captured.err
     assert "50%" in captured.err
-    assert "0%" not in captured.err
+    assert re.search(r"Processing audio:\\s+0%", captured.err) is None
     assert "Runtime warning: fixture warning" in captured.err
     assert state["pbar"] is False
     assert state["kwargs"]["model_type"] == "bs_roformer"
