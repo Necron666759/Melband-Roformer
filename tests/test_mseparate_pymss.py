@@ -61,7 +61,7 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
             state["mix_shape"] = mix.shape
             state["stems"] = tuple(stems)
             # Match tqdm's leading CR and chunked stderr writes, then a warning.
-            sys.stderr.write("\\r")
+            sys.stderr.write("\r")
             sys.stderr.write("Processing audio: 0%|          | 0/48")
             sys.stderr.write("\r")
             sys.stderr.write("Processing audio: 50%|█████     | 24/48")
