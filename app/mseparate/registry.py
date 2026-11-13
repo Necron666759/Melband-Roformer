@@ -142,7 +142,7 @@ def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
         if model.status == "available"
         and model.license_status == "verified"
         and all((not asset.required) or bool(asset.sha256) for asset in model.assets)
-        and bool(model.assets)
+        and (bool(model.assets) or model.backend == "demucs-onnx")
     ]
 
 
