@@ -5,6 +5,7 @@ failure isolation, artifact validation, and the one-model-at-a-time invariant.
 """
 from __future__ import annotations
 
+import fcntl
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -73,9 +74,26 @@ class ExecutionSummary:
         return sum(item.status == "skipped" for item in self.results)
 
 
-# Serializes execution across manager instances in this Python process. A
-# subprocess adapter also runs one inference process at a time by construction.
+# The thread lock serializes manager instances in this process; flock also
+# serializes independent mseparate processes sharing the same model store.
 _EXECUTION_LOCK = threading.Lock()
+
+
+class _SystemExecutionLock:
+    def __init__(self, path: Path):
+        self.path = path
+        self._stream = None
+
+    def __enter__(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._stream = self.path.open("a+b")
+        fcntl.flock(self._stream.fileno(), fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if self._stream is not None:
+            fcntl.flock(self._stream.fileno(), fcntl.LOCK_UN)
+            self._stream.close()
 
 
 class ExecutionManager:
@@ -109,7 +127,8 @@ class ExecutionManager:
         results: list[TaskResult] = []
         states: dict[str, str] = {}
 
-        with _EXECUTION_LOCK:
+        lock_path = self.models_root.parent / ".mseparate-execution.lock"
+        with _EXECUTION_LOCK, _SystemExecutionLock(lock_path):
             for task in plan.tasks:
                 failed_dependencies = [
                     dependency for dependency in task.depends_on
@@ -148,7 +167,7 @@ class ExecutionManager:
                 backend = factory()
                 outputs: tuple[StemArtifact, ...] = ()
                 error: str | None = None
-                loaded = False
+                load_attempted = False
                 try:
                     compatible, reason = backend.compatibility(manifest)
                     if not compatible:
@@ -156,8 +175,8 @@ class ExecutionManager:
                     if not input_path.is_file():
                         raise FileNotFoundError(f"Input stem does not exist: {input_path}")
                     model_dir = self.models_root / manifest.model_id
+                    load_attempted = True
                     backend.load(manifest, model_dir, self.device)
-                    loaded = True
                     task_output_dir = self.output_root / task.task_id
                     task_output_dir.mkdir(parents=True, exist_ok=True)
                     produced = backend.infer(input_path, task_output_dir, task.target_stems)
@@ -179,7 +198,7 @@ class ExecutionManager:
                 except Exception as exc:
                     error = f"{type(exc).__name__}: {exc}"
                 finally:
-                    if loaded:
+                    if load_attempted:
                         try:
                             backend.unload()
                         except Exception as exc:
