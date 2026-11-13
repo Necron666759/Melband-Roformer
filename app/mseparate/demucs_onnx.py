@@ -26,9 +26,15 @@ def _prewarm_strict_cuda(runtime, cache_dir: Path, precision: str) -> dict[str, 
     pool = runtime.session_pool()
     session = pool.get(model_path, ["CUDAExecutionProvider"])
     active = tuple(session.get_providers())
-    if active != ("CUDAExecutionProvider",):
+    # ONNX Runtime commonly registers CPUExecutionProvider after the requested
+    # CUDA provider. Its presence alone does not mean CUDA initialization
+    # failed: CUDA must be first so it has priority for supported graph nodes.
+    # disable_fallback() below prevents ORT from retrying a failed CUDA run on
+    # another provider; requiring CUDA to be the only registered provider is
+    # incompatible with ORT's normal provider registration behavior.
+    if not active or active[0] != "CUDAExecutionProvider":
         raise RuntimeError(
-            "Strict CUDA session did not register CUDAExecutionProvider exclusively; "
+            "Strict CUDA session did not register CUDAExecutionProvider first; "
             f"active providers: {active}"
         )
     disable_fallback = getattr(session, "disable_fallback", None)
