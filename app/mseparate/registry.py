@@ -88,6 +88,9 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
     sample_rate = data.get("sample_rate")
     if sample_rate is not None and (not isinstance(sample_rate, int) or isinstance(sample_rate, bool) or sample_rate <= 0):
         raise RegistryError("sample_rate must be a positive integer or null")
+    planner_priority = data.get("planner_priority", 0)
+    if not isinstance(planner_priority, int) or isinstance(planner_priority, bool) or not -1000 <= planner_priority <= 1000:
+        raise RegistryError("planner_priority must be an integer between -1000 and 1000")
     channels = data.get("channels")
     if channels not in _CHANNEL_POLICIES:
         raise RegistryError(f"channels must be one of {sorted(x for x in _CHANNEL_POLICIES if x)} or null")
@@ -111,7 +114,7 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         target_stems=strings("target_stems"), dummy_stems=strings("dummy_stems"),
         refinement_targets=strings("refinement_targets"), sample_rate=sample_rate,
         channels=channels, input_formats=tuple(x.lower().lstrip(".") for x in strings("input_formats")),
-        category=data.get("category"),
+        category=data.get("category"), planner_priority=planner_priority,
         upstream_version=data.get("upstream_version"), notes=notes, status=status,
     )
 
@@ -154,8 +157,9 @@ def model_audio_compatibility(model: ModelManifest, audio: AudioMetadata) -> tup
             allowed = ", ".join(model.input_formats)
             actual = extension or "(no extension)"
             return False, f"requires {allowed} input; got .{actual}"
+    resampling_backends = {"demucs-onnx", "bs-roformer-pymss", "mdx23c-pymss"}
     if (model.sample_rate is not None and audio.sample_rate != model.sample_rate
-            and model.backend != "demucs-onnx"):
+            and model.backend not in resampling_backends):
         return False, f"requires {model.sample_rate} Hz input; got {audio.sample_rate} Hz (resampling is not supported by this backend)"
     if model.channels == "stereo" and audio.channels != 2:
         return False, f"requires stereo input; got {audio.channels} channel(s)"
