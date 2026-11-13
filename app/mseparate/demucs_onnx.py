@@ -49,7 +49,7 @@ class _ChunkProgressStream:
                     self._stream.write(line + "\n")
                     self._stream.flush()
                     continue
-            self._stream.write(line + "\\n")
+            self._stream.write(line + "\n")
         return len(value)
 
     def flush(self) -> None:
