@@ -338,8 +338,9 @@ def test_planner_explicit_model_preference_overrides_default_priority():
     by_model = {task.model_id: task for task in plan.tasks}
 
     assert "mdx23c-zfturbo-vocals" in by_model
-    assert "melband-roformer-kim-vocals" not in by_model
     assert by_model["mdx23c-zfturbo-vocals"].target_stems == ("vocals",)
+    # MelBand remains selected for its separate derived instrumental output.
+    assert by_model["melband-roformer-kim-vocals"].target_stems == ("instrumental",)
     assert "explicitly preferred" in by_model["mdx23c-zfturbo-vocals"].rationale
 
 
