@@ -279,6 +279,36 @@ def test_chunk_progress_stream_redraws_one_native_tqdm_line():
     assert output.endswith("\n")
 
 
+def test_chunk_progress_stream_filters_stderr_tqdm_and_keeps_one_line():
+    from mseparate.demucs_onnx import _ChunkProgressStream
+
+    target = io.StringIO()
+    progress = _ChunkProgressStream(target)
+
+    # Native tqdm writes carriage-return frames to stderr. They must not
+    # become separate HUD rows or compete with our chunk-count bar.
+    progress.write("\rProcessing audio: 70%|███████ | 3:37/5:09, RTF=0.13")
+    progress.write("\rProcessing audio: 72%|███████▏| 3:43/5:09, RTF=0.13")
+    # Actual verbose chunk events arrive as ordinary stdout lines.
+    progress.write("    chunk 1/48: 0.8s elapsed\n")
+    progress.write("    chunk 24/48: 12.4s elapsed\n")
+    progress.write("    chunk 48/48: 25.0s elapsed\n")
+    progress.finish()
+
+    output = target.getvalue()
+    assert "RTF=" not in output
+    assert "70%|" not in output
+    assert "72%|" not in output
+    assert "2%|" in output
+    assert "50%|" in output
+    assert "100%|" in output
+    assert "1/48" in output
+    assert "24/48" in output
+    assert "48/48" in output
+    assert output.count("\r") == 3
+    assert output.endswith("\n")
+
+
 def test_chunk_progress_stream_flushes_after_each_progress_event():
     from mseparate.demucs_onnx import _ChunkProgressStream
 
