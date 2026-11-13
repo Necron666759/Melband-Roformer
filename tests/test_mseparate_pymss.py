@@ -168,4 +168,4 @@ def test_pymss_tqdm_carriage_returns_become_flushed_log_lines():
     output = target.getvalue()
     assert "Processing audio: 0%|          | 0/48\n" in output
     assert "Processing audio: 50%|█████     | 24/48\n" in output
-    assert target.flush_count == 2
+    assert target.flush_count == 3
