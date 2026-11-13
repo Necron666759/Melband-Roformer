@@ -87,6 +87,8 @@ def test_adapter_forces_cuda_and_writes_all_requested_outputs(tmp_path, monkeypa
     assert state["session_providers"] == ["CUDAExecutionProvider"]
     assert state["fallback_disabled"]
     assert state["call"]["precision"] == "fp16weights"
+    assert state["call"]["verbose"] is True
+    assert state["call"]["progress"] is False
     assert [item.stem for item in artifacts] == ["drums", "guitar", "piano"]
     adapter.unload()
     assert state["cleared"]
@@ -249,7 +251,7 @@ def test_RUN_GPU_demucs_onnx_cuda_integration(tmp_path):
 
 
 
-def test_chunk_progress_stream_uses_native_tqdm_bar_and_redraws_chunk_counter():
+def test_chunk_progress_stream_redraws_one_native_tqdm_line():
     import re
     from mseparate.demucs_onnx import _ChunkProgressStream
 
@@ -268,13 +270,13 @@ def test_chunk_progress_stream_uses_native_tqdm_bar_and_redraws_chunk_counter():
     assert "2%|" in output
     assert "50%|" in output
     assert "100%|" in output
-    assert "Обрабатывается фрагмент: 1 / 48" in output
-    assert "Обрабатывается фрагмент: 24 / 48" in output
-    assert "Обработано фрагментов: 48 / 48" in output
-    assert "first chunk + warm-up" not in output
-    assert "last chunk:" not in output
-    assert "\x1b[1A" in raw  # later updates redraw the two-line display in place
-    assert raw.endswith("\n")
+    assert "1/48" in output
+    assert "24/48" in output
+    assert "48/48" in output
+    assert "\x1b[" not in raw
+    assert output.count("\r") == 3
+    assert output.count("\n") == 2
+    assert output.endswith("\n")
 
 
 def test_chunk_progress_stream_flushes_after_each_progress_event():
