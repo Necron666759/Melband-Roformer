@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import replace
 
 from .registry import eligible_models, model_audio_compatibility
 from .types import AnalysisReport, ExecutionPlan, ExecutionTask, ModelManifest
@@ -85,6 +86,7 @@ def build_plan(
     analysis: AnalysisReport | None = None,
     registry: dict[str, ModelManifest] | None = None,
     preferred_model_id: str | None = None,
+    allow_resample: bool = False,
 ) -> ExecutionPlan:
     """Choose eligible, input-compatible models using transparent acoustic routing.
 
@@ -104,14 +106,21 @@ def build_plan(
     rejected: list[str] = []
     for model in candidates:
         if audio is not None:
-            ok, reason = model_audio_compatibility(model, audio)
+            checked_audio = (
+                replace(audio, sample_rate=model.sample_rate)
+                if allow_resample and model.sample_rate is not None
+                else audio
+            )
+            ok, reason = model_audio_compatibility(model, checked_audio)
             if not ok:
                 rejected.append(f"{model.model_id}: {reason}")
                 continue
         compatible.append(model)
     if not compatible:
         notes = ["No eligible model accepts the input audio format; no inference was scheduled."]
-        notes.extend(rejected)
+        if allow_resample:
+        notes.append("Sample-rate conversion is enabled: the execution manager uses a temporary model-rate WAV and restores output stems to the input sample rate.")
+    notes.extend(rejected)
         return ExecutionPlan(1, (), tuple(notes), max_depth)
 
     if preferred_model_id is not None and preferred_model_id not in {model.model_id for model in compatible}:
@@ -156,7 +165,7 @@ def build_plan(
             rationale="; ".join(item["reasons"]),
         ))
     notes = [
-        "Hard sample-rate/channel constraints were checked before model ranking.",
+        "Hard input-format and channel constraints are checked before model ranking; sample-rate conversion requires explicit --allow-resample.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
         "Overlapping routes prefer a manifest-declared specialist, then an explicitly preferred model, then manifest planner_priority and source salience. Priority is an operator routing preference, not a measured quality score; CLAP/acoustic scores do not estimate model quality or calibrated source presence.",
         "CLAP detects broad semantic audio-text matches; it cannot reliably identify every individual synthesizer patch or guarantee clean isolation.",
