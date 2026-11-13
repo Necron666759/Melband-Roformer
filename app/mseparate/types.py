@@ -67,6 +67,9 @@ class ExecutionTask:
     target_stems: tuple[str, ...]
     depends_on: tuple[str, ...] = ()
     depth: int = 0
+    score: float = 0.0
+    confidence: float = 0.0
+    rationale: str = ""
 
 
 @dataclass(frozen=True)
