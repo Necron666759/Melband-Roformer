@@ -112,6 +112,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--inference-timeout", type=float, default=0.0,
                         help="Per-task inference timeout in seconds; 0 disables the timeout (default)")
     parser.add_argument("--max-depth", type=int, default=3, help="Maximum refinement depth for future plans")
+    parser.add_argument("--prefer-model", help="Prefer this eligible model ID for overlapping stem routes (see --list-models)")
     parser.add_argument("--verbose", action="store_true", help="Print additional diagnostics")
     parser.add_argument("--report", nargs="?", const="mseparate-report.json",
                         help="Write a JSON report (optional path; default: mseparate-report.json)")
@@ -160,7 +161,8 @@ def main(argv: list[str] | None = None) -> int:
                 no_download=args.no_download,
             )
             report = replace(report, predictions=predictions)
-        plan = build_plan(max_depth=args.max_depth, analysis=report, registry=registry)
+        plan = build_plan(max_depth=args.max_depth, analysis=report, registry=registry,
+                          preferred_model_id=args.prefer_model)
         validate_plan(plan)
 
         asset_results: list[dict] = []
