@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "melband-roformer-wrapper"
 version = "0.1.0"
 description = "Debian-packaging CLI/GUI wrapper around upstream melband-roformer-infer"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     # Pinned to a CUDA 13.0 build compatible with RTX 3060 Ti (Ampere, sm_86).
     # Installed from the PyTorch wheel index, not PyPI's default index -- see
