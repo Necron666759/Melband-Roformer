@@ -32,24 +32,54 @@ class _ChunkProgressStream:
     def __init__(self, stream):
         self._stream = stream
         self._pending = ""
+        self._last_elapsed = 0.0
+
+    @staticmethod
+    def _format_duration(seconds: float) -> str:
+        whole = max(0, int(round(seconds)))
+        minutes, secs = divmod(whole, 60)
+        return f"{minutes}m {secs:02d}s" if minutes else f"{secs}s"
+
+    def _write_chunk_progress(self, completed: int, total: int, detail: str) -> None:
+        percent = min(100, round(completed * 100 / total))
+        width = 24
+        filled = min(width, round(width * completed / total))
+        bar = "█" * filled + "░" * (width - filled)
+
+        elapsed_match = re.search(r"([0-9]+(?:\\.[0-9]+)?)s elapsed", detail)
+        timing = ""
+        if elapsed_match:
+            elapsed = float(elapsed_match.group(1))
+            chunk_seconds = elapsed - self._last_elapsed
+            self._last_elapsed = elapsed
+            if completed == 1:
+                timing = (
+                    f" | first chunk + warm-up: "
+                    f"{self._format_duration(chunk_seconds)}"
+                )
+            else:
+                timing = (
+                    f" | last chunk: {self._format_duration(chunk_seconds)}"
+                )
+            timing += f" | total: {self._format_duration(elapsed)}"
+
+        self._stream.write(f"    progress: [{bar}] {percent}%\\n")
+        self._stream.write(
+            f"    chunks processed: {completed}/{total}{timing}\\n"
+        )
+        self._stream.flush()
 
     def write(self, value: str) -> int:
         self._pending += value
-        while "\n" in self._pending:
-            line, self._pending = self._pending.split("\n", 1)
+        while "\\n" in self._pending:
+            line, self._pending = self._pending.split("\\n", 1)
             match = self._CHUNK_LINE.match(line)
             if match:
                 completed, total = int(match.group(1)), int(match.group(2))
                 if total > 0:
-                    percent = min(100, round(completed * 100 / total))
-                    line = (
-                        f"    progress: {completed}/{total} chunks "
-                        f"({percent}%) | {match.group(3)}"
-                    )
-                    self._stream.write(line + "\n")
-                    self._stream.flush()
+                    self._write_chunk_progress(completed, total, match.group(3))
                     continue
-            self._stream.write(line + "\n")
+            self._stream.write(line + "\\n")
         return len(value)
 
     def flush(self) -> None:
