@@ -1,6 +1,9 @@
 """Human-readable rendering for analysis and plan reports."""
 from __future__ import annotations
 
+from pathlib import Path
+
+from .execution import ExecutionSummary
 from .types import AnalysisReport, ExecutionPlan
 
 
@@ -32,3 +35,27 @@ def print_plan(plan: ExecutionPlan) -> None:
             print(f"     Rationale: {task.rationale}")
     for note in plan.notes:
         print(f"  Note: {note}")
+
+
+
+def print_execution_summary(summary: ExecutionSummary) -> None:
+    """Print task outcomes and the technical quality checks for each output."""
+    print("Execution results")
+    print(
+        f"  Succeeded: {summary.succeeded}; "
+        f"failed: {summary.failed}; skipped: {summary.skipped}"
+    )
+    for result in summary.results:
+        print(f"  {result.task_id} [{result.model_id}]: {result.status}")
+        if result.message:
+            print(f"    Message: {result.message}")
+        for report in result.quality_reports:
+            print(f"    Quality: {report.status} — {Path(report.path).name}")
+            if report.duration_seconds is not None:
+                print(
+                    f"      {report.duration_seconds:.3f}s, "
+                    f"{report.sample_rate} Hz, {report.channels} channel(s)"
+                )
+            if report.issues:
+                for issue in report.issues:
+                    print(f"      Warning: {issue}")
