@@ -184,7 +184,7 @@
     "notes": [
       "The checkpoint is the ZFTurbo MDX23C vocals model from release v1.0.0, mirrored at the pinned Sucial/MSST-WebUI revision 55155c4e2f99d0ca94d24fce88d6dc25711a9252.",
       "The mirror repository declares CC-BY-NC-SA-4.0 for the model assets: attribution is required, commercial use is not permitted, and adaptations or redistributions are subject to the share-alike terms.",
-      "The matching config is pinned to the ZFTurbo v1.0.0 source tag. Both checkpoint and config have recorded SHA-256 digests and byte sizes.",
+      "The matching config is pinned to the ZFTurbo v1.0.0 commit 6190c903f353715b9d2f53bb40b0ff7145a13b72. Both checkpoint and config have recorded SHA-256 digests and byte sizes.",
       "The model is configured for 44100 Hz stereo input and predicts vocals/other. Only the native vocals estimate is exposed to the planner; other is not treated as an independent instrumental estimate.",
       "The pymss runtime code is MIT-licensed; that code license does not replace the separate checkpoint license."
     ],
@@ -199,7 +199,7 @@
       },
       {
         "role": "config",
-        "url": "https://raw.githubusercontent.com/ZFTurbo/Music-Source-Separation-Training/v1.0.0/configs/config_vocals_mdx23c.yaml",
+        "url": "https://raw.githubusercontent.com/ZFTurbo/Music-Source-Separation-Training/6190c903f353715b9d2f53bb40b0ff7145a13b72/configs/config_vocals_mdx23c.yaml",
         "relative_path": "config_vocals_mdx23c.yaml",
         "sha256": "a2b9724a1a15522dc3478a0eff4e052492ab186c03981e38b1197a7b38204687",
         "size_bytes": 1164,
