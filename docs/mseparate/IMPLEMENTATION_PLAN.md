@@ -1,0 +1,86 @@
+# mseparate implementation plan
+
+Status: proposed sequence. Each phase must leave the legacy `separate` path working.
+
+## Phase 0 — baseline and safety
+
+- Record the current main-branch commit and inspect the complete package/build/test layout.
+- Establish a feature branch and a clean rollback point.
+- Capture baseline CLI help/version/self-test behavior and existing test results.
+- Add regression tests for legacy parser and command dispatch before changing integration points.
+
+Exit criteria: a reproducible baseline and a documented list of compatibility surfaces.
+
+## Phase 1 — core contracts (no neural inference)
+
+- Add independent `mseparate` CLI routing without changing `separate`.
+- Define typed models for audio metadata, analysis findings, source/stem identities, model manifests, execution tasks/plans, backend results, quality findings and events.
+- Add registry schema validation and a small test-only fixture registry.
+- Add persistent storage path resolution and report serialization.
+- Add analysis-only and plan-only modes.
+
+Exit criteria: CLI can inspect an input, validate fixture manifests and print a deterministic plan without importing optional neural backends.
+
+## Phase 2 — asset manager
+
+- Implement local asset inventory and checksum verification.
+- Implement safe downloads to `.part`, bounded retries/timeouts, resume where supported, and atomic finalization.
+- Isolate failures per asset/model; continue checking the rest of the registry.
+- Test offline mode, partial downloads, checksum mismatch, 404/403/5xx, retries and reuse of verified assets.
+
+Exit criteria: asset manager is deterministic and never re-downloads a valid checkpoint unnecessarily.
+
+## Phase 3 — backend adapters
+
+- Implement the MelBand adapter using the already-installed upstream inference package.
+- Investigate MSST and PyMSS compatibility in isolated environments before enabling either.
+- Add capability/compatibility reports and model-specific manifests only after checking source, license, checkpoint/config pairing and output semantics.
+- Record real VRAM/runtime measurements on supported hardware; do not invent estimates.
+
+Exit criteria: one backend can run a controlled inference task through the common interface; optional backends fail closed and do not affect the legacy environment.
+
+## Phase 4 — planner and sequential executor
+
+- Implement candidate scoring using source likelihoods, stem targets, model capabilities, availability, resource constraints and prior validation results.
+- Generate a bounded acyclic execution plan.
+- Implement the global sequential model lifecycle manager.
+- Add explicit preservation/fallback rules and refinement acceptance.
+- Add invariant tests proving no overlapping inference calls or simultaneous model residency.
+
+Exit criteria: all neural tasks in a job execute strictly one at a time and every failure preserves usable input audio.
+
+## Phase 5 — analysis and quality
+
+- Add deterministic audio measurements first.
+- Add optional genre/structure/BPM/source-analysis providers with confidence and provenance.
+- Add stem integrity and artifact/leakage heuristics.
+- Use reference-based metrics only when reference stems exist.
+
+Exit criteria: reports distinguish measurements, model predictions, heuristics and unknowns.
+
+## Phase 6 — integration and packaging
+
+- Add the `mseparate` console entry point.
+- Add explicit AppImage shell allow-list routing.
+- Verify Debian packaging, AppImage runtime paths, GUI coexistence and optional dependency isolation.
+- Keep new heavyweight dependencies out of the legacy base environment unless strictly necessary.
+
+Exit criteria: installed package exposes both commands; legacy GUI and `separate` remain unchanged.
+
+## Phase 7 — validation and release
+
+- Run unit, integration, packaging and regression tests.
+- Test offline and partial-network-failure paths.
+- Test representative tracks and reference datasets where legally available.
+- Compare outputs with baselines and retain logs/reports.
+- Document unsupported models and hardware limits honestly.
+
+Exit criteria: tests and hardware actually exercised are recorded; no unsupported quality claims are made.
+
+## Current status
+
+- Repository access confirmed.
+- Initial source-level audit started.
+- Feature branch `feature/mseparate-foundation` created.
+- No application code or runtime dependencies changed yet.
+- No runtime test has been claimed or performed in this documentation-only slice.
