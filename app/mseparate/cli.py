@@ -9,10 +9,37 @@ from . import __version__
 from .audio import analyze_audio
 from .assets import ensure_model_assets
 from .planner import build_plan, validate_plan
-from .registry import RegistryError, eligible_models, load_registry
+from .registry import RegistryError, bundled_registry_path, eligible_models, load_registry
 from .reporting import print_analysis, print_plan
 from .storage import data_root, ensure_layout, write_json_atomic
 from .types import to_jsonable
+
+
+def _registry_path(paths: dict[str, Path], override: str | None) -> Path:
+    if override:
+        return Path(override).expanduser()
+    local = paths["registry"] / "models.json"
+    return local if local.exists() else bundled_registry_path()
+
+
+def _print_models(registry) -> None:
+    print("Model registry")
+    if not registry:
+        print("  No model manifests found.")
+        return
+    eligible = {model.model_id for model in eligible_models(registry)}
+    for model in sorted(registry.values(), key=lambda item: item.model_id):
+        state = "eligible" if model.model_id in eligible else "not eligible"
+        outputs = ", ".join(model.target_stems or model.native_stems or model.derived_stems) or "none declared"
+        print(f"  {model.model_id} [{state}]")
+        print(f"    {model.name}")
+        print(f"    Architecture/backend: {model.architecture} / {model.backend}")
+        print(f"    Category: {model.category or 'unspecified'}; outputs: {outputs}")
+        print(f"    License: {model.license or 'unknown'} ({model.license_status}); status: {model.status}")
+        if model.sample_rate or model.channels:
+            print(f"    Input: {model.sample_rate or 'any'} Hz; {model.channels or 'any channels'}")
+        for note in model.notes:
+            print(f"    Note: {note}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,6 +52,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", choices=("auto", "cuda", "cpu"), default="auto",
                         help="Target compute device (inference is not enabled in this foundation release)")
     parser.add_argument("--models-dir", default=None, help="Override persistent model storage directory")
+    parser.add_argument("--registry", default=None, help="Use an alternate JSON model registry")
+    parser.add_argument("--list-models", action="store_true", help="List bundled/local models and their review eligibility")
     parser.add_argument("--analysis-only", action="store_true", help="Analyze audio without planning inference")
     parser.add_argument("--plan-only", action="store_true", help="Analyze audio and print the execution plan")
     parser.add_argument("--no-download", action="store_true", help="Verify local assets only; never access the network")
@@ -42,9 +71,6 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if not args.input:
-        parser.print_help(sys.stderr)
-        return 2
     if args.max_depth < 0:
         parser.error("--max-depth must be zero or greater")
     if args.download_timeout <= 0:
@@ -53,13 +79,21 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--download-retries must be at least one")
 
     try:
-        report = analyze_audio(args.input)
         paths = ensure_layout()
         if args.models_dir:
             paths["models"] = Path(args.models_dir).expanduser()
             paths["models"].mkdir(parents=True, exist_ok=True)
-        registry_path = paths["registry"] / "models.json"
+        registry_path = _registry_path(paths, args.registry)
         registry = load_registry(registry_path)
+        if args.list_models:
+            _print_models(registry)
+            print(f"  Registry source: {registry_path}")
+            return 0
+        if not args.input:
+            parser.print_help(sys.stderr)
+            return 2
+
+        report = analyze_audio(args.input)
         plan = build_plan(max_depth=args.max_depth, analysis=report, registry=registry)
         validate_plan(plan)
         asset_results = []
@@ -70,12 +104,9 @@ def main(argv: list[str] | None = None) -> int:
                     timeout=args.download_timeout, retries=args.download_retries,
                 )
                 asset_results.extend({
-                    "model_id": model.model_id,
-                    "role": result.role,
-                    "status": result.status,
-                    "path": result.path,
-                    "message": result.message,
-                    "bytes_downloaded": result.bytes_downloaded,
+                    "model_id": model.model_id, "role": result.role,
+                    "status": result.status, "path": result.path,
+                    "message": result.message, "bytes_downloaded": result.bytes_downloaded,
                 } for result in model_results)
     except (OSError, ValueError, RuntimeError, RegistryError) as exc:
         print(f"mseparate: {exc}", file=sys.stderr)
@@ -99,13 +130,10 @@ def main(argv: list[str] | None = None) -> int:
         if not report_path.is_absolute():
             report_path = Path(args.output_dir).expanduser() / report_path
         payload = {
-            "schema_version": 1,
-            "analysis": to_jsonable(report),
+            "schema_version": 1, "analysis": to_jsonable(report),
             "plan": None if args.analysis_only else to_jsonable(plan),
-            "registry_path": str(registry_path),
-            "models_root": str(paths["models"]),
-            "inference_performed": False,
-            "asset_results": asset_results,
+            "registry_path": str(registry_path), "models_root": str(paths["models"]),
+            "inference_performed": False, "asset_results": asset_results,
         }
         try:
             write_json_atomic(report_path, payload)
