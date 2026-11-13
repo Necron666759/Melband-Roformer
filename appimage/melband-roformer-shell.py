@@ -215,7 +215,8 @@ class MelbandRoformerShell(cmd.Cmd):
     # the alias table below, since Python identifiers can't contain '-'.
     def default(self, line):
         cmd_word = line.split(None, 1)[0] if line.strip() else ""
-        alias = {"mseparate": self.do_mseparate,\n                  "list-models": self.do_list_models,
+        alias = {"mseparate": self.do_mseparate,
+                  "list-models": self.do_list_models,
                   "download-model": self.do_download_model,
                   "self-test": self.do_self_test}.get(cmd_word)
         if alias is not None:
