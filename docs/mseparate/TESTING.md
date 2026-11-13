@@ -56,3 +56,8 @@ Status: required test matrix; no runtime tests are implied by this document.
 ## Real-audio evaluation
 
 Use a documented collection spanning different arrangements and source densities, not only genre labels. Keep source references where licensing permits. Record model versions, checkpoint hashes, hardware/software stack, elapsed time, VRAM observations and evaluation method. Synthetic test tones validate plumbing only; they do not establish separation quality.
+
+
+## Asset manager test coverage
+
+The CPU-only asset tests use a local HTTP server and cover verified download/reuse, Range resume, servers that ignore Range, checksum mismatch, preservation of corrupt files, offline checks, and failure isolation between assets. They do not download production checkpoints or validate model quality.
