@@ -8,11 +8,59 @@ from __future__ import annotations
 
 import gc
 import os
+import re
+import sys
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from .execution import BackendInfo, StemArtifact
 from .types import ModelManifest
 
+
+
+class _ChunkProgressStream:
+    """Convert demucs-onnx verbose chunk messages into flushed percentages.
+
+    demucs-onnx only enables tqdm for a TTY. In GUI/subprocess output its
+    verbose chunk messages are otherwise block-buffered, making a live job
+    look frozen until inference returns. This small stdout proxy preserves
+    normal output and turns the library's real completed-chunk counter into
+    a machine-readable percentage without estimating progress by elapsed time.
+    """
+
+    _CHUNK_LINE = re.compile(r"^\\s*chunk\\s+(\\d+)/(\\d+):\\s*(.*?)\\s*$")
+
+    def __init__(self, stream):
+        self._stream = stream
+        self._pending = ""
+
+    def write(self, value: str) -> int:
+        self._pending += value
+        while "\\n" in self._pending:
+            line, self._pending = self._pending.split("\\n", 1)
+            match = self._CHUNK_LINE.match(line)
+            if match:
+                completed, total = int(match.group(1)), int(match.group(2))
+                if total > 0:
+                    percent = min(100, round(completed * 100 / total))
+                    line = (
+                        f"    progress: {completed}/{total} chunks "
+                        f"({percent}%) | {match.group(3)}"
+                    )
+                    self._stream.write(line + "\\n")
+                    self._stream.flush()
+                    continue
+            self._stream.write(line + "\\n")
+        return len(value)
+
+    def flush(self) -> None:
+        if self._pending:
+            self._stream.write(self._pending)
+            self._pending = ""
+        self._stream.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
 
 def _prewarm_strict_cuda(runtime, cache_dir: Path, precision: str) -> dict[str, Path]:
     """Prewarm HT-Demucs and disable ONNX Runtime's CPU retry fallback."""
@@ -139,13 +187,21 @@ class DemucsOnnxAdapter:
                 _prewarm_strict_cuda(
                     self._runtime, self._cache_dir, self.precision,
                 )
-            self._runtime.separate(
-                str(input_audio), str(output_dir),
-                model=self.MODEL_NAME, stems=target_stems,
-                providers=self._provider, precision=self.precision,
-                cache_dir=str(self._cache_dir), verbose=True,
-                progress=True, output_format="wav",
-            )
+            # demucs-onnx renders tqdm only when stdout is a TTY. The
+            # application GUI and captured CLI output use pipes instead, so
+            # request its real per-chunk verbose events and translate them to
+            # flushed percentages. This reports completed ONNX chunks only;
+            # it never guesses progress from elapsed time or GPU utilization.
+            progress_stream = _ChunkProgressStream(sys.stdout)
+            with redirect_stdout(progress_stream):
+                self._runtime.separate(
+                    str(input_audio), str(output_dir),
+                    model=self.MODEL_NAME, stems=target_stems,
+                    providers=self._provider, precision=self.precision,
+                    cache_dir=str(self._cache_dir), verbose=True,
+                    progress=True, output_format="wav",
+                )
+                progress_stream.flush()
         finally:
             if self.no_download:
                 if old_offline is None:
