@@ -104,6 +104,31 @@ out-of-memory error, use `--device cpu` as a fallback; do not expect the
 `fp16weights` file to reduce inference VRAM because it changes only the
 stored weights.
 
+## Optional real-model integration tests
+
+The default CI suite uses mocked ONNX Runtime modules and does not download
+model weights. On a machine with the package installed and network access, the
+real CPU integration test downloads the six-stem fp16weights graph and checks
+that all six WAV files are produced with the expected channel count, sample
+rate and duration:
+
+```bash
+MSEPARATE_RUN_DEMUCS_ONNX_INTEGRATION=1 \
+  python -m pytest -q tests/test_mseparate_demucs_onnx.py -k RUN_MODEL
+```
+
+On a host with a working NVIDIA driver and ONNX Runtime CUDA provider, run the
+same real-model check through the strict CUDA path:
+
+```bash
+MSEPARATE_RUN_DEMUCS_ONNX_GPU=1 \
+  python -m pytest -q tests/test_mseparate_demucs_onnx.py -k RUN_GPU
+```
+
+These tests are opt-in because they download model weights and the GPU test
+requires compatible hardware. A successful CPU test validates the pinned
+Python API and output contract; only the GPU test validates CUDA execution.
+
 ## Adding more instrument families
 
 The current general-purpose model exposes six stems, while CLAP adds broad
