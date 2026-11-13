@@ -12,6 +12,48 @@ from .execution import BackendInfo, StemArtifact
 from .types import ModelManifest
 
 
+class _InitialTqdmProgressFilter:
+    """Suppress only pymss' first 0% status line; preserve all later output."""
+
+    def __init__(self, stream) -> None:
+        self._stream = stream
+        self._pending = ""
+        self._suppressed = False
+
+    def write(self, value: str) -> int:
+        if not isinstance(value, str):
+            raise TypeError("write() argument must be str")
+        for char in value:
+            if char in "\\r\\n":
+                line = self._pending
+                self._pending = ""
+                prefix = line.split("|", 1)[0].rstrip()
+                is_initial_progress = (
+                    not self._suppressed
+                    and prefix.startswith("Processing audio:")
+                    and prefix.endswith("0%")
+                )
+                if is_initial_progress:
+                    self._suppressed = True
+                else:
+                    self._stream.write(line + char)
+            else:
+                self._pending += char
+        return len(value)
+
+    def flush(self) -> None:
+        self._stream.flush()
+
+    def finish(self) -> None:
+        if self._pending:
+            self._stream.write(self._pending)
+            self._pending = ""
+        self._stream.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
 class PymssAdapter:
     """Run one MSST-format model through pymss with explicit local assets."""
 
@@ -104,12 +146,19 @@ class PymssAdapter:
         # pair for the selected model's vocal estimate.
         if "instrumental" in target_stems and "vocals" not in native_targets:
             native_targets.append("vocals")
-        # Keep tqdm's carriage returns intact. The AppImage HUD is a real
-        # PTY-backed terminal (pyte) and uses CR to redraw the current line;
-        # converting CR to LF here turns every progress frame into a new row.
-        separated = self._separator.separate(
-            mixture.T, pbar=True, stems=native_targets
-        )
+        # Keep tqdm's carriage returns intact for in-place HUD updates, but
+        # omit its initial 0% placeholder. The first useful update follows
+        # model setup and is more informative than a transient empty bar.
+        progress_stream = _InitialTqdmProgressFilter(sys.stderr)
+        from contextlib import redirect_stderr
+
+        try:
+            with redirect_stderr(progress_stream):
+                separated = self._separator.separate(
+                    mixture.T, pbar=True, stems=native_targets
+                )
+        finally:
+            progress_stream.finish()
         output_dir.mkdir(parents=True, exist_ok=True)
         artifacts: list[StemArtifact] = []
         for stem in target_stems:
