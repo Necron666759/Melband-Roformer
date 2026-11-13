@@ -1,13 +1,15 @@
 .TH MSEPARATE 1 "November 2026" "mseparate" "User Commands"
 .SH NAME
-mseparate \- analyze audio and prepare a multi-model separation plan
+mseparate \- analyze audio and execute multi-model source-separation plans
 .SH SYNOPSIS
 .B mseparate
-.I input
+.RI [ input ]
 .RI [ options ]
 .SH DESCRIPTION
 .B mseparate
-is an independent command for technical audio analysis and preparation of a future multi-model source-separation plan. This foundation release performs signal measurements only. It does not run neural inference and does not modify the input audio.
+analyzes audio, builds a plan from the enabled model registry and can execute compatible source-separation tasks when
+.B --execute
+is explicitly requested. The current registry includes HT-Demucs six-stem ONNX separation and MelBand RoFormer vocals separation. The input file is not modified.
 .PP
 The existing
 .B melband-roformer
@@ -20,10 +22,10 @@ workflows are unchanged.
 Analyze the input without displaying an execution plan.
 .TP
 .B --plan-only
-Analyze the input and display the currently available execution plan.
+Analyze the input and display the currently available execution plan without inference.
 .TP
 .B --output-dir DIR
-Directory used for a requested report file.
+Directory used for separated stems and a requested report file.
 .TP
 .B --report [PATH]
 Write a JSON report. If PATH is omitted, use mseparate-report.json in the output directory.
@@ -32,22 +34,31 @@ Write a JSON report. If PATH is omitted, use mseparate-report.json in the output
 Override the local model storage directory.
 .TP
 .B --device auto|cuda|cpu
-Record the intended compute device. Neural inference is not enabled in this release.
+Select the inference device. The explicit cuda mode requires CUDAExecutionProvider and does not permit CPU fallback. The auto mode may fall back to CPU.
+.TP
+.B --execute
+Explicitly execute the planned separation tasks. This can download model assets and use the selected compute device.
 .TP
 .B --prepare-models
-Verify or download assets for registry models whose license and required checksums have been reviewed.
+Download and prewarm eligible model assets. For the ONNX model, this uses the Hugging Face Hub cache.
 .TP
 .B --no-download
-Verify local assets only; never access the network. Applies to --prepare-models.
+Never access the network. Execution requires all model assets to be available locally.
 .TP
 .B --download-timeout SECONDS
-Per-request network timeout (default 30 seconds).
+Per-request network timeout for SHA-pinned assets (default 30 seconds).
 .TP
 .B --download-retries N
-Maximum attempts per asset (default 3).
+Maximum attempts per SHA-pinned asset (default 3).
+.TP
+.B --inference-timeout SECONDS
+Per-task inference timeout; zero disables the timeout.
 .TP
 .B --max-depth N
 Set the maximum refinement depth for the execution plan.
+.TP
+.B --list-models
+List registry models and their eligibility.
 .TP
 .B --verbose
 Print additional diagnostics.
@@ -63,14 +74,18 @@ environment variable overrides the root directory.
 .SH EXIT STATUS
 .TP
 .B 0
-Analysis completed successfully.
+Analysis or requested execution completed successfully.
 .TP
 .B 1
-Report could not be written.
+Model preparation or inference failed, or a report could not be written.
 .TP
 .B 2
 Invalid arguments or input/registry error.
 .SH NOTES
-The initial registry is empty by design. A model must have reviewed license metadata, verified assets and a compatible backend before it can be scheduled. No model quality or separation result is implied by this analysis-only foundation.
+The HT-Demucs ONNX backend downloads its model through Hugging Face Hub. The upstream package manages this cache independently of mseparate's SHA-pinned asset manager. The six output stems are drums, bass, other, vocals, guitar and piano; guitar and piano are estimates and may contain bleed or artifacts. The fp16weights option reduces download and storage size, not inference memory use.
+.PP
+Passing
+.B --device cuda
+requires a working CUDA Execution Provider. No actual GPU inference or quality result is implied by CPU-only tests.
 .SH SEE ALSO
 .BR melband-roformer (1)
