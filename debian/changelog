@@ -1,3 +1,19 @@
+melband-roformer (0.1.16) unstable; urgency=medium
+
+  * Add the standard-library mseparate asset manager with SHA-256-gated
+    streaming downloads, bounded retries/timeouts, HTTP Range resume,
+    atomic installation, local cache reuse and recovery of verified
+    partial files.
+  * Preserve corrupt prior checkpoints instead of silently trusting or
+    deleting them; reject unsafe paths/symlink escapes and non-HTTP(S)
+    asset URLs. Isolate failures per asset and add explicit offline-only
+    verification via --no-download.
+  * Add CPU-only local-HTTP tests and a lightweight GitHub Actions
+    workflow. No production model manifests or neural inference are
+    enabled by this change.
+
+ -- melband-roformer packaging <packaging@example.invalid>  Fri, 13 Nov 2026 13:45:00 +0000
+
 melband-roformer (0.1.15) unstable; urgency=medium
 
   * Add the independent mseparate command as a separate package and
