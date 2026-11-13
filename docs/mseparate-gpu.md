@@ -63,8 +63,13 @@ inference, run the same command with `--prepare-models` and without
 `--execute`; then run it again with `--execute`.
 
 `--device cuda` is strict: if ONNX Runtime does not expose
-`CUDAExecutionProvider`, execution fails with a diagnostic instead of
-silently using the CPU. `--device auto` may use CPU if CUDA is unavailable.
+`CUDAExecutionProvider`, execution fails with a diagnostic. In strict mode
+mseparate passes the explicit `CUDAExecutionProvider` name rather than the
+upstream `cuda` alias, because that alias appends `CPUExecutionProvider` as a
+fallback. If CUDA cannot initialize or a required operator is unsupported,
+the task must fail instead of silently executing those nodes on CPU.
+`--device auto` may use CPU if CUDA is unavailable and may retain CPU as an
+ONNX Runtime fallback provider.
 
 The six-stem model uses the `fp16weights` download variant to reduce cache
 size. This only reduces download/storage size; the upstream package states
