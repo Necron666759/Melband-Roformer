@@ -27,5 +27,8 @@ def print_plan(plan: ExecutionPlan) -> None:
         print("  No neural inference tasks scheduled.")
     for index, task in enumerate(plan.tasks, start=1):
         print(f"  {index}. {task.task_id}: {task.model_id} -> {', '.join(task.target_stems)}")
+        print(f"     Routing score: {task.score:.3f}; confidence: {task.confidence:.3f}")
+        if task.rationale:
+            print(f"     Rationale: {task.rationale}")
     for note in plan.notes:
         print(f"  Note: {note}")
