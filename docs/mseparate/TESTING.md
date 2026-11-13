@@ -61,3 +61,8 @@ Use a documented collection spanning different arrangements and source densities
 ## Asset manager test coverage
 
 The CPU-only asset tests use a local HTTP server and cover verified download/reuse, Range resume, servers that ignore Range, checksum mismatch, preservation of corrupt files, offline checks, and failure isolation between assets. They do not download production checkpoints or validate model quality.
+
+
+## Sequential backend execution tests
+
+The execution-manager tests use fake CPU-only adapters. They verify that a second model is not loaded until the first adapter has unloaded and the resource check has run; output stems are checked against the task contract; failed tasks do not abort independent tasks; and dependent tasks are skipped when prerequisites fail. These tests do not claim GPU memory reclamation or real backend inference.
