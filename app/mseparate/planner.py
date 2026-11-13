@@ -113,24 +113,26 @@ def build_plan(
         notes.extend(rejected)
         return ExecutionPlan(1, (), tuple(notes), max_depth)
 
-    ranked: dict[str, list[tuple[int, float, ModelManifest, str]]] = defaultdict(list)
+    ranked: dict[str, list[tuple[int, int, float, ModelManifest, str]]] = defaultdict(list)
     for model in compatible:
         for stem in _model_outputs(model):
             score, reason = _stem_score(stem, features, analysis.predictions if analysis else None)
             specialization = _model_specialization(stem, model)
-            ranked[stem].append((specialization, score, model, reason))
+            ranked[stem].append((specialization, model.planner_priority, score, model, reason))
 
     selected: dict[str, dict] = {}
     for stem, entries in ranked.items():
         # CLAP/acoustic scores describe source salience, not model quality.
-        # Resolve overlapping capabilities by explicit manifest specialization
-        # first, then by source salience, with model_id as a stable final tie-break.
-        entries.sort(key=lambda item: (-item[0], -item[1], item[2].model_id))
-        specialization, score, model, reason = entries[0]
+        # Route by declared specialization, then operator-set manifest priority,
+        # then source salience; model_id is only the stable final tie-break.
+        entries.sort(key=lambda item: (-item[0], -item[1], -item[2], item[3].model_id))
+        specialization, priority, score, model, reason = entries[0]
         bucket = selected.setdefault(model.model_id, {"model": model, "stems": [], "scores": [], "reasons": []})
         bucket["stems"].append(stem)
         bucket["scores"].append(score)
         route = "manifest-declared specialist" if specialization else "general-purpose capability"
+        if priority:
+            route += f" (planner priority {priority})"
         bucket["reasons"].append(f"{stem}: {route}; {reason}")
 
     tasks = []
@@ -147,7 +149,7 @@ def build_plan(
     notes = [
         "Hard sample-rate/channel constraints were checked before model ranking.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
-        "Overlapping routes prefer a manifest-declared stem specialist before general-purpose models; CLAP/acoustic scores rank source salience, not model quality or calibrated source presence.",
+        "Overlapping routes prefer a manifest-declared specialist, then the explicit planner_priority in the model manifest; that priority is an operator routing preference, not a measured quality score. CLAP/acoustic scores rank source salience, not model quality or calibrated source presence.",
         "CLAP detects broad semantic audio-text matches; it cannot reliably identify every individual synthesizer patch or guarantee clean isolation.",
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
