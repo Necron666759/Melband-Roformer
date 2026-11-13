@@ -167,8 +167,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--download-retries must be at least one")
     if args.inference_timeout < 0:
         parser.error("--inference-timeout must be zero or greater")
-    if args.execute and (args.analysis_only or args.plan_only or args.prepare_models):
-        parser.error("--execute cannot be combined with --analysis-only, --plan-only or --prepare-models")
+    if args.execute and (args.analysis_only or args.plan_only):
+        parser.error("--execute cannot be combined with --analysis-only or --plan-only")
 
     try:
         paths = ensure_layout()
@@ -198,11 +198,25 @@ def main(argv: list[str] | None = None) -> int:
             # Semantic source recognition is an execution-time routing aid only.
             # Asset preparation must remain independent of the optional CLAP stack.
             from .source_analysis import analyze_sources
-            predictions = analyze_sources(
-                input_path, device=args.device,
-                cache_dir=paths["models"] / "source-analysis",
-                no_download=args.no_download,
-            )
+            try:
+                predictions = analyze_sources(
+                    input_path, device=effective_device,
+                    cache_dir=paths["models"] / "source-analysis",
+                    no_download=args.no_download,
+                )
+            except Exception as exc:
+                if args.device != "auto" or effective_device != "cuda":
+                    raise
+                device_fallback_reason = (
+                    f"CLAP CUDA analysis failed ({type(exc).__name__}: {exc}); switching to CPU."
+                )
+                print("Warning: " + device_fallback_reason, file=sys.stderr)
+                effective_device = "cpu"
+                predictions = analyze_sources(
+                    input_path, device="cpu",
+                    cache_dir=paths["models"] / "source-analysis",
+                    no_download=args.no_download,
+                )
             report = replace(report, predictions=predictions)
         plan = build_plan(max_depth=args.max_depth, analysis=report, registry=registry,
                           preferred_model_id=args.prefer_model)
