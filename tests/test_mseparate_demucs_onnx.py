@@ -123,3 +123,4 @@ def test_planner_schedules_all_six_demucs_stems():
     assert plan.tasks[0].model_id == model.model_id
     assert set(plan.tasks[0].target_stems) == set(DemucsOnnxAdapter.STEMS)
     assert not any("demucs-onnx-htdemucs-6s: requires 44100 Hz" in note for note in plan.notes)
+    assert not any("demucs-onnx-htdemucs-6s: requires 44100 Hz" in note for note in plan.notes)
