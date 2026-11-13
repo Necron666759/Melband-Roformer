@@ -46,7 +46,7 @@ class _ChunkProgressStream:
         filled = min(width, round(width * completed / total))
         bar = "█" * filled + "░" * (width - filled)
 
-        elapsed_match = re.search(r"([0-9]+(?:\\.[0-9]+)?)s elapsed", detail)
+        elapsed_match = re.search(r"([0-9]+(?:\.[0-9]+)?)s elapsed", detail)
         timing = ""
         if elapsed_match:
             elapsed = float(elapsed_match.group(1))
@@ -63,23 +63,23 @@ class _ChunkProgressStream:
                 )
             timing += f" | total: {self._format_duration(elapsed)}"
 
-        self._stream.write(f"    progress: [{bar}] {percent}%\\n")
+        self._stream.write(f"    progress: [{bar}] {percent}%\n")
         self._stream.write(
-            f"    chunks processed: {completed}/{total}{timing}\\n"
+            f"    chunks processed: {completed}/{total}{timing}\n"
         )
         self._stream.flush()
 
     def write(self, value: str) -> int:
         self._pending += value
-        while "\\n" in self._pending:
-            line, self._pending = self._pending.split("\\n", 1)
+        while "\n" in self._pending:
+            line, self._pending = self._pending.split("\n", 1)
             match = self._CHUNK_LINE.match(line)
             if match:
                 completed, total = int(match.group(1)), int(match.group(2))
                 if total > 0:
                     self._write_chunk_progress(completed, total, match.group(3))
                     continue
-            self._stream.write(line + "\\n")
+            self._stream.write(line + "\n")
         return len(value)
 
     def flush(self) -> None:
