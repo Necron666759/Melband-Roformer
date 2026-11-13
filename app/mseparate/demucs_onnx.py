@@ -29,7 +29,7 @@ class _ChunkProgressStream:
     are redrawn in place; updates do not accumulate as a staircase in logs.
     """
 
-    _CHUNK_LINE = re.compile(r"^\\s*chunk\\s+(\\d+)/(\\d+):\\s*(.*?)\\s*$")
+    _CHUNK_LINE = re.compile(r"^\s*chunk\s+(\d+)/(\d+):\s*(.*?)\s*$")
 
     def __init__(self, stream):
         self._stream = stream
@@ -64,31 +64,31 @@ class _ChunkProgressStream:
         completed = max(0, min(completed, total))
         elapsed = time.monotonic() - self._started_at
         bar = self._render(completed, total, elapsed)
-        current = f"Обрабатывается фрагмент: {completed + 1} / {total}"
+        current = f"Обрабатывается фрагмент: {completed} / {total}"
         if completed >= total:
             current = f"Обработано фрагментов: {total} / {total}"
 
         if self._drawn:
             # Cursor is on the second (counter) line after the previous
             # update. Move to the bar, clear both rows, and redraw them.
-            self._stream.write("\\x1b[1A\\r\\x1b[2K")
+            self._stream.write("\x1b[1A\r\x1b[2K")
         else:
-            self._stream.write("\\r")
+            self._stream.write("\r")
             self._drawn = True
-        self._stream.write(bar + "\\n\\r\\x1b[2K" + current)
+        self._stream.write(bar + "\n\r\x1b[2K" + current)
         self._stream.flush()
         self._last_total = total
 
     def write(self, value: str) -> int:
         self._pending += value
-        while "\\n" in self._pending:
-            line, self._pending = self._pending.split("\\n", 1)
+        while "\n" in self._pending:
+            line, self._pending = self._pending.split("\n", 1)
             match = self._CHUNK_LINE.match(line)
             if match:
                 completed, total = int(match.group(1)), int(match.group(2))
                 self._write_chunk_progress(completed, total)
                 continue
-            self._stream.write(line + "\\n")
+            self._stream.write(line + "\n")
         return len(value)
 
     def flush(self) -> None:
@@ -100,7 +100,7 @@ class _ChunkProgressStream:
     def finish(self) -> None:
         self.flush()
         if self._drawn:
-            self._stream.write("\\n")
+            self._stream.write("\n")
             self._stream.flush()
             self._drawn = False
 
@@ -241,14 +241,16 @@ class DemucsOnnxAdapter:
             # it never guesses progress from elapsed time or GPU utilization.
             progress_stream = _ChunkProgressStream(sys.stdout)
             with redirect_stdout(progress_stream):
-                self._runtime.separate(
-                    str(input_audio), str(output_dir),
-                    model=self.MODEL_NAME, stems=target_stems,
-                    providers=self._provider, precision=self.precision,
-                    cache_dir=str(self._cache_dir), verbose=True,
-                    progress=True, output_format="wav",
-                )
-                progress_stream.finish()
+                try:
+                    self._runtime.separate(
+                        str(input_audio), str(output_dir),
+                        model=self.MODEL_NAME, stems=target_stems,
+                        providers=self._provider, precision=self.precision,
+                        cache_dir=str(self._cache_dir), verbose=True,
+                        progress=True, output_format="wav",
+                    )
+                finally:
+                    progress_stream.finish()
         finally:
             if self.no_download:
                 if old_offline is None:
