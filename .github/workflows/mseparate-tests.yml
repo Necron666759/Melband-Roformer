@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install CPU-only test dependencies
-        run: python -m pip install --upgrade pytest numpy soundfile tqdm
+        run: python -m pip install --upgrade pytest numpy soundfile tqdm soxr
       - name: Build wrapper wheel and validate packaging metadata
         run: |
           python -m pip install --upgrade "setuptools>=77.0.0" wheel build
