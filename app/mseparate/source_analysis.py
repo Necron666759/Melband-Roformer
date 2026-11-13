@@ -92,7 +92,7 @@ def analyze_sources(path: str | Path, *, device: str = "auto",
         for name, score in zip(SOURCES, mean_scores):
             result.append({"source": name, "score": round(float(score), 6),
                            "windows": count, "model": MODEL_ID})
-    del model, processor
+    del model, processor, outputs, inputs, frames, mono, resampled, scores
     if target_device == "cuda":
         torch.cuda.empty_cache()
     gc.collect()
