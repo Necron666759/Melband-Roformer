@@ -2,69 +2,86 @@
 from __future__ import annotations
 
 import gc
-import sys
 from pathlib import Path
+from time import time
 
 import numpy as np
 import soundfile as sf
+from tqdm.auto import tqdm
 
 from .assets import verify_asset
 from .execution import BackendInfo, StemArtifact
 from .types import ModelManifest
 
 
-class _InitialTqdmProgressFilter:
-    """Suppress only pymss' first 0% status line; preserve all later output."""
+def _format_progress_time(value: float) -> str:
+    seconds = max(0, int(round(value or 0)))
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours:d}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:d}:{seconds:02d}"
 
-    def __init__(self, stream) -> None:
-        self._stream = stream
-        self._pending = ""
-        self._pending_cr = False
-        self._suppressed = False
 
-    def write(self, value: str) -> int:
-        if not isinstance(value, str):
-            raise TypeError("write() argument must be str")
-        for char in value:
-            if char == "\r" and not self._pending:
-                # tqdm may begin an update with CR; hold it until we know
-                # whether this is the initial placeholder being suppressed.
-                self._pending_cr = True
-                continue
-            if char in "\r\n":
-                line = self._pending
-                self._pending = ""
-                prefix = line.split("|", 1)[0].rstrip()
-                is_initial_progress = (
-                    not self._suppressed
-                    and prefix.startswith("Processing audio:")
-                    and prefix.endswith("0%")
-                )
-                if is_initial_progress:
-                    self._suppressed = True
-                else:
-                    if self._pending_cr:
-                        self._stream.write("\r")
-                    self._stream.write(line + char)
-                self._pending_cr = False
-            else:
-                self._pending += char
-        return len(value)
+class _PymssAudioProgressBar(tqdm):
+    """tqdm bar that retains pymss' elapsed/total audio and RTF display."""
 
-    def flush(self) -> None:
-        self._stream.flush()
+    @property
+    def format_dict(self):
+        data = super().format_dict
+        done = float(self.n or 0)
+        elapsed = max(0.0, time() - getattr(self, "start_t", time()))
+        rtf = "--" if done <= 0 else f"{elapsed / done:.2f}"
+        data["audio_progress"] = (
+            f"{_format_progress_time(done)}/{_format_progress_time(self.total)}, RTF={rtf}"
+        )
+        return data
 
-    def finish(self) -> None:
-        if self._pending_cr:
-            self._stream.write("\r")
-            self._pending_cr = False
-        if self._pending:
-            self._stream.write(self._pending)
-            self._pending = ""
-        self._stream.flush()
 
-    def __getattr__(self, name):
-        return getattr(self._stream, name)
+class _PymssProgressCallback:
+    """Render pymss callback updates without creating an empty 0% bar."""
+
+    def __init__(self) -> None:
+        self._bar = None
+        self._message = None
+        self._total = None
+
+    def __call__(self, done, total, message) -> None:
+        total = max(1, int(total or 1))
+        done = max(0, min(int(done), total))
+        changed = self._message != message or self._total != total
+        reset = self._bar is not None and done < self._bar.n
+        if changed or reset:
+            self.close()
+        self._message = message
+        self._total = total
+
+        # pymss emits callback(0, total, ...) before the first model chunk.
+        # Wait for a useful non-zero update, then create the bar at that value.
+        if self._bar is None:
+            if done <= 0:
+                return
+            self._bar = _PymssAudioProgressBar(
+                total=total,
+                initial=done,
+                desc=message,
+                leave=False,
+                unit="",
+                bar_format="{l_bar}{bar}| {audio_progress}",
+                mininterval=0,
+                miniters=1,
+            )
+            self._bar.refresh()
+            return
+
+        if done > self._bar.n:
+            self._bar.update(done - self._bar.n)
+            self._bar.refresh()
+
+    def close(self) -> None:
+        if self._bar is not None:
+            self._bar.close()
+            self._bar = None
 
 class PymssAdapter:
     """Run one MSST-format model through pymss with explicit local assets."""
@@ -74,6 +91,7 @@ class PymssAdapter:
 
     def __init__(self) -> None:
         self._separator = None
+        self._progress: _PymssProgressCallback | None = None
         self._model_id: str | None = None
         self._device: str | None = None
         self._native_stems: tuple[str, ...] = ()
@@ -123,6 +141,7 @@ class PymssAdapter:
         # Explicit local paths prevent pymss from consulting or downloading
         # another model catalog entry. Model bytes are verified by mseparate
         # before the runtime is allowed to deserialize them.
+        self._progress = _PymssProgressCallback()
         self._separator = MSSeparator(
             model_type=self.MODEL_TYPE,
             model_path=str(assets["checkpoint"]),
@@ -133,6 +152,7 @@ class PymssAdapter:
             use_tta=False,
             store_dirs={},
             debug=True,
+            progress_callback=self._progress,
             inference_params={"batch_size": 1, "normalize": False},
         )
         self._model_id = manifest.model_id
@@ -158,23 +178,17 @@ class PymssAdapter:
         # pair for the selected model's vocal estimate.
         if "instrumental" in target_stems and "vocals" not in native_targets:
             native_targets.append("vocals")
-        # Keep tqdm's carriage returns intact for in-place HUD updates, but
-        # omit its initial 0% placeholder. The first useful update follows
-        # model setup and is more informative than a transient empty bar.
-        stdout_filter = _InitialTqdmProgressFilter(sys.stdout)
-        stderr_filter = _InitialTqdmProgressFilter(sys.stderr)
-        from contextlib import redirect_stderr, redirect_stdout
-
         try:
-            # pymss/tqdm output streams can differ between runtime versions.
-            # Filter both while preserving each stream's original destination.
-            with redirect_stdout(stdout_filter), redirect_stderr(stderr_filter):
-                separated = self._separator.separate(
-                    mixture.T, pbar=True, stems=native_targets
-                )
+            # pymss' callback reports audio-time progress. The callback skips
+            # its initial zero update and starts the bar at the first real
+            # inference update, without redirecting stdout/stderr or hiding
+            # runtime warnings.
+            separated = self._separator.separate(
+                mixture.T, pbar=False, stems=native_targets
+            )
         finally:
-            stdout_filter.finish()
-            stderr_filter.finish()
+            if self._progress is not None:
+                self._progress.close()
         output_dir.mkdir(parents=True, exist_ok=True)
         artifacts: list[StemArtifact] = []
         for stem in target_stems:
