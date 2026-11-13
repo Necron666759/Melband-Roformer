@@ -100,5 +100,69 @@
       "mseparate converts input audio to 44100 Hz before inference and converts every output stem back to the original input sample rate; the original source file is never modified."
     ],
     "assets": []
-  }
+  },
+{
+  "model_id": "bs-roformer-vocals-candidate",
+  "name": "BS-RoFormer | Vocals (research candidate)",
+  "architecture": "Band-Split RoFormer",
+  "backend": "pending-adapter",
+  "source_url": "https://github.com/lucidrains/BS-RoFormer",
+  "license": null,
+  "license_url": "https://github.com/lucidrains/BS-RoFormer",
+  "license_status": "review_required",
+  "category": "vocals",
+  "status": "candidate",
+  "sample_rate": null,
+  "channels": null,
+  "input_formats": [
+    "wav"
+  ],
+  "native_stems": [
+    "vocals"
+  ],
+  "derived_stems": [],
+  "target_stems": [
+    "vocals"
+  ],
+  "dummy_stems": [],
+  "refinement_targets": [],
+  "notes": [
+    "Research candidate only; not eligible for automatic download or execution.",
+    "The linked repository provides an implementation reference, not a pinned production checkpoint for this application.",
+    "Checkpoint provenance, exact model configuration, redistribution terms, checksum, inference API, sample-rate contract and output validation must be established before enabling."
+  ],
+  "assets": []
+},
+{
+  "model_id": "mdx23c-vocals-candidate",
+  "name": "MDX23C | Vocals (research candidate)",
+  "architecture": "MDX-Net / MDX23C",
+  "backend": "pending-adapter",
+  "source_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training",
+  "license": null,
+  "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training",
+  "license_status": "review_required",
+  "category": "vocals",
+  "status": "candidate",
+  "sample_rate": null,
+  "channels": null,
+  "input_formats": [
+    "wav"
+  ],
+  "native_stems": [
+    "vocals"
+  ],
+  "derived_stems": [],
+  "target_stems": [
+    "vocals"
+  ],
+  "dummy_stems": [],
+  "refinement_targets": [],
+  "notes": [
+    "Research candidate only; not eligible for automatic download or execution.",
+    "The upstream training repository contains multiple architectures and checkpoints; a specific model artifact and its terms have not been selected or verified.",
+    "Checkpoint provenance, exact configuration, redistribution terms, checksum, inference API, sample-rate contract and output validation must be established before enabling."
+  ],
+  "assets": []
+}
 ]
