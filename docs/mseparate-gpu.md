@@ -19,7 +19,7 @@ The bundled registry now also tracks two research candidates: BS-RoFormer
 `--list-models` for visibility but are not eligible for planning, downloading,
 or inference. Their exact checkpoint artifacts, redistribution terms,
 configuration/API contracts and checksums must be verified before they can be
-be enabled. A repository containing model code is not by itself proof that a
+enabled. A repository containing model code is not by itself proof that a
 particular checkpoint is licensed for redistribution.
 
 For overlapping output capabilities, the planner now prefers an explicitly
