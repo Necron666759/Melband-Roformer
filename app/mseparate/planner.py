@@ -163,7 +163,7 @@ def build_plan(
             rationale="; ".join(item["reasons"]),
         ))
     notes = [
-        "Hard input-format and channel constraints are checked before model ranking; sample-rate conversion requires explicit --allow-resample.",
+        "Hard input-format and channel constraints are checked before model ranking; models without backend-declared sample-rate conversion support require explicit --allow-resample.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
         "Overlapping routes prefer a manifest-declared specialist, then an explicitly preferred model, then manifest planner_priority and source salience. Priority is an operator routing preference, not a measured quality score; CLAP/acoustic scores do not estimate model quality or calibrated source presence.",
         "CLAP detects broad semantic audio-text matches; it cannot reliably identify every individual synthesizer patch or guarantee clean isolation.",
