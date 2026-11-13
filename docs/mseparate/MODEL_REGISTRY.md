@@ -49,7 +49,7 @@ The bundled registry currently includes the following newly reviewed vocal model
 
 Both models expose a native vocals estimate and can also produce a complementary instrumental residual by subtracting that vocals estimate from the input mixture. The residual is explicitly marked as derived, not as a native model output; the models' secondary other/instrument estimate is not relabelled as an independently predicted instrumental stem. The BS-RoFormer checkpoint/config are pinned to Hugging Face revision 7e4e5669cad8a8810983e02fa25294229246d374; the MDX23C checkpoint is pinned to Sucial/MSST-WebUI revision 55155c4e2f99d0ca94d24fce88d6dc25711a9252, with its matching configuration pinned to ZFTurbo commit 6190c903f353715b9d2f53bb40b0ff7145a13b72.
 
-The MDX23C model repository declares CC-BY-NC-SA-4.0. It is non-commercial: commercial use is not permitted; attribution and share-alike requirements apply. The BS-RoFormer model repository declares GPL-3.0. These are model-asset licenses, distinct from the MIT license of the pymss inference code.
+The MDX23C model repository declares CC-BY-NC-SA-4.0. It is non-commercial: commercial use is not permitted; attribution and share-alike requirements apply. The BS-RoFormer model repository declares GPL-3.0. These are model-asset licenses, distinct from the MIT license of the pymss inference code. The CC-BY-NC-SA-4.0 declaration comes from the Sucial/MSST-WebUI mirror; a separate weight-specific grant from the original ZFTurbo release author was not located, so checkpoint redistribution should wait for provenance confirmation.
 
 ## Candidate families to investigate
 
