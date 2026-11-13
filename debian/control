@@ -27,7 +27,7 @@ Description: Local GPU-accelerated and multi-model audio separation
  music and can execute verified multi-model separation plans, including the
  six-stem HT-Demucs ONNX backend. When explicitly enabled, input WAVs can be
  converted to a model's required sample rate in temporary files; output stems
- are restored to the original input rate. No audio is sent to a network service.
+ retain the model's output sample rate. No audio is sent to a network service.
  .
  This package wraps the upstream melband-roformer-infer Python project
  (MIT licensed) and ships a self-contained Python environment (including
