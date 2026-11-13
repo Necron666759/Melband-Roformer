@@ -102,7 +102,11 @@ class PymssAdapter:
             samples = np.asarray(separated[stem], dtype=np.float32)
             if samples.ndim == 1:
                 pass
-            elif samples.ndim == 2 and samples.shape[0] == mixture.shape[0]:
+            elif (
+                samples.ndim == 2
+                and samples.shape[0] in (1, 2)
+                and samples.shape[1] == mixture.shape[0]
+            ):
                 # Accept channel-major output defensively; the documented
                 # pymss API returns sample-major arrays.
                 samples = samples.T
