@@ -27,6 +27,10 @@ dependencies = [
     # rewritten terminal progress bar (not only pulled in transitively
     # via melband-roformer-infer's own dependency on it).
     "tqdm>=4.64",
+    # ONNX Runtime GPU uses CUDA 13.0 / cuDNN 9, matching torch 2.13+cu130.
+    "onnxruntime-gpu[cuda,cudnn]>=1.27,<1.31",
+    "huggingface-hub>=0.24",
+    "soxr>=0.3",
 ]
 
 [project.scripts]
