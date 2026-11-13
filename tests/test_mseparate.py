@@ -276,6 +276,27 @@ def test_feature_guided_planner_selects_models_from_declared_stems():
     assert 0 <= by_model["bass-model"].confidence <= 1
 
 
+def test_planner_prefers_vocal_specialist_over_general_demucs_route():
+    registry = load_registry(bundled_registry_path())
+    plan = build_plan(registry=registry)
+    validate_plan(plan)
+
+    by_model = {task.model_id: task for task in plan.tasks}
+    assert set(by_model) == {
+        "melband-roformer-kim-vocals",
+        "demucs-onnx-htdemucs-6s",
+    }
+    assert set(by_model["melband-roformer-kim-vocals"].target_stems) == {
+        "vocals", "instrumental",
+    }
+    assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
+        "drums", "bass", "other", "guitar", "piano",
+    }
+    assert "manifest-declared specialist" in by_model[
+        "melband-roformer-kim-vocals"
+    ].rationale
+
+
 def test_planner_uses_semantic_source_rankings_when_available():
     from mseparate.planner import _stem_score
 
