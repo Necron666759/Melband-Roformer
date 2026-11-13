@@ -262,9 +262,13 @@ def test_chunk_progress_stream_reports_real_completed_chunk_percentage():
 
     output = target.getvalue()
     assert "  input:  12,151,885 samples\n" in output
-    assert "progress: 1/48 chunks (2%) | 0.8s elapsed" in output
-    assert "progress: 24/48 chunks (50%) | 12.4s elapsed" in output
-    assert "progress: 48/48 chunks (100%) | 25.0s elapsed" in output
+    assert "progress: [█" in output
+    assert "] 2%" in output
+    assert "] 50%" in output
+    assert "] 100%" in output
+    assert "chunks processed: 1/48 | first chunk + warm-up: 1s | total: 1s" in output
+    assert "chunks processed: 24/48 | last chunk: 12s | total: 12s" in output
+    assert "chunks processed: 48/48 | last chunk: 13s | total: 25s" in output
 
 
 def test_chunk_progress_stream_flushes_after_each_progress_event():
