@@ -51,8 +51,11 @@ mseparate "/home/clerik/Музыка/Servus Machina/Servus_Machina_capture.wav" 
   --report
 ```
 
-The first run downloads the selected ONNX model from Hugging Face and caches
-it under `~/.local/share/mseparate/models/`. Later runs reuse that cache.
+The first execution downloads the CLAP source-analysis model and the selected
+ONNX model from Hugging Face. CLAP is cached under
+`~/.local/share/mseparate/models/source-analysis/`; ONNX files are managed by
+demucs-onnx. Later runs reuse their caches. `--no-download` requires both
+model families to be cached already.
 
 To explicitly download and prewarm every currently eligible model before
 inference, run the same command with `--prepare-models` and without
