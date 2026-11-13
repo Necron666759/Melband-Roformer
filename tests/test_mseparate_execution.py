@@ -133,3 +133,28 @@ def test_execution_rejects_missing_requested_stem(tmp_path):
     assert summary.failed == 1
     assert "did not produce requested stems" in summary.results[0].message
     assert state["active"] == 0
+
+
+def test_backend_is_unloaded_even_when_load_raises_part_way(tmp_path):
+    source = tmp_path / "input.wav"
+    source.write_bytes(b"input")
+
+    class PartialLoadBackend(FakeBackend):
+        def load(self, manifest, model_dir, device):
+            self.state["active"] += 1
+            self.state["events"].append(("partial-load", manifest.model_id))
+            raise RuntimeError("failed during load")
+
+    state = {"active": 0, "max_active": 0, "events": []}
+    manager = ExecutionManager(
+        {"fake": lambda: PartialLoadBackend(state)},
+        models_root=tmp_path / "models", output_root=tmp_path / "outputs",
+    )
+    plan = ExecutionPlan(1, (
+        ExecutionTask("task", "model-a", "mix", ("vocals",)),
+    ))
+    summary = manager.execute(plan, {"model-a": _manifest("model-a")}, {"mix": source})
+
+    assert summary.failed == 1
+    assert state["active"] == 0
+    assert state["events"] == [("partial-load", "model-a"), ("unload",)]
