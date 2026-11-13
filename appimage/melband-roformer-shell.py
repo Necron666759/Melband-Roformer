@@ -94,7 +94,7 @@ BANNER = _hud(r"""
 # The exact set of subcommands this shell understands. Kept as a plain
 # tuple (not derived "cleverly") so the whitelist is easy to audit by eye.
 _KNOWN_COMMANDS = (
-    "separate", "list-models", "download-model", "info", "self-test",
+    "separate", "mseparate", "list-models", "download-model", "info", "self-test",
     "version", "clear", "help", "exit", "quit",
 )
 
@@ -134,6 +134,18 @@ class MelbandRoformerShell(cmd.Cmd):
         except ValueError as exc:
             print(f"Could not parse arguments: {exc}")
             return
+        if subcommand == "mseparate":
+            from mseparate.cli import main as mseparate_main
+            try:
+                rc = mseparate_main(extra)
+            except SystemExit as exc:
+                rc = exc.code
+            except Exception as exc:  # noqa: BLE001 - keep failures inside the REPL
+                print(f"mseparate error: {exc}")
+                rc = 1
+            if rc:
+                print(f"(exit code {rc})")
+            return
         cli = _import_cli()
         argv = _build_argv(subcommand, extra)
         try:
@@ -153,6 +165,11 @@ class MelbandRoformerShell(cmd.Cmd):
         "separate <file(s)> [--output-dir DIR] [--device auto|cuda|cpu] [--model SLUG]\n" \
         "    Separate vocals/instrumental from one or more audio files."
         self._dispatch("separate", arg)
+
+    def do_mseparate(self, arg):
+        "mseparate <file> [--analysis-only] [--plan-only] [--report [PATH]]\\n" \\
+        "    Analyze audio and prepare a safe multi-model separation plan."
+        self._dispatch("mseparate", arg)
 
     def do_list_models(self, arg):
         "list-models\n    List models available in the upstream registry."
@@ -198,7 +215,7 @@ class MelbandRoformerShell(cmd.Cmd):
     # the alias table below, since Python identifiers can't contain '-'.
     def default(self, line):
         cmd_word = line.split(None, 1)[0] if line.strip() else ""
-        alias = {"list-models": self.do_list_models,
+        alias = {"mseparate": self.do_mseparate,\n                  "list-models": self.do_list_models,
                   "download-model": self.do_download_model,
                   "self-test": self.do_self_test}.get(cmd_word)
         if alias is not None:
