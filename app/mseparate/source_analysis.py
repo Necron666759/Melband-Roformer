@@ -58,7 +58,6 @@ def analyze_sources(path: str | Path, *, device: str = "auto",
     # holding a long 96 kHz master in memory.
     window_seconds, hop_seconds, sample_rate = 10.0, 7.5, 48000
     window = int(window_seconds * sample_rate)
-    hop = int(hop_seconds * sample_rate)
     similarities = np.zeros(len(SOURCES), dtype=np.float64)
     count = 0
     labels = [f"The recording contains {description}." for description in SOURCES.values()]
@@ -82,7 +81,7 @@ def analyze_sources(path: str | Path, *, device: str = "auto",
                     resampled = np.pad(resampled, (0, window - len(resampled)))
                 else:
                     resampled = resampled[:window]
-                inputs = processor(audios=[resampled], sampling_rate=sample_rate,
+                inputs = processor(audio=[resampled], sampling_rate=sample_rate,
                                    return_tensors="pt", padding=True)
                 inputs = {key: value.to(target_device) for key, value in inputs.items()}
                 audio_features = model.get_audio_features(**inputs)
