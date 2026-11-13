@@ -158,8 +158,14 @@ def test_incompatible_audio_does_not_schedule_model():
     )
     plan = build_plan(analysis=audio, registry=registry)
     assert len(plan.tasks) == 1
-    assert plan.tasks[0].model_id == "demucs-onnx-htdemucs-6s"
-    assert set(plan.tasks[0].target_stems) == {"drums", "bass", "other", "vocals", "guitar", "piano"}
+    assert len(plan.tasks) == 2
+    by_model = {task.model_id: task for task in plan.tasks}
+    assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
+        "drums", "bass", "other", "guitar", "piano",
+    }
+    assert set(by_model["melband-roformer-kim-vocals"].target_stems) == {
+        "vocals", "instrumental",
+    }
     assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
 
