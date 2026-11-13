@@ -1,6 +1,6 @@
 # mseparate architecture
 
-Status: design baseline; implementation has not started.
+Status: foundation slice implemented on feature/mseparate-foundation. Neural inference, source prediction and asset downloads are not enabled yet.
 
 ## 1. Compatibility boundary
 
