@@ -35,7 +35,6 @@ class _ChunkProgressStream:
         self._stream = stream
         self._pending = ""
         self._started_at = time.monotonic()
-        self._last_total = 0
         self._drawn = False
 
     @staticmethod
@@ -77,7 +76,6 @@ class _ChunkProgressStream:
             self._drawn = True
         self._stream.write(bar + "\n\r\x1b[2K" + current)
         self._stream.flush()
-        self._last_total = total
 
     def write(self, value: str) -> int:
         self._pending += value
@@ -88,6 +86,8 @@ class _ChunkProgressStream:
                 completed, total = int(match.group(1)), int(match.group(2))
                 self._write_chunk_progress(completed, total)
                 continue
+            if self._drawn:
+                self.finish()
             self._stream.write(line + "\n")
         return len(value)
 
