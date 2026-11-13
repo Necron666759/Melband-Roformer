@@ -22,11 +22,16 @@ def _stem_score(stem: str, features: dict, predictions: list[dict] | None = None
     }
     if predictions:
         lookup = {str(item.get("source")): float(item.get("score", 0.0)) for item in predictions}
-        matched = next((key for token, values in aliases.items() if token in name
-                        for key in values if key in lookup), None)
-        if matched is not None:
+        candidates = [key for token, values in aliases.items() if token in name
+                      for key in values if key in lookup]
+        if candidates:
+            # Broad stems such as `other` match several source families. Use
+            # the strongest CLAP match instead of whichever alias appears first.
+            matched = max(candidates, key=lambda key: lookup[key])
             ordered = sorted(lookup.values())
-            rank = ordered.index(lookup[matched]) / max(1, len(ordered) - 1)
+            matched_score = lookup[matched]
+            rank = (sum(value < matched_score for value in ordered)
+                    + 0.5 * sum(value == matched_score for value in ordered)) / max(1, len(ordered) - 1)
             return max(0.0, min(1.0, rank)), (
                 f"CLAP relative similarity for {matched}: {lookup[matched]:.4f}; "
                 "not a calibrated source-presence probability"
