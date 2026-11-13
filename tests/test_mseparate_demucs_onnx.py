@@ -34,9 +34,23 @@ def test_adapter_requires_all_six_declared_native_stems():
 
 
 def test_adapter_forces_cuda_and_writes_all_requested_outputs(tmp_path, monkeypatch):
-    state = {"preload": None, "call": None, "cleared": False}
+    state = {
+        "preload": None, "call": None, "cleared": False,
+        "prewarm": None, "session_providers": None, "fallback_disabled": False,
+    }
+
+    class Session:
+        def get_providers(self):
+            return ["CUDAExecutionProvider"]
+
+        def disable_fallback(self):
+            state["fallback_disabled"] = True
 
     class Pool:
+        def get(self, model_path, providers):
+            state["session_providers"] = providers
+            return Session()
+
         def clear(self):
             state["cleared"] = True
 
@@ -45,6 +59,10 @@ def test_adapter_forces_cuda_and_writes_all_requested_outputs(tmp_path, monkeypa
     fake_ort.preload_dlls = lambda **kwargs: state.update(preload=kwargs)
     fake_runtime = types.ModuleType("demucs_onnx")
     fake_runtime.session_pool = lambda: Pool()
+    def prewarm(**kwargs):
+        state["prewarm"] = kwargs
+        return {"htdemucs_6s": Path("htdemucs_6s.onnx")}
+    fake_runtime.prewarm = prewarm
 
     def separate(input_path, output_dir, **kwargs):
         state["call"] = kwargs
@@ -64,6 +82,9 @@ def test_adapter_forces_cuda_and_writes_all_requested_outputs(tmp_path, monkeypa
     assert state["preload"] == {"directory": ""}
     assert state["call"]["model"] == "htdemucs_6s"
     assert state["call"]["providers"] == "CUDAExecutionProvider"
+    assert state["prewarm"]["providers"] == "CUDAExecutionProvider"
+    assert state["session_providers"] == ["CUDAExecutionProvider"]
+    assert state["fallback_disabled"]
     assert state["call"]["precision"] == "fp16weights"
     assert [item.stem for item in artifacts] == ["drums", "guitar", "piano"]
     adapter.unload()
@@ -88,8 +109,24 @@ def test_no_download_uses_huggingface_offline_mode(tmp_path, monkeypatch):
     fake_ort.get_available_providers = lambda: ["CUDAExecutionProvider", "CPUExecutionProvider"]
     fake_ort.preload_dlls = lambda **kwargs: None
     fake_runtime = types.ModuleType("demucs_onnx")
-    fake_runtime.session_pool = lambda: types.SimpleNamespace(clear=lambda: None)
-    state = {}
+    state = {"fallback_disabled": False}
+
+    class Session:
+        def get_providers(self):
+            return ["CUDAExecutionProvider"]
+
+        def disable_fallback(self):
+            state["fallback_disabled"] = True
+
+    class Pool:
+        def get(self, model_path, providers):
+            return Session()
+
+        def clear(self):
+            pass
+
+    fake_runtime.session_pool = lambda: Pool()
+    fake_runtime.prewarm = lambda **kwargs: {"htdemucs_6s": Path("htdemucs_6s.onnx")}
 
     def separate(*args, **kwargs):
         state["offline"] = os.environ.get("HF_HUB_OFFLINE")
@@ -107,6 +144,7 @@ def test_no_download_uses_huggingface_offline_mode(tmp_path, monkeypatch):
     source.write_bytes(b"input")
     adapter.infer(source, tmp_path / "out", ("vocals",))
     assert state["offline"] == "1"
+    assert state["fallback_disabled"]
     assert "HF_HUB_OFFLINE" not in os.environ
     adapter.unload()
 
