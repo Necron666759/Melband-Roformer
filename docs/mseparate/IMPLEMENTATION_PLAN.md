@@ -97,3 +97,13 @@ Exit criteria: tests and hardware actually exercised are recorded; no unsupporte
 - Planner routes declared stem outputs among eligible manifests using explicit, inspectable heuristics and records score, confidence and rationale.
 - The confidence value is deliberately capped and must not be interpreted as source-detection probability or model-quality confidence.
 - The registry currently has no production model entries, so a normal checkout still produces an explicit empty inference plan. No real model is selected or run until manifests and assets are reviewed.
+
+
+### Executor-integrated quality validation
+
+- [x] Run bounded-memory integrity checks on every produced stem before marking a task successful.
+- [x] Compare output duration, sample rate and channel count with the exact task input.
+- [x] Reject unreadable, non-finite or structurally misaligned outputs while retaining available diagnostic reports.
+- [x] Keep warning-level outputs (including silence/clipping warnings) visible rather than silently discarding them.
+- [x] Add CPU-only executor tests for valid output, structural mismatch and warning retention.
+- [ ] Extend perceptual artifact/leakage heuristics only when a defensible, testable method is available; do not substitute heuristic scores for reference-based metrics.
