@@ -248,3 +248,46 @@ def test_executor_keeps_warning_outputs_available(tmp_path):
     assert len(result.outputs) == 1
     assert result.quality_reports[0].status == "warning"
     assert "output is effectively silent" in result.quality_reports[0].issues
+
+
+
+def test_executor_propagates_cross_stem_duplicate_warning(tmp_path):
+    source = tmp_path / "input.wav"
+    sf.write(source, np.full((48000, 2), 0.1, dtype=np.float32), 48000)
+
+    class DuplicateBackend(FakeBackend):
+        def infer(self, input_audio, output_dir, target_stems):
+            outputs = []
+            signal = np.sin(np.linspace(0, 100, 48000, dtype=np.float32)) * 0.2
+            stereo = np.column_stack((signal, signal))
+            for stem in target_stems:
+                path = output_dir / f"{stem}.wav"
+                sf.write(path, stereo, 48000)
+                outputs.append(StemArtifact(stem, path))
+            return outputs
+
+    state = {"active": 0, "max_active": 0, "events": []}
+    manager = ExecutionManager(
+        {"fake": lambda: DuplicateBackend(state)},
+        models_root=tmp_path / "models", output_root=tmp_path / "outputs",
+    )
+    manifest = replace(
+        _manifest("model-a"),
+        native_stems=("vocals", "drums"),
+        target_stems=("vocals", "drums"),
+    )
+    plan = ExecutionPlan(1, (
+        ExecutionTask("task", "model-a", "mix", ("vocals", "drums")),
+    ))
+
+    result = manager.execute(
+        plan, {"model-a": manifest}, {"mix": source}
+    ).results[0]
+
+    assert result.status == "success"
+    assert len(result.outputs) == 2
+    assert all(report.status == "warning" for report in result.quality_reports)
+    assert all(
+        any("possible duplicated content" in issue for issue in report.issues)
+        for report in result.quality_reports
+    )
