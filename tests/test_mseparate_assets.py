@@ -197,3 +197,26 @@ def test_eligible_registry_requires_pinned_required_asset():
     }
     manifest = parse_manifest(raw)
     assert eligible_models({manifest.model_id: manifest}) == []
+
+
+
+def test_verified_partial_file_is_promoted_without_network(tmp_path, asset_server):
+    asset = _asset(asset_server)
+    model_dir = tmp_path / "model-a"
+    target = model_dir / asset.relative_path
+    target.parent.mkdir(parents=True)
+    part = target.with_name(target.name + ".part")
+    part.write_bytes(_AssetHandler.payload)
+
+    result = ensure_asset(model_dir, asset)
+    assert result.status == "recovered"
+    assert verify_asset(target, asset)
+    assert _AssetHandler.range_requests == []
+
+
+def test_http_404_is_reported_without_installing_bad_asset(tmp_path, asset_server):
+    _AssetHandler.status_code = 404
+    asset = _asset(asset_server)
+    with pytest.raises(AssetError, match="Could not install asset"):
+        ensure_asset(tmp_path / "model-a", asset, retries=1)
+    assert not (tmp_path / "model-a" / asset.relative_path).exists()
