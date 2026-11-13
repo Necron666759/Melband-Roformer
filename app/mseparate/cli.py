@@ -150,7 +150,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-depth", type=int, default=3, help="Maximum refinement depth for future plans")
     parser.add_argument("--prefer-model", help="Prefer this eligible model ID for overlapping stem routes (see --list-models)")
     parser.add_argument("--allow-resample", action="store_true",
-                        help="Allow temporary WAV sample-rate conversion to satisfy model input rates; outputs keep the original rate")
+                        help="Allow temporary WAV sample-rate conversion to satisfy model input rates; outputs keep the model sample rate")
     parser.add_argument("--verbose", action="store_true", help="Print additional diagnostics")
     parser.add_argument("--report", nargs="?", const="mseparate-report.json",
                         help="Write a JSON report (optional path; default: mseparate-report.json)")
