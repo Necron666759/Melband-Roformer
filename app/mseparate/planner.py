@@ -172,7 +172,7 @@ def build_plan(
     if allow_resample:
         notes.append(
             "Sample-rate conversion is enabled: the execution manager uses a temporary model-rate WAV "
-            "and restores output stems to the input sample rate."
+            "for inference; output stems retain the model sample rate."
         )
     notes.extend(rejected)
     if not tasks:
