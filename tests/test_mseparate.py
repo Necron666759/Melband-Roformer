@@ -258,3 +258,80 @@ def test_feature_guided_planner_selects_models_from_declared_stems():
     assert by_model["bass-model"].target_stems == ("bass",)
     assert by_model["bass-model"].rationale
     assert 0 <= by_model["bass-model"].confidence <= 1
+
+
+def test_cli_execute_runs_plan_only_after_assets_are_verified(tmp_path, monkeypatch, capsys):
+    from mseparate.assets import AssetResult
+    from mseparate.execution import ExecutionSummary, TaskResult
+
+    source = _write_wav(tmp_path / "input.wav", sample_rate=44100)
+    state = {"manager_args": None, "execute_args": None, "assets": []}
+
+    def prepare(model, models_root, **kwargs):
+        state["assets"].append(model.model_id)
+        return [AssetResult("checkpoint", "cached", str(models_root / model.model_id / "model.ckpt")),
+                AssetResult("config", "cached", str(models_root / model.model_id / "config.yaml"))]
+
+    class FakeManager:
+        def __init__(self, factories, **kwargs):
+            state["manager_args"] = (factories, kwargs)
+
+        def execute(self, plan, manifests, inputs):
+            state["execute_args"] = (plan, manifests, inputs)
+            return ExecutionSummary((TaskResult("separate-01", "melband-roformer-kim-vocals", "success"),))
+
+    monkeypatch.setattr("mseparate.cli.ensure_model_assets", prepare)
+    monkeypatch.setattr("mseparate.cli.ExecutionManager", FakeManager)
+    monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
+    output = tmp_path / "stems"
+    report = tmp_path / "execution.json"
+
+    rc = main([str(source), "--execute", "--device", "cpu",
+               "--output-dir", str(output), "--report", str(report)])
+
+    assert rc == 0
+    assert state["assets"] == ["melband-roformer-kim-vocals"]
+    factories, manager_kwargs = state["manager_args"]
+    assert "melband-roformer" in factories
+    assert manager_kwargs["device"] == "cpu"
+    assert manager_kwargs["output_root"] == output / "mseparate-stems"
+    plan, manifests, inputs = state["execute_args"]
+    assert plan.tasks[0].target_stems == ("instrumental", "vocals")
+    assert "melband-roformer-kim-vocals" in manifests
+    assert inputs["mix"] == source.resolve()
+    payload = json.loads(report.read_text())
+    assert payload["inference_performed"] is True
+    assert payload["execution"]["results"][0]["status"] == "success"
+    assert "Execution results" in capsys.readouterr().out
+
+
+def test_cli_execute_is_blocked_when_assets_are_not_verified(tmp_path, monkeypatch, capsys):
+    from mseparate.assets import AssetResult
+
+    source = _write_wav(tmp_path / "input.wav", sample_rate=44100)
+    called = {"manager": False}
+
+    monkeypatch.setattr(
+        "mseparate.cli.ensure_model_assets",
+        lambda *a, **k: [AssetResult("checkpoint", "missing", message="offline")],
+    )
+
+    class ForbiddenManager:
+        def __init__(self, *args, **kwargs):
+            called["manager"] = True
+            raise AssertionError("execution must not start with missing assets")
+
+    monkeypatch.setattr("mseparate.cli.ExecutionManager", ForbiddenManager)
+    monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
+    rc = main([str(source), "--execute", "--no-download"])
+    output = capsys.readouterr()
+    assert rc == 1
+    assert not called["manager"]
+    assert "Execution blocked" in output.err
+    assert "Inference was not started" in output.out
+
+
+def test_cli_rejects_execute_with_analysis_only():
+    with pytest.raises(SystemExit) as exc:
+        main(["input.wav", "--execute", "--analysis-only"])
+    assert exc.value.code == 2
