@@ -79,8 +79,10 @@ Exit criteria: tests and hardware actually exercised are recorded; no unsupporte
 
 ## Current status
 
-- Repository access confirmed.
-- Initial source-level audit started.
-- Feature branch `feature/mseparate-foundation` created.
-- No application code or runtime dependencies changed yet.
-- No runtime test has been claimed or performed in this documentation-only slice.
+- Repository access and write permissions confirmed.
+- Source-level audit of the CLI, model download wrapper, packaging rules, AppImage shell and current tests completed to the extent available through repository files.
+- Feature branch `feature/mseparate-foundation` created from `main`.
+- Phase 1 foundation code added: independent `mseparate` entry point, audio metadata/signal measurements, typed contracts, validated local registry, persistent data layout, atomic JSON reports and plan validation.
+- Debian launcher/manual page and AppImage restricted-shell routing added. Legacy CLI implementation and dependency pins were not changed.
+- CPU-only tests were authored but have not been executed in a local runtime. No build, AppImage, GPU or real-audio inference test has been claimed.
+- Next: execute the CPU-only test tier in the project environment, correct any failures, then begin the asset manager (Phase 2).
