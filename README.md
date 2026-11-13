@@ -282,7 +282,7 @@ mseparate input.wav --prefer-model mdx23c-zfturbo-vocals
 mseparate input.wav --plan-only --allow-resample
 ```
 
-When a model's required sample rate differs from the input, `--allow-resample` lets the planner schedule models that otherwise reject that rate. Execution converts only a temporary WAV for model inference and restores the separated stems to the input file's original sample rate; the source file is never modified. Backends that already declare sample-rate conversion support continue to use the execution manager's conversion path without this opt-in.
+When a model's required sample rate differs from the input, `--allow-resample` lets the planner schedule models that otherwise reject that rate. Execution converts only a temporary WAV for model inference; separated stems retain the model's output sample rate. The source file is never modified. Backends that already declare sample-rate conversion support continue to use the execution manager's conversion path without this opt-in.
 
 The model registry and persistent model cache are stored under `~/.local/share/mseparate/`. Normal execution downloads only assets required by the selected plan and reuses verified cached files on later runs. `--prepare-models` without `--execute` explicitly verifies or downloads all eligible model assets without running inference; `--no-download` checks local files only. The optional `--execute` flag remains accepted for compatibility. The existing `separate` command remains the original Mel-Band RoFormer workflow.
 
