@@ -172,3 +172,31 @@ without requiring an input file. A user registry at
 not mean inference has been enabled: this release only analyzes, plans and
 prepares assets. The real checkpoint/GPU inference integration remains gated
 on an end-to-end run against the target Debian/PyTorch/CUDA environment.
+
+
+## Explicit inference execution
+
+`mseparate` now exposes an opt-in `--execute` path. It prepares only the
+models referenced by the generated plan, requires every declared asset to be
+cached or freshly downloaded and SHA-256/size verified, and then hands the
+plan to `ExecutionManager`. The current MelBand adapter invokes the installed
+`melband-roformer` wrapper in a child process. The wrapper in turn stages the
+single input WAV and invokes the pinned `melband-roformer-infer==0.1.5`
+entry point with explicit config/checkpoint paths. This keeps Torch out of the
+coordinator process and makes child-process exit the model-lifetime boundary.
+
+Successful output stems are written below
+`<output-dir>/mseparate-stems/<task-id>/`. Each output is decoded and checked
+against the exact input for duration, sample rate, channel count, finite
+samples, silence/clipping warnings and cross-stem duplication heuristics.
+Structural failures mark the task failed; warning outputs remain available.
+The optional JSON report records whether inference was attempted, asset
+verification results, execution status, output paths and quality reports.
+
+Execution is never implicit: users must pass `--execute`. `--no-download`
+makes execution offline-only and blocks inference if any required asset is
+missing or unverified. `--inference-timeout 0` (default) disables the
+per-task timeout; a positive value enforces one. A successful CPU-only CI run
+tests the orchestration with fake adapters, not actual model weights, CUDA or
+GPU inference. End-to-end validation on the target Debian/GPU machine remains
+required before claiming production GPU support.
