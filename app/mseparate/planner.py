@@ -4,14 +4,14 @@ from __future__ import annotations
 from .types import ExecutionPlan
 
 
-def build_plan() -> ExecutionPlan:
+def build_plan(max_depth: int = 3) -> ExecutionPlan:
     # No production model is enabled in this foundation slice. Returning an
     # explicit empty plan is safer than selecting an unreviewed checkpoint.
     return ExecutionPlan(
         schema_version=1,
         tasks=(),
         notes=("No verified model manifests are enabled; neural inference was not scheduled.",),
-        max_depth=0,
+        max_depth=max_depth,
     )
 
 
