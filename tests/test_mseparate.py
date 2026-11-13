@@ -123,7 +123,7 @@ def test_model_audio_compatibility_enforces_sample_rate_and_channels():
     wrong_container = AudioMetadata("mix.flac", 1.0, 44100, 2, 44100, "PCM_16")
     assert model_audio_compatibility(model, good) == (True, "")
     assert not model_audio_compatibility(model, wrong_rate)[0]
-    assert "resampling is not implicit" in model_audio_compatibility(model, wrong_rate)[1]
+    assert "resampling is not supported" in model_audio_compatibility(model, wrong_rate)[1]
     assert not model_audio_compatibility(model, too_many_channels)[0]
     assert not model_audio_compatibility(model, wrong_container)[0]
     assert "requires wav input" in model_audio_compatibility(model, wrong_container)[1]
