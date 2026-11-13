@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -42,6 +43,43 @@ def _print_models(registry) -> None:
             print(f"    Input: {model.sample_rate or 'any'} Hz; {model.channels or 'any channels'}")
         for note in model.notes:
             print(f"    Note: {note}")
+
+
+def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> dict[str, Path]:
+    """Download and prewarm the six-stem ONNX model, then release its session."""
+    import onnxruntime as ort
+    import demucs_onnx
+
+    preload = getattr(ort, "preload_dlls", None)
+    if callable(preload):
+        preload(directory="")
+    available = set(ort.get_available_providers())
+    if device == "cuda" and "CUDAExecutionProvider" not in available:
+        raise RuntimeError(
+            "CUDAExecutionProvider is unavailable; ONNX Runtime providers: "
+            + ", ".join(sorted(available))
+        )
+    provider = (
+        "cuda" if device == "cuda" or
+        (device == "auto" and "CUDAExecutionProvider" in available)
+        else "cpu"
+    )
+    model_dir.mkdir(parents=True, exist_ok=True)
+    old_offline = os.environ.get("HF_HUB_OFFLINE")
+    if no_download:
+        os.environ["HF_HUB_OFFLINE"] = "1"
+    try:
+        return demucs_onnx.prewarm(
+            models=["htdemucs_6s"], precision="fp16weights",
+            providers=provider, cache_dir=str(model_dir),
+        )
+    finally:
+        demucs_onnx.session_pool().clear()
+        if no_download:
+            if old_offline is None:
+                os.environ.pop("HF_HUB_OFFLINE", None)
+            else:
+                os.environ["HF_HUB_OFFLINE"] = old_offline
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -126,6 +164,40 @@ def main(argv: list[str] | None = None) -> int:
         unique_models = {model.model_id: model for model in models_to_prepare}
         model_asset_status: dict[str, bool] = {}
         for model in unique_models.values():
+            if model.backend == "demucs-onnx":
+                model_dir = paths["models"] / model.model_id
+                if args.prepare_models:
+                    try:
+                        prepared = _prepare_demucs_onnx(
+                            model_dir, args.device, no_download=args.no_download,
+                        )
+                        model_asset_status[model.model_id] = bool(prepared)
+                        asset_results.extend({
+                            "model_id": model.model_id, "role": "onnx-model",
+                            "status": "prepared", "path": str(path),
+                            "message": "Downloaded or reused through Hugging Face Hub and prewarmed.",
+                            "bytes_downloaded": 0,
+                        } for path in prepared.values())
+                    except Exception as exc:
+                        model_asset_status[model.model_id] = False
+                        asset_results.append({
+                            "model_id": model.model_id, "role": "onnx-model",
+                            "status": "failed", "path": None,
+                            "message": f"{type(exc).__name__}: {exc}",
+                            "bytes_downloaded": 0,
+                        })
+                else:
+                    # The backend downloads the pinned model family lazily on
+                    # first inference; --no-download is enforced by HF_HUB_OFFLINE.
+                    model_asset_status[model.model_id] = True
+                    asset_results.append({
+                        "model_id": model.model_id, "role": "onnx-model",
+                        "status": "managed-by-backend", "path": str(model_dir),
+                        "message": "Model download/cache is managed by demucs-onnx.",
+                        "bytes_downloaded": 0,
+                    })
+                continue
+
             results = ensure_model_assets(
                 model, paths["models"], no_download=args.no_download,
                 timeout=args.download_timeout, retries=args.download_retries,
@@ -151,10 +223,17 @@ def main(argv: list[str] | None = None) -> int:
                 print("Execution blocked: model assets are missing or failed verification: "
                       + ", ".join(failed_assets), file=sys.stderr)
             else:
+                from .demucs_onnx import DemucsOnnxAdapter
+
                 manager = ExecutionManager(
-                    {"melband-roformer": lambda: MelBandCLIAdapter(
-                        timeout=args.inference_timeout or None
-                    )},
+                    {
+                        "melband-roformer": lambda: MelBandCLIAdapter(
+                            timeout=args.inference_timeout or None
+                        ),
+                        "demucs-onnx": lambda: DemucsOnnxAdapter(
+                            no_download=args.no_download,
+                        ),
+                    },
                     models_root=paths["models"],
                     output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
                     device=args.device,
