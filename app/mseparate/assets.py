@@ -6,6 +6,7 @@ downloaded content and only installs assets with a pinned SHA-256 digest.
 from __future__ import annotations
 
 import hashlib
+import http.client
 import os
 import re
 import time
@@ -203,7 +204,7 @@ def ensure_asset(model_dir: str | Path, asset: ModelAsset, *,
                 os.replace(part, target)
                 return AssetResult(asset.role, "downloaded", str(target),
                                    bytes_downloaded=downloaded)
-            except (urllib.error.URLError, TimeoutError, OSError, AssetError) as exc:
+            except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError, AssetError) as exc:
                 last_error = exc
                 # Keep a resumable partial file for transient failures. A
                 # checksum/size failure cannot be repaired by appending;
