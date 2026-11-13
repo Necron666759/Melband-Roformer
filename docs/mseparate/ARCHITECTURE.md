@@ -155,7 +155,7 @@ MelBand RoFormer vocal checkpoint. Its MIT license is declared by the
 checkpoint's Hugging Face repository; the checkpoint SHA-256 and byte size
 match the checksum inventory shipped with the pinned upstream
 `melband-roformer-infer==0.1.5` release. Its YAML configuration is pinned to
-the same upstream tag and checksum inventory.
+the same upstream tag; its SHA-256 is computed from the exact 728-byte source file.
 
 The model predicts vocals natively. The instrumental is the mixture residual
 (`mixture - vocals`), not a second independently predicted stem. The pinned
