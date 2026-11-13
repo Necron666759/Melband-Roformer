@@ -191,6 +191,14 @@ def ensure_asset(model_dir: str | Path, asset: ModelAsset, *,
             preserved = target.with_name(target.name + ".corrupt-" + uuid.uuid4().hex[:8])
             target.replace(preserved)
 
+        if part.exists() and verify_asset(part, asset):
+            os.replace(part, target)
+            return AssetResult(asset.role, "recovered", str(target))
+        if part.exists() and asset.size_bytes is not None and part.stat().st_size >= asset.size_bytes:
+            # A complete-sized but invalid partial file cannot be resumed
+            # meaningfully; restart it rather than issuing an unsatisfiable Range.
+            part.unlink()
+
         downloaded = 0
         last_error: Exception | None = None
         for attempt in range(retries):
@@ -229,8 +237,11 @@ def ensure_model_assets(manifest: ModelManifest, models_root: str | Path, *,
                         no_download: bool = False, timeout: float = 30.0,
                         retries: int = 3) -> list[AssetResult]:
     """Check/download all assets independently; one failure never skips peers."""
-    base = Path(models_root).expanduser().resolve()
-    base.mkdir(parents=True, exist_ok=True)
+    base_path = Path(models_root).expanduser()
+    if base_path.is_symlink():
+        return [AssetResult(asset.role, "failed", message=f"Refusing model store symlink: {base_path}") for asset in manifest.assets]
+    base_path.mkdir(parents=True, exist_ok=True)
+    base = base_path.resolve()
     model_dir = base / manifest.model_id
     if model_dir.is_symlink():
         return [AssetResult(asset.role, "failed", message=f"Refusing model directory symlink: {model_dir}") for asset in manifest.assets]
