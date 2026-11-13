@@ -300,6 +300,7 @@ def test_cli_execute_runs_plan_only_after_assets_are_verified(tmp_path, monkeypa
     assert "melband-roformer-kim-vocals" in manifests
     assert inputs["mix"] == source.resolve()
     payload = json.loads(report.read_text())
+    assert payload["inference_attempted"] is True
     assert payload["inference_performed"] is True
     assert payload["execution"]["results"][0]["status"] == "success"
     assert "Execution results" in capsys.readouterr().out
