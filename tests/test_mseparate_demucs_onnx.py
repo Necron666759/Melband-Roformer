@@ -254,14 +254,14 @@ def test_chunk_progress_stream_reports_real_completed_chunk_percentage():
 
     target = io.StringIO()
     progress = _ChunkProgressStream(target)
-    progress.write("  input:  12,151,885 samples\\n")
-    progress.write("    chunk 1/48: 0.8s elapsed\\n")
-    progress.write("    chunk 24/48: 12.4s elapsed\\n")
-    progress.write("    chunk 48/48: 25.0s elapsed\\n")
+    progress.write("  input:  12,151,885 samples\n")
+    progress.write("    chunk 1/48: 0.8s elapsed\n")
+    progress.write("    chunk 24/48: 12.4s elapsed\n")
+    progress.write("    chunk 48/48: 25.0s elapsed\n")
     progress.flush()
 
     output = target.getvalue()
-    assert "  input:  12,151,885 samples\\n" in output
+    assert "  input:  12,151,885 samples\n" in output
     assert "progress: 1/48 chunks (2%) | 0.8s elapsed" in output
     assert "progress: 24/48 chunks (50%) | 12.4s elapsed" in output
     assert "progress: 48/48 chunks (100%) | 25.0s elapsed" in output
@@ -281,7 +281,7 @@ def test_chunk_progress_stream_flushes_after_each_progress_event():
 
     target = FlushTrackingStream()
     progress = _ChunkProgressStream(target)
-    progress.write("    chunk 3/10: 2.1s elapsed\\n")
+    progress.write("    chunk 3/10: 2.1s elapsed\n")
 
     assert target.flush_count == 1
     assert "progress: 3/10 chunks (30%)" in target.getvalue()
