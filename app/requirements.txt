@@ -68,3 +68,7 @@ tqdm>=4.64
 onnxruntime-gpu[cuda,cudnn]>=1.27,<1.31
 huggingface-hub>=0.24
 soxr>=0.3
+
+# CLAP-based semantic instrument/source ranking (downloaded model on first run).
+transformers>=4.45,<5
+librosa>=0.10.2,<1
