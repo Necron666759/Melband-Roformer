@@ -20,7 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Analyze a music track and prepare a safe multi-model separation plan.",
     )
     parser.add_argument("input", nargs="?", help="Input audio file")
-    parser.add_argument("--output-dir", default=".", help="Directory for final stems and reports")
+    parser.add_argument("--output-dir", default=".", help="Directory for requested report files")
     parser.add_argument("--device", choices=("auto", "cuda", "cpu"), default="auto",
                         help="Target compute device (inference is not enabled in this foundation release)")
     parser.add_argument("--models-dir", default=None, help="Override persistent model storage directory")
@@ -83,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Report written: {report_path}")
     if args.verbose:
         print(f"Data directory: {data_root()}")
+        print("Models directory: " + str(paths["models"]))
         print(f"Registry entries: {len(registry)}")
         print(f"Device preference: {args.device}")
         print("Inference: disabled in this foundation release")
