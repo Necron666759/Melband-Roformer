@@ -173,11 +173,15 @@ def ensure_asset(model_dir: str | Path, asset: ModelAsset, *,
     if retries < 1:
         raise ValueError("retries must be at least 1")
     root = Path(model_dir).expanduser()
+    if root.is_symlink():
+        raise AssetError(f"Refusing model directory symlink: {root}")
     root.mkdir(parents=True, exist_ok=True)
     target = _safe_asset_path(root, asset.relative_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     part = target.with_name(target.name + ".part")
     lock = target.with_name(target.name + ".lock")
+    if part.is_symlink():
+        raise AssetError(f"Refusing partial-file symlink: {part}")
 
     with _AssetLock(lock, timeout=lock_timeout):
         if verify_asset(target, asset):
@@ -225,7 +229,15 @@ def ensure_model_assets(manifest: ModelManifest, models_root: str | Path, *,
                         no_download: bool = False, timeout: float = 30.0,
                         retries: int = 3) -> list[AssetResult]:
     """Check/download all assets independently; one failure never skips peers."""
-    model_dir = Path(models_root).expanduser() / manifest.model_id
+    base = Path(models_root).expanduser().resolve()
+    base.mkdir(parents=True, exist_ok=True)
+    model_dir = base / manifest.model_id
+    if model_dir.is_symlink():
+        return [AssetResult(asset.role, "failed", message=f"Refusing model directory symlink: {model_dir}") for asset in manifest.assets]
+    try:
+        model_dir.resolve().relative_to(base)
+    except ValueError:
+        return [AssetResult(asset.role, "failed", message=f"Model directory escapes model store: {model_dir}") for asset in manifest.assets]
     results: list[AssetResult] = []
     for asset in manifest.assets:
         try:
