@@ -1,8 +1,10 @@
 # GPU multi-stem separation with mseparate
 
 The AppImage includes a six-stem HT-Demucs ONNX backend and a CLAP-based
-semantic source-analysis stage. CLAP is loaded only for --execute; model asset
-preparation does not require it. During --execute, mseparate analyzes the mix
+semantic source-analysis stage. Normal invocation executes separation by
+default; CLAP is loaded as part of that execution, while --analysis-only,
+--plan-only and preparation-only invocations do not require it. During
+execution, mseparate analyzes the mix
 in overlapping 10-second windows and ranks broad source families: voice,
 drums, bass, guitar, piano, synthesizer, strings, brass, woodwinds and
 electronic sound effects.
@@ -56,7 +58,7 @@ for overlapping routes. For example:
 
 ```bash
 mseparate input.wav --plan-only --prefer-model bs-roformer-anvuew-vocals
-mseparate input.wav --execute --device cuda --prefer-model mdx23c-zfturbo-vocals
+mseparate input.wav --device cuda --prefer-model mdx23c-zfturbo-vocals
 ```
 
 The preference changes routing only; it does not change the model's license or
@@ -94,39 +96,44 @@ the RTX 3060 and RTX 3060 Ti GPU architectures are supported.
 
 ## Run
 
-Quote the input path when it contains spaces:
+The normal workflow is one command:
 
 ```bash
-mseparate "/home/clerik/Музыка/Servus Machina/Servus_Machina_capture.wav" \
-  --execute \
-  --device cuda \
-  --output-dir "/home/clerik/Музыка/Servus Machina/Separated" \
-  --report
+mseparate "input.wav"
 ```
 
-The first execution downloads the CLAP source-analysis model and the selected
-ONNX model from Hugging Face. CLAP is cached under
-`~/.local/share/mseparate/models/source-analysis/`; ONNX files are managed by
-demucs-onnx. Later runs reuse their caches. `--no-download` requires both
-model families to be cached already.
+By default, mseparate analyzes the audio, performs semantic source analysis,
+builds a multi-model separation plan, downloads only the verified assets
+required by that plan, and runs the separation. Downloaded models are cached
+for later runs. The output stems are written under
+`./mseparate-stems/`; the original input file is not modified.
 
-To explicitly download and prewarm every currently eligible model before
-inference, run the same command with `--prepare-models` and without
-`--execute`; then run it again with `--execute`.
+For a custom output directory or an explicit report:
 
-`--device cuda` is strict: if ONNX Runtime does not expose
-`CUDAExecutionProvider`, execution fails with a diagnostic. In strict mode
-mseparate passes the explicit `CUDAExecutionProvider` name rather than the
-upstream `cuda` alias, because that alias appends `CPUExecutionProvider` as a
-fallback. Before inference, mseparate prewarms the graph, verifies that the
-session registered only `CUDAExecutionProvider`, and disables ONNX Runtime's
-retry fallback. If CUDA session creation or inference fails, the task fails
-instead of retrying on CPU. `--device auto` may use CPU if CUDA is unavailable
-and may retain CPU as an ONNX Runtime fallback provider.
+```bash
+mseparate "input.wav" --output-dir "/path/to/output" --report
+```
 
-The six-stem model uses the `fp16weights` download variant to reduce cache
-size. This only reduces download/storage size; the upstream package states
-that runtime precision, latency, and memory use are unchanged.
+The optional `--execute` flag remains accepted for compatibility, but is no
+longer required. Use `--analysis-only` to inspect the audio without planning
+or inference, `--plan-only` to build and display a plan without inference,
+or `--prepare-models` without `--execute` to download and prewarm every
+currently eligible model without separating audio. By default, only assets
+for models selected by the current plan are prepared; this avoids downloading
+unused checkpoints.
+
+The default `--device auto` probes both PyTorch CUDA and the ONNX Runtime
+CUDA provider before selecting the device. If either runtime cannot initialize
+CUDA, mseparate prints a warning and runs the plan on CPU. If CUDA passes the
+initial probe but a model load or inference task subsequently fails, all
+adapters are unloaded and the complete plan is retried on CPU; the fallback
+reason is included in the console output and JSON report. This retry may take
+considerably longer than GPU inference.
+
+`--device cuda` is strict and never falls back to CPU. If CUDA is unavailable
+or inference fails, the task fails with a diagnostic. `--device cpu` forces
+CPU execution. The `--no-download` flag disables network access and requires
+all selected model assets to be cached and verified locally.
 
 ## Output layout
 
