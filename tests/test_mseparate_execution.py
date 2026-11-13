@@ -92,7 +92,7 @@ def test_execution_is_strictly_sequential_and_unloads_before_next(tmp_path):
 
 def test_failed_task_does_not_abort_independent_task_but_skips_dependents(tmp_path):
     source = tmp_path / "input.wav"
-    source.write_bytes(b"input")
+    sf.write(source, np.full((48000, 2), 0.1, dtype=np.float32), 48000)
     state = {"active": 0, "max_active": 0, "events": []}
 
     def factory():
