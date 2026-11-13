@@ -1,0 +1,47 @@
+[
+  {
+    "model_id": "melband-roformer-kim-vocals",
+    "name": "MelBand RoFormer Kim | Vocals (Kimberley Jensen)",
+    "architecture": "Mel-Band RoFormer",
+    "backend": "melband-roformer",
+    "source_url": "https://huggingface.co/KimberleyJSN/melbandroformer",
+    "license": "MIT",
+    "license_url": "https://huggingface.co/KimberleyJSN/melbandroformer",
+    "license_status": "verified",
+    "upstream_version": "melband-roformer-infer==0.1.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "native_stems": ["vocals"],
+    "derived_stems": ["instrumental"],
+    "target_stems": ["vocals", "instrumental"],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Checkpoint SHA-256 and byte size are pinned from the upstream v0.1.5 checksum manifest.",
+      "Configuration is pinned to the upstream v0.1.5 source tag.",
+      "The model emits vocals; instrumental is computed as mixture minus vocals and is not a native model prediction.",
+      "Upstream inference does not resample input audio; this manifest therefore requires 44100 Hz input.",
+      "The upstream inference implementation duplicates mono input to stereo for inference and writes the vocal output back as mono."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/KimberleyJSN/melbandroformer/resolve/main/MelBandRoformer.ckpt",
+        "relative_path": "MelBandRoformer.ckpt",
+        "sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e",
+        "size_bytes": 913106900,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://raw.githubusercontent.com/openmirlab/melband-roformer-infer/v0.1.5/src/mel_band_roformer/configs/config_vocals_mel_band_roformer.yaml",
+        "relative_path": "config_vocals_mel_band_roformer.yaml",
+        "sha256": "d0d3fabd87abdbe2f83ed290462ec8f7d821dfcb",
+        "size_bytes": 728,
+        "required": true
+      }
+    ]
+  }
+]
