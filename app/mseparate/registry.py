@@ -48,14 +48,23 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         if checksum is not None and (not isinstance(checksum, str) or not _SHA256.fullmatch(checksum)):
             raise RegistryError(f"Asset {role!r} has an invalid SHA-256")
         size = item.get("size_bytes")
-        if size is not None and (not isinstance(size, int) or size <= 0):
+        if size is not None and (not isinstance(size, int) or isinstance(size, bool) or size <= 0):
             raise RegistryError(f"Asset {role!r} has an invalid size_bytes")
+        required = item.get("required", True)
+        if not isinstance(required, bool):
+            raise RegistryError(f"Asset {role!r} field required must be boolean")
         assets.append(ModelAsset(
             role=role, url=url, relative_path=relative_path,
             sha256=checksum, size_bytes=size,
-            required=bool(item.get("required", True)),
+            required=required,
         ))
 
+    license_value = data.get("license")
+    license_url = data.get("license_url")
+    if license_value is not None and not isinstance(license_value, str):
+        raise RegistryError("license must be a string or null")
+    if license_url is not None and not isinstance(license_url, str):
+        raise RegistryError("license_url must be a string or null")
     license_status = data.get("license_status", "review_required")
     status = data.get("status", "candidate")
     if license_status not in _LICENSE_STATES:
@@ -70,7 +79,7 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         return tuple(value)
 
     sample_rate = data.get("sample_rate")
-    if sample_rate is not None and (not isinstance(sample_rate, int) or sample_rate <= 0):
+    if sample_rate is not None and (not isinstance(sample_rate, int) or isinstance(sample_rate, bool) or sample_rate <= 0):
         raise RegistryError("sample_rate must be a positive integer or null")
 
     model_id = _required_string(data, "model_id")
@@ -83,8 +92,8 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         architecture=_required_string(data, "architecture"),
         backend=_required_string(data, "backend"),
         source_url=_required_string(data, "source_url"),
-        license=data.get("license"),
-        license_url=data.get("license_url"),
+        license=license_value,
+        license_url=license_url,
         license_status=license_status,
         assets=tuple(assets),
         native_stems=strings("native_stems"),
