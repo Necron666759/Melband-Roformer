@@ -13,20 +13,39 @@ name every individual synth patch or guarantee a clean stem. The planner can
 only select models actually present in the registry; a source label without a
 compatible specialist model remains part of a broader stem such as other.
 
-The bundled registry now also tracks two research candidates: BS-RoFormer
-(vocal-focused) and MDX23C (vocal-focused). They are deliberately marked
-`candidate`, `review_required`, and `pending-adapter`. They appear in
-`--list-models` for visibility but are not eligible for planning, downloading,
-or inference. Their exact checkpoint artifacts, redistribution terms,
-configuration/API contracts and checksums must be verified before they can be
-enabled. A repository containing model code is not by itself proof that a
-particular checkpoint is licensed for redistribution.
+The registry contains four enabled models: the existing MelBand RoFormer
+vocal model, six-stem HT-Demucs ONNX, a vocal-focused BS-RoFormer checkpoint,
+and a vocal-focused MDX23C checkpoint. The two new PyTorch models use separate
+adapters backed by the pinned `pymss==2.3.5` runtime and the same sequential
+load/infer/unload lifecycle as the existing backends.
 
-For overlapping output capabilities, the planner now prefers an explicitly
-declared specialist category (for example, the MelBand vocals model) over a
-general-purpose model (HT-Demucs). CLAP/acoustic scores still describe source
-salience; they are not estimates of model quality. This prevents the general
-Demucs route from winning a tie merely because its model ID sorts first.
+| Model | Weights | Declared model license | SHA-256 |
+|---|---:|---|---|
+| BS-RoFormer Anvuew vocals | 204,485,563 bytes | GPL-3.0 | `8d0f72ad0ac4154f5f4c3cdf230880bbb9a5bd01dc610241a2abfe787f0d7784` |
+| MDX23C ZFTurbo vocals | 448,101,203 bytes | CC-BY-NC-SA-4.0 | `49d51472769e34a2501cd1da782346a3212555c3a5619fc2c53507445528d816` |
+
+The BS-RoFormer checkpoint and config are pinned to Hugging Face revision
+`7e4e5669cad8a8810983e02fa25294229246d374`. Its model repository declares
+GPL-3.0. The MDX23C checkpoint is pinned to Sucial/MSST-WebUI revision
+`55155c4e2f99d0ca94d24fce88d6dc25711a9252`; that model repository declares
+CC-BY-NC-SA-4.0. The latter license requires attribution, prohibits commercial
+use, and applies share-alike terms to adaptations/redistributions. The MDX23C
+config is pinned to the ZFTurbo `v1.0.0` source tag. The registry also pins
+config SHA-256 and byte size for both models.
+
+The inference library code (`pymss`) is MIT-licensed, but its code license does
+not replace the separate licenses of the downloaded model weights. Review the
+model license before using or redistributing the corresponding checkpoint.
+The BS-RoFormer and MDX23C checkpoints have not yet undergone real-hardware
+inference in this project.
+
+For overlapping output capabilities, the planner first prefers a declared
+specialist, then the explicit `planner_priority` in the manifest, and finally
+the source-salience score and stable model ID. The priority is an operator-set
+routing preference, not a measured quality score. Defaults keep the existing
+MelBand backend ahead of the newly added alternatives until comparable
+benchmarking has been performed. CLAP/acoustic scores are not estimates of
+model quality.
 
 The current general-purpose model separates a supported audio file into:
 
@@ -50,6 +69,7 @@ Rebuild the AppImage after pulling this branch. The build installs:
   wheels;
 - Hugging Face Hub and SOXR;
 - Transformers and librosa for on-demand CLAP source recognition.
+- `pymss==2.3.5` and `pymss-core==0.1.15` for BS-RoFormer and MDX23C inference; its `torch>=2.7.1` requirement is satisfied by the existing pinned PyTorch 2.13.0 build.
 
 The ONNX Runtime CUDA 13 build is selected to match this project's
 PyTorch 2.13 CUDA 13.0 stack. The NVIDIA driver must support CUDA 13.0;
