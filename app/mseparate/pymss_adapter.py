@@ -22,14 +22,19 @@ class PymssAdapter:
         self._separator = None
         self._model_id: str | None = None
         self._device: str | None = None
+        self._native_stems: tuple[str, ...] = ()
+        self._derived_stems: tuple[str, ...] = ()
 
     def compatibility(self, manifest: ModelManifest) -> tuple[bool, str]:
         if manifest.backend != self.BACKEND:
             return False, f"Manifest backend must be {self.BACKEND!r}"
         if "vocals" not in manifest.native_stems:
             return False, "MSST vocal adapter requires vocals as a native output"
-        if set(manifest.target_stems) - set(manifest.native_stems):
-            return False, "MSST adapter only supports manifest-declared native stems"
+        supported = set(manifest.native_stems) | set(manifest.derived_stems)
+        if set(manifest.target_stems) - supported:
+            return False, "MSST adapter target stems must be native or explicitly derived"
+        if set(manifest.derived_stems) - {"instrumental"}:
+            return False, "MSST adapter currently supports only the mixture-minus-vocals instrumental residual"
         assets = {asset.role: asset for asset in manifest.assets}
         missing = {"checkpoint", "config"} - set(assets)
         if missing:
@@ -78,6 +83,8 @@ class PymssAdapter:
         )
         self._model_id = manifest.model_id
         self._device = str(getattr(self._separator, "device", device))
+        self._native_stems = manifest.native_stems
+        self._derived_stems = manifest.derived_stems
 
     def infer(
         self, input_audio: Path, output_dir: Path, target_stems: tuple[str, ...]
@@ -91,33 +98,57 @@ class PymssAdapter:
             str(input_audio), dtype="float32", always_2d=True
         )
         # pymss expects channel-major input and returns sample-major outputs.
+        native_targets = [stem for stem in target_stems if stem in self._native_stems]
+        # Instrumental is deliberately a derived residual, never presented as
+        # a native model output: mixture - vocals gives an exactly complementary
+        # pair for the selected model's vocal estimate.
+        if "instrumental" in target_stems and "vocals" not in native_targets:
+            native_targets.append("vocals")
         separated = self._separator.separate(
-            mixture.T, pbar=True, stems=list(target_stems)
+            mixture.T, pbar=True, stems=native_targets
         )
         output_dir.mkdir(parents=True, exist_ok=True)
         artifacts: list[StemArtifact] = []
         for stem in target_stems:
-            if stem not in separated:
-                raise RuntimeError(f"{self.MODEL_TYPE} did not return requested stem {stem!r}")
-            samples = np.asarray(separated[stem], dtype=np.float32)
-            if samples.ndim == 1:
-                pass
-            elif (
-                samples.ndim == 2
-                and samples.shape[0] in (1, 2)
-                and samples.shape[1] == mixture.shape[0]
-            ):
-                # Accept channel-major output defensively; the documented
-                # pymss API returns sample-major arrays.
-                samples = samples.T
-            elif samples.ndim != 2 or samples.shape[1] not in (1, 2):
+            if stem == "instrumental" and stem in self._derived_stems:
+                if "vocals" not in separated:
+                    raise RuntimeError(
+                        f"{self.MODEL_TYPE} did not return vocals needed for the instrumental residual"
+                    )
+                vocals = np.asarray(separated["vocals"], dtype=np.float32)
+                if vocals.ndim == 1:
+                    vocals = vocals[:, None]
+                elif (
+                    vocals.ndim == 2
+                    and vocals.shape[0] in (1, 2)
+                    and vocals.shape[1] == mixture.shape[0]
+                ):
+                    vocals = vocals.T
+                if vocals.shape != mixture.shape:
+                    raise RuntimeError(
+                        f"{self.MODEL_TYPE} vocals shape {vocals.shape} does not match mixture {mixture.shape}"
+                    )
+                samples = mixture - vocals
+            else:
+                if stem not in separated:
+                    raise RuntimeError(f"{self.MODEL_TYPE} did not return requested stem {stem!r}")
+                samples = np.asarray(separated[stem], dtype=np.float32)
+                if samples.ndim == 1:
+                    samples = samples[:, None]
+                elif (
+                    samples.ndim == 2
+                    and samples.shape[0] in (1, 2)
+                    and samples.shape[1] == mixture.shape[0]
+                ):
+                    samples = samples.T
+            if samples.ndim != 2 or samples.shape[1] not in (1, 2):
                 raise RuntimeError(
                     f"{self.MODEL_TYPE} returned an invalid {stem!r} array shape {samples.shape}"
                 )
-            if samples.shape[0] != mixture.shape[0]:
+            if samples.shape != mixture.shape:
                 raise RuntimeError(
-                    f"{self.MODEL_TYPE} output {stem!r} has {samples.shape[0]} frames; "
-                    f"expected {mixture.shape[0]}"
+                    f"{self.MODEL_TYPE} output {stem!r} has shape {samples.shape}; "
+                    f"expected {mixture.shape}"
                 )
             path = output_dir / f"{stem}.wav"
             sf.write(str(path), samples, sample_rate, subtype="FLOAT")
@@ -129,6 +160,8 @@ class PymssAdapter:
         self._separator = None
         self._model_id = None
         self._device = None
+        self._native_stems = ()
+        self._derived_stems = ()
         if separator is not None:
             separator.close()
         del separator
