@@ -96,7 +96,7 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
     import onnxruntime as ort
     import demucs_onnx
     from demucs_onnx.inference import (
-        N_SAMPLES, SAMPLE_RATE, _make_transition_window,
+        N_SAMPLES, SAMPLE_RATE,
     )
     from demucs_onnx.providers import resolve_providers
 
@@ -156,7 +156,6 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
         stride = N_SAMPLES - N_SAMPLES // 4
         total_chunks = max(1, (total_samples + stride - 1) // stride)
         chunks_to_run = min(max_chunks, total_chunks)
-        window = _make_transition_window(N_SAMPLES)
         run_times: list[float] = []
         preprocessing_times: list[float] = []
 
