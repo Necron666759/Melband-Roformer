@@ -94,7 +94,7 @@
     "refinement_targets": [],
     "notes": [
       "Model assets are managed and cached by demucs-onnx through Hugging Face Hub; they are not downloaded through mseparate's SHA-pinned asset manager.",
-      "The ONNX backend uses ONNX Runtime CUDAExecutionProvider when CUDA is requested and fails rather than silently falling back to CPU.",
+      "Explicit --device cuda passes only CUDAExecutionProvider to ONNX Runtime; auto mode may include CPU as a fallback.",
       "The piano stem is experimental and may contain substantial bleed or artifacts; audition before relying on it.",
       "The model emits six estimates from the full mix: drums, bass, other, vocals, guitar and piano.",
       "mseparate converts input audio to 44100 Hz before inference and converts every output stem back to the original input sample rate; the original source file is never modified."
