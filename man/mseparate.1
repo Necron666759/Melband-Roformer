@@ -34,8 +34,17 @@ Override the local model storage directory.
 .B --device auto|cuda|cpu
 Record the intended compute device. Neural inference is not enabled in this release.
 .TP
+.B --prepare-models
+Verify or download assets for registry models whose license and required checksums have been reviewed.
+.TP
 .B --no-download
-Guarantee that the command does not access the network. No model downloads are implemented in this foundation release.
+Verify local assets only; never access the network. Applies to --prepare-models.
+.TP
+.B --download-timeout SECONDS
+Per-request network timeout (default 30 seconds).
+.TP
+.B --download-retries N
+Maximum attempts per asset (default 3).
 .TP
 .B --max-depth N
 Set the maximum refinement depth for the execution plan.
