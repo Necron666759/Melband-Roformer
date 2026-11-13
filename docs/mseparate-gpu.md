@@ -1,7 +1,18 @@
 # GPU multi-stem separation with mseparate
 
-The AppImage includes a six-stem HT-Demucs ONNX backend. It separates a
-supported audio file into:
+The AppImage includes a six-stem HT-Demucs ONNX backend and a CLAP-based
+semantic source-analysis stage. During --execute, mseparate analyzes the mix
+in overlapping 10-second windows and ranks broad source families: voice,
+drums, bass, guitar, piano, synthesizer, strings, brass, woodwinds and
+electronic sound effects.
+
+CLAP is a zero-shot audio/text similarity model: scores are relative rankings,
+not calibrated probabilities or proof that a source exists. It cannot reliably
+name every individual synth patch or guarantee a clean stem. The planner can
+only select models actually present in the registry; a source label without a
+compatible specialist model remains part of a broader stem such as other.
+
+The current general-purpose model separates a supported audio file into:
 
 - `vocals.wav`
 - `drums.wav`
@@ -21,7 +32,8 @@ Rebuild the AppImage after pulling this branch. The build installs:
 - `demucs-onnx==0.3.4` without its generic CPU `onnxruntime` dependency;
 - `onnxruntime-gpu[cuda,cudnn]` (CUDA 13 / cuDNN 9) and its NVIDIA runtime
   wheels;
-- Hugging Face Hub and SOXR.
+- Hugging Face Hub and SOXR;
+- Transformers and librosa for on-demand CLAP source recognition.
 
 The ONNX Runtime CUDA 13 build is selected to match this project's
 PyTorch 2.13 CUDA 13.0 stack. The NVIDIA driver must support CUDA 13.0;
@@ -85,7 +97,8 @@ stored weights.
 
 ## Adding more instrument families
 
-The current general-purpose model exposes six stems. Further splits such as
+The current general-purpose model exposes six stems, while CLAP adds broad
+source-family ranking but does not itself separate audio. Further splits such as
 kick/snare/toms/cymbals or individual string/synth parts require additional
 specialist models with verified model files, licenses, input/output
 contracts, and quality checks. They should be added as separate sequential
