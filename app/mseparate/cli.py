@@ -88,6 +88,144 @@ def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> 
                 os.environ["HF_HUB_OFFLINE"] = old_offline
 
 
+def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
+                           max_chunks: int, *, no_download: bool) -> int:
+    """Measure a bounded number of real HT-Demucs ONNX inference chunks."""
+    import time
+
+    import onnxruntime as ort
+    import demucs_onnx
+    from demucs_onnx.inference import (
+        N_SAMPLES, SAMPLE_RATE, _make_transition_window,
+    )
+    from demucs_onnx.providers import resolve_providers
+
+    from .demucs_onnx import _prewarm_strict_cuda
+
+    model_dir.mkdir(parents=True, exist_ok=True)
+    old_offline = os.environ.get("HF_HUB_OFFLINE")
+    if no_download:
+        os.environ["HF_HUB_OFFLINE"] = "1"
+
+    try:
+        print("HT-Demucs ONNX diagnostic")
+        print(f"  input: {input_path}")
+        print(f"  requested device: {device}")
+        print(f"  ONNX Runtime: {ort.__version__}")
+        print(f"  maximum chunks: {max_chunks}")
+
+        if device == "cuda":
+            model_paths = _prewarm_strict_cuda(
+                demucs_onnx, model_dir, "fp16weights",
+            )
+            providers = ["CUDAExecutionProvider"]
+        else:
+            provider = "cuda" if device == "cuda" else device
+            model_paths = demucs_onnx.prewarm(
+                models=["htdemucs_6s"], precision="fp16weights",
+                providers=provider, cache_dir=str(model_dir),
+            )
+            providers = resolve_providers(provider)
+
+        model_path = model_paths.get("htdemucs_6s")
+        if model_path is None:
+            raise RuntimeError("Could not prepare the htdemucs_6s ONNX model")
+
+        audio, native_rate = demucs_onnx.load_audio(
+            str(input_path), target_sr=SAMPLE_RATE,
+        )
+        session = demucs_onnx.session_pool().get(model_path, providers)
+        active_providers = tuple(session.get_providers())
+        if not active_providers:
+            raise RuntimeError("ONNX Runtime session did not report an execution provider")
+        if device == "cuda":
+            disable_fallback = getattr(session, "disable_fallback", None)
+            if not callable(disable_fallback):
+                raise RuntimeError(
+                    "ONNX Runtime session does not expose disable_fallback(); "
+                    "strict CUDA diagnostic cannot continue"
+                )
+            disable_fallback()
+            if active_providers[0] != "CUDAExecutionProvider":
+                raise RuntimeError(
+                    "Strict CUDA diagnostic did not select CUDAExecutionProvider first; "
+                    f"active providers: {active_providers}"
+                )
+
+        total_samples = int(audio.shape[1])
+        stride = N_SAMPLES - N_SAMPLES // 4
+        total_chunks = max(1, (total_samples + stride - 1) // stride)
+        chunks_to_run = min(max_chunks, total_chunks)
+        window = _make_transition_window(N_SAMPLES)
+        run_times: list[float] = []
+        preprocessing_times: list[float] = []
+
+        print(f"  input audio: {total_samples:,} samples ({total_samples / SAMPLE_RATE:.1f} s)")
+        print(f"  source sample rate: {native_rate} Hz; model rate: {SAMPLE_RATE} Hz")
+        print(f"  chunk size: {N_SAMPLES:,} samples ({N_SAMPLES / SAMPLE_RATE:.1f} s)")
+        print(f"  overlap: 25%; stride: {stride:,} samples")
+        print(f"  chunks in full track: {total_chunks}")
+        print(f"  active providers: {', '.join(active_providers)}")
+        print(f"  model: {model_path}")
+        print("  running bounded inference (no stem files will be written)")
+
+        diagnostic_started = time.perf_counter()
+        for index in range(chunks_to_run):
+            prep_started = time.perf_counter()
+            start = index * stride
+            end = min(start + N_SAMPLES, total_samples)
+            chunk = audio[:, start:end]
+            if chunk.shape[1] < N_SAMPLES:
+                import numpy as np
+                chunk = np.pad(
+                    chunk, ((0, 0), (0, N_SAMPLES - chunk.shape[1])),
+                    mode="constant",
+                )
+            model_input = chunk[np.newaxis, ...].astype("float32", copy=False)
+            preprocessing_times.append(time.perf_counter() - prep_started)
+
+            run_started = time.perf_counter()
+            result = session.run(["stems"], {"mix": model_input})
+            run_elapsed = time.perf_counter() - run_started
+            run_times.append(run_elapsed)
+            del result
+
+            label = " (first run / warm-up)" if index == 0 else ""
+            print(
+                f"  chunk {index + 1}/{total_chunks}: "
+                f"session.run={run_elapsed:.3f}s, "
+                f"input prep={preprocessing_times[-1]:.3f}s{label}"
+            )
+
+        diagnostic_elapsed = time.perf_counter() - diagnostic_started
+        inference_total = sum(run_times)
+        print("Diagnostic summary")
+        print(f"  chunks measured: {chunks_to_run}/{total_chunks}")
+        print(f"  measured ONNX time: {inference_total:.3f}s")
+        print(f"  diagnostic wall time: {diagnostic_elapsed:.3f}s")
+        if len(run_times) > 1:
+            steady_average = sum(run_times[1:]) / (len(run_times) - 1)
+            projected = run_times[0] + steady_average * (total_chunks - 1)
+            print(f"  average after first run: {steady_average:.3f}s/chunk")
+            print("  estimated full-track ONNX time: "
+                  f"{projected:.1f}s ({projected / (total_samples / SAMPLE_RATE):.3f} RTF)")
+            print("  estimate excludes audio decode, overlap-add and file writing")
+        elif total_chunks == 1:
+            print(f"  estimated full-track ONNX time: {inference_total:.3f}s")
+        else:
+            projected = run_times[0] * total_chunks
+            print("  estimated full-track ONNX time: "
+                  f"{projected:.1f}s (rough estimate from one chunk; low confidence)")
+        return 0
+    finally:
+        demucs_onnx.session_pool().clear()
+        if no_download:
+            if old_offline is None:
+                os.environ.pop("HF_HUB_OFFLINE", None)
+            else:
+                os.environ["HF_HUB_OFFLINE"] = old_offline
+
+
 def _resolve_auto_device() -> tuple[str, str | None]:
     """Probe both CUDA runtimes before selecting a device for the whole plan."""
     failures: list[str] = []
@@ -139,6 +277,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--plan-only", action="store_true", help="Analyze audio and print the plan without inference")
     parser.add_argument("--execute", action="store_true",
                         help="Run the planned separation tasks (default unless --analysis-only, --plan-only or --prepare-models is used)")
+    parser.add_argument("--diagnose", type=int, metavar="N",
+                        help="Run an HT-Demucs ONNX diagnostic on at most N chunks; writes no stems")
     parser.add_argument("--no-download", action="store_true",
                         help="Never access the network; execution requires all model assets to be verified locally")
     parser.add_argument("--prepare-models", action="store_true",
@@ -171,6 +311,10 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--inference-timeout must be zero or greater")
     if args.execute and (args.analysis_only or args.plan_only):
         parser.error("--execute cannot be combined with --analysis-only or --plan-only")
+    if args.diagnose is not None and args.diagnose < 1:
+        parser.error("--diagnose must be at least one chunk")
+    if args.diagnose is not None and (args.execute or args.analysis_only or args.plan_only or args.prepare_models or args.report):
+        parser.error("--diagnose cannot be combined with --execute, --analysis-only, --plan-only, --prepare-models or --report")
 
     try:
         paths = ensure_layout()
@@ -188,6 +332,23 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         input_path = Path(args.input).expanduser().resolve()
+        if args.diagnose is not None:
+            diagnostic_device = args.device
+            if diagnostic_device == "auto":
+                diagnostic_device, reason = _resolve_auto_device()
+                if reason:
+                    print("Warning: " + reason, file=sys.stderr)
+            diagnostic_model = next(
+                (item for item in registry.values() if item.backend == "demucs-onnx"
+                 and item.model_id == "demucs-onnx-htdemucs-6s"),
+                None,
+            )
+            if diagnostic_model is None:
+                raise RuntimeError("Registry does not contain the htdemucs_6s ONNX model")
+            return _run_demucs_diagnostic(
+                input_path, paths["models"] / diagnostic_model.model_id,
+                diagnostic_device, args.diagnose, no_download=args.no_download,
+            )
         execute_requested = args.execute or not (args.analysis_only or args.plan_only or args.prepare_models)
         effective_device = args.device
         device_fallback_reason = None
