@@ -1,4 +1,4 @@
-"""CPU-only tests for the mseparate foundation; no model weights or GPU required."""
+"""CPU-only tests for the mseparate foundation; no Torch, weights or GPU required."""
 from __future__ import annotations
 
 import json
@@ -10,7 +10,10 @@ import pytest
 from mseparate.audio import analyze_audio
 from mseparate.cli import main
 from mseparate.planner import build_plan, validate_plan
-from mseparate.registry import RegistryError, eligible_models, load_registry, parse_manifest
+from mseparate.registry import (
+    RegistryError, bundled_registry_path, eligible_models, load_registry,
+    model_audio_compatibility, parse_manifest,
+)
 from mseparate.storage import ensure_layout, write_json_atomic
 
 
@@ -87,10 +90,58 @@ def test_registry_rejects_bad_checksum():
         })
 
 
+def test_registry_rejects_duplicate_asset_roles():
+    raw = {
+        "model_id":"duplicate","name":"Duplicate","architecture":"x","backend":"x",
+        "source_url":"https://example.invalid",
+        "assets":[
+            {"role":"checkpoint","url":"https://example.invalid/a","relative_path":"a","sha256":"a"*64},
+            {"role":"checkpoint","url":"https://example.invalid/b","relative_path":"b","sha256":"b"*64},
+        ],
+    }
+    with pytest.raises(RegistryError, match="Duplicate asset role"):
+        parse_manifest(raw)
+
+
+def test_bundled_registry_contains_pinned_kim_vocals_model():
+    registry = load_registry(bundled_registry_path())
+    model = registry["melband-roformer-kim-vocals"]
+    assert model in eligible_models(registry)
+    assert model.upstream_version == "melband-roformer-infer==0.1.5"
+    assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
+    assert all(asset.sha256 and asset.size_bytes for asset in model.assets)
+    assert model.native_stems == ("vocals",)
+    assert model.derived_stems == ("instrumental",)
+
+
+def test_model_audio_compatibility_enforces_sample_rate_and_channels():
+    from mseparate.types import AudioMetadata
+    model = load_registry(bundled_registry_path())["melband-roformer-kim-vocals"]
+    good = AudioMetadata("mix.wav", 1.0, 44100, 2, 44100, "PCM_16")
+    wrong_rate = AudioMetadata("mix.wav", 1.0, 48000, 2, 48000, "PCM_16")
+    too_many_channels = AudioMetadata("mix.wav", 1.0, 44100, 6, 44100, "PCM_16")
+    assert model_audio_compatibility(model, good) == (True, "")
+    assert not model_audio_compatibility(model, wrong_rate)[0]
+    assert "resampling is not implicit" in model_audio_compatibility(model, wrong_rate)[1]
+    assert not model_audio_compatibility(model, too_many_channels)[0]
+
+
 def test_plan_is_explicitly_empty_and_valid():
     plan = build_plan()
     validate_plan(plan)
     assert plan.tasks == ()
+
+
+def test_incompatible_audio_does_not_schedule_model():
+    from mseparate.types import AnalysisReport, AudioMetadata
+    registry = load_registry(bundled_registry_path())
+    audio = AnalysisReport(
+        schema_version=2,
+        audio=AudioMetadata("mix.wav", 1.0, 48000, 2, 48000, "PCM_16"),
+    )
+    plan = build_plan(analysis=audio, registry=registry)
+    assert plan.tasks == ()
+    assert any("requires 44100 Hz" in note for note in plan.notes)
 
 
 def test_storage_layout_and_atomic_json(tmp_path):
@@ -111,6 +162,14 @@ def test_cli_analysis_and_report(tmp_path, monkeypatch, capsys):
     assert payload["plan"] is None
 
 
+def test_cli_list_models_does_not_require_audio(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
+    assert main(["--list-models"]) == 0
+    output = capsys.readouterr().out
+    assert "melband-roformer-kim-vocals [eligible]" in output
+    assert "Registry source:" in output
+
+
 def test_cli_no_input_returns_usage(capsys):
     assert main([]) == 2
     assert "usage:" in capsys.readouterr().err
@@ -128,7 +187,6 @@ def test_cli_honors_models_dir_override(tmp_path, monkeypatch):
     custom_models = tmp_path / "custom-models"
     assert main([str(source), "--analysis-only", "--models-dir", str(custom_models)]) == 0
     assert custom_models.is_dir()
-
 
 
 def test_cli_prepare_models_offline_reports_missing_asset(tmp_path, monkeypatch, capsys):
