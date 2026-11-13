@@ -1,6 +1,7 @@
 """CPU-only tests for sequential backend execution and failure isolation."""
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from mseparate.execution import BackendInfo, ExecutionManager, StemArtifact
@@ -129,7 +130,8 @@ def test_execution_rejects_missing_requested_stem(tmp_path):
     plan = ExecutionPlan(1, (
         ExecutionTask("task", "model-a", "mix", ("vocals", "drums")),
     ))
-    summary = manager.execute(plan, {"model-a": _manifest("model-a")}, {"mix": source})
+    manifest = replace(_manifest("model-a"), derived_stems=("drums",))
+    summary = manager.execute(plan, {"model-a": manifest}, {"mix": source})
     assert summary.failed == 1
     assert "did not produce requested stems" in summary.results[0].message
     assert state["active"] == 0
