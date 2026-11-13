@@ -97,6 +97,7 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         license_status=license_status,
         assets=tuple(assets),
         native_stems=strings("native_stems"),
+        derived_stems=strings("derived_stems"),
         target_stems=strings("target_stems"),
         dummy_stems=strings("dummy_stems"),
         refinement_targets=strings("refinement_targets"),
