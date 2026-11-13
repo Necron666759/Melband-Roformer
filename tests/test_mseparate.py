@@ -332,6 +332,23 @@ def test_pymss_models_allow_manager_sample_rate_conversion():
         assert model_audio_compatibility(registry[model_id], audio) == (True, "")
 
 
+def test_planner_explicit_model_preference_overrides_default_priority():
+    registry = load_registry(bundled_registry_path())
+    plan = build_plan(registry=registry, preferred_model_id="mdx23c-zfturbo-vocals")
+    by_model = {task.model_id: task for task in plan.tasks}
+
+    assert "mdx23c-zfturbo-vocals" in by_model
+    assert "melband-roformer-kim-vocals" not in by_model
+    assert by_model["mdx23c-zfturbo-vocals"].target_stems == ("vocals",)
+    assert "explicitly preferred" in by_model["mdx23c-zfturbo-vocals"].rationale
+
+
+def test_planner_rejects_unknown_preferred_model():
+    registry = load_registry(bundled_registry_path())
+    with pytest.raises(ValueError, match="not eligible or compatible"):
+        build_plan(registry=registry, preferred_model_id="unknown-model")
+
+
 def test_planner_uses_semantic_source_rankings_when_available():
     from mseparate.planner import _stem_score
 
