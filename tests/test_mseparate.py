@@ -283,6 +283,7 @@ def test_cli_execute_runs_plan_only_after_assets_are_verified(tmp_path, monkeypa
             return ExecutionSummary((TaskResult("separate-01", "melband-roformer-kim-vocals", "success"),))
 
     monkeypatch.setattr("mseparate.cli.ensure_model_assets", prepare)
+    monkeypatch.setattr("mseparate.source_analysis.analyze_sources", lambda *a, **k: [])
     monkeypatch.setattr("mseparate.cli.ExecutionManager", FakeManager)
     monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
     output = tmp_path / "stems"
@@ -323,6 +324,7 @@ def test_cli_execute_is_blocked_when_assets_are_not_verified(tmp_path, monkeypat
         "mseparate.cli.ensure_model_assets",
         lambda *a, **k: [AssetResult("checkpoint", "missing", message="offline")],
     )
+    monkeypatch.setattr("mseparate.source_analysis.analyze_sources", lambda *a, **k: [])
 
     class ForbiddenManager:
         def __init__(self, *args, **kwargs):
