@@ -120,7 +120,7 @@ def test_failed_task_does_not_abort_independent_task_but_skips_dependents(tmp_pa
 
 def test_execution_rejects_missing_requested_stem(tmp_path):
     source = tmp_path / "input.wav"
-    source.write_bytes(b"input")
+    sf.write(source, np.zeros((4410, 2), dtype=np.float32), 44100)
 
     class IncompleteBackend(FakeBackend):
         def infer(self, input_audio, output_dir, target_stems):
