@@ -206,7 +206,7 @@ class ExecutionManager:
                             model_output = temp_root / "outputs"
                             model_output.mkdir()
                             audio, source_rate = sf.read(str(input_path), dtype="float32", always_2d=True)
-                            converted = soxr.resample(audio, source_rate, target_rate, axis=0)
+                            converted = soxr.resample(audio, source_rate, target_rate)
                             sf.write(str(model_input), converted, target_rate, subtype="PCM_24")
                             staged = backend.infer(model_input, model_output, task.target_stems)
                             produced = []
@@ -216,7 +216,7 @@ class ExecutionManager:
                                     raise RuntimeError(
                                         f"Model output {artifact.path.name} is {stem_rate} Hz; expected {target_rate} Hz"
                                     )
-                                restored = soxr.resample(samples, stem_rate, source_info.samplerate, axis=0)
+                                restored = soxr.resample(samples, stem_rate, source_info.samplerate)
                                 final_path = task_output_dir / f"{artifact.stem}.wav"
                                 sf.write(str(final_path), restored, source_info.samplerate,
                                          subtype=source_info.subtype or "PCM_24")
