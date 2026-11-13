@@ -60,12 +60,12 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
         def separate(self, mix, *, pbar, stems):
             state["mix_shape"] = mix.shape
             state["stems"] = tuple(stems)
-            # Match tqdm's leading CR and chunked stderr writes, then a warning.
-            sys.stderr.write("\r")
-            sys.stderr.write("Processing audio: 0%|          | 0/48")
-            sys.stderr.write("\r")
-            sys.stderr.write("Processing audio: 50%|█████     | 24/48")
-            sys.stderr.write("\r")
+            # tqdm may write progress to stdout while runtime warnings use stderr.
+            sys.stdout.write("\r")
+            sys.stdout.write("Processing audio: 0%|          | 0/48")
+            sys.stdout.write("\r")
+            sys.stdout.write("Processing audio: 50%|█████     | 24/48")
+            sys.stdout.write("\r")
             sys.stderr.write("\nRuntime warning: fixture warning\n")
             return {stem: np.full((mix.shape[1], mix.shape[0]), 0.125, dtype=np.float32)
                     for stem in stems}
@@ -83,11 +83,9 @@ def test_bs_roformer_adapter_loads_verified_assets_and_writes_vocals(tmp_path, m
     adapter.load(manifest, tmp_path, "cpu")
     outputs = adapter.infer(source, tmp_path / "out", ("vocals", "instrumental"))
 
-    stderr = capsys.readouterr().err
-    assert stderr == (
-        "Processing audio: 50%|█████     | 24/48\r"
-        "\nRuntime warning: fixture warning\n"
-    )
+    captured = capsys.readouterr()
+    assert captured.out == "Processing audio: 50%|█████     | 24/48\r"
+    assert captured.err == "\nRuntime warning: fixture warning\n"
     assert state["kwargs"]["model_type"] == "bs_roformer"
     assert state["kwargs"]["device"] == "cpu"
     assert state["stems"] == ("vocals",)
