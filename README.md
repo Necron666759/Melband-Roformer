@@ -261,7 +261,20 @@ shared with the `.deb` (see §5), so delete
 `~/.cache/melband-roformer-infer/` yourself if you no longer want the
 downloaded weights either.
 
-## 4. Basic usage\n\n### Intelligent multi-model analysis (mseparate)\n\nThe separate `mseparate` command analyzes audio and prepares a model execution plan. In this initial foundation release, neural inference is intentionally not enabled yet; the command reports technical measurements and does not modify the source file.\n\n```bash\nmseparate input.wav --analysis-only\nmseparate input.wav --plan-only --report\n```\n\nThe model registry is stored under `~/.local/share/mseparate/`. Only models with reviewed licenses and verified assets will become eligible for automatic planning. The existing `separate` command remains the original Mel-Band RoFormer workflow.\n\n## 4. Basic usage
+## 4. Basic usage
+
+### Intelligent multi-model analysis (mseparate)
+
+The separate `mseparate` command analyzes audio and prepares a model execution plan. In this initial foundation release, neural inference is intentionally not enabled yet; the command reports technical measurements and does not modify the source file.
+
+```bash
+mseparate input.wav --analysis-only
+mseparate input.wav --plan-only --report
+```
+
+The model registry is stored under `~/.local/share/mseparate/`. Only models with reviewed licenses and verified assets will become eligible for automatic planning. The existing `separate` command remains the original Mel-Band RoFormer workflow.
+
+## 4. Basic usage
 
 ### `.deb`: direct CLI
 
