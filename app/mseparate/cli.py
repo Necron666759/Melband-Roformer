@@ -156,8 +156,6 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
     )
     from demucs_onnx.providers import resolve_providers
 
-    from .demucs_onnx import _prewarm_strict_cuda
-
     preload = getattr(ort, "preload_dlls", None)
     if callable(preload):
         try:
@@ -259,32 +257,36 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
         print("  running bounded inference (no stem files will be written)")
 
         diagnostic_started = time.perf_counter()
-        for index in range(chunks_to_run):
-            prep_started = time.perf_counter()
-            start = index * stride
-            end = min(start + N_SAMPLES, total_samples)
-            chunk = audio[:, start:end]
-            if chunk.shape[1] < N_SAMPLES:
-                chunk = np.pad(
-                    chunk, ((0, 0), (0, N_SAMPLES - chunk.shape[1])),
-                    mode="constant",
+        try:
+            for index in range(chunks_to_run):
+                prep_started = time.perf_counter()
+                start = index * stride
+                end = min(start + N_SAMPLES, total_samples)
+                chunk = audio[:, start:end]
+                if chunk.shape[1] < N_SAMPLES:
+                    chunk = np.pad(
+                        chunk, ((0, 0), (0, N_SAMPLES - chunk.shape[1])),
+                        mode="constant",
+                    )
+                model_input = chunk[np.newaxis, ...].astype("float32", copy=False)
+                preprocessing_times.append(time.perf_counter() - prep_started)
+
+                run_started = time.perf_counter()
+                result = session.run(["stems"], {"mix": model_input})
+                run_elapsed = time.perf_counter() - run_started
+                run_times.append(run_elapsed)
+                del result
+
+                label = " (first run / warm-up)" if index == 0 else ""
+                print(
+                    f"  chunk {index + 1}/{total_chunks}: "
+                    f"session.run={run_elapsed:.3f}s, "
+                    f"input prep={preprocessing_times[-1]:.3f}s{label}"
                 )
-            model_input = chunk[np.newaxis, ...].astype("float32", copy=False)
-            preprocessing_times.append(time.perf_counter() - prep_started)
 
-            run_started = time.perf_counter()
-            result = session.run(["stems"], {"mix": model_input})
-            run_elapsed = time.perf_counter() - run_started
-            run_times.append(run_elapsed)
-            del result
 
-            label = " (first run / warm-up)" if index == 0 else ""
-            print(
-                f"  chunk {index + 1}/{total_chunks}: "
-                f"session.run={run_elapsed:.3f}s, "
-                f"input prep={preprocessing_times[-1]:.3f}s{label}"
-            )
-
+        finally:
+            profile_path = Path(session.end_profiling())
         diagnostic_elapsed = time.perf_counter() - diagnostic_started
         profile_path = Path(session.end_profiling())
         print(f"  ONNX Runtime profile: {profile_path}")
