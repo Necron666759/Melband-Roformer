@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from dataclasses import replace
 import sys
@@ -68,9 +69,7 @@ def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> 
         os.environ["HF_HUB_OFFLINE"] = "1"
     try:
         if device == "cuda":
-            from .demucs_onnx import _prewarm_strict_cuda
-
-            return _prewarm_strict_cuda(demucs_onnx, model_dir, "fp16weights")
+                    return _prewarm_strict_cuda(demucs_onnx, model_dir, "fp16weights")
         if device == "auto" and "CUDAExecutionProvider" in available:
             provider = "cuda"
         else:
@@ -86,6 +85,62 @@ def _prepare_demucs_onnx(model_dir: Path, device: str, *, no_download: bool) -> 
                 os.environ.pop("HF_HUB_OFFLINE", None)
             else:
                 os.environ["HF_HUB_OFFLINE"] = old_offline
+
+
+def _print_onnx_profile_summary(profile_path: Path) -> None:
+    """Print per-provider node placement and cumulative operator timings."""
+    try:
+        events = json.loads(profile_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"  could not read ONNX Runtime profile: {exc}")
+        return
+
+    providers: dict[str, dict[str, float | int]] = {}
+    cpu_nodes: list[tuple[float, str, str]] = []
+    for event in events:
+        if event.get("cat") != "Node":
+            continue
+        args = event.get("args") or {}
+        provider = args.get("provider")
+        if not provider:
+            continue
+        duration_s = max(0.0, float(event.get("dur") or 0)) / 1_000_000
+        stats = providers.setdefault(provider, {"nodes": 0, "duration_s": 0.0})
+        stats["nodes"] = int(stats["nodes"]) + 1
+        stats["duration_s"] = float(stats["duration_s"]) + duration_s
+        if provider == "CPUExecutionProvider":
+            cpu_nodes.append((
+                duration_s,
+                str(event.get("name") or "unknown node"),
+                str(args.get("op_name") or "unknown op"),
+            ))
+
+    print("Execution-provider placement (ONNX Runtime profile)")
+    if not providers:
+        print("  No provider-tagged node events were recorded.")
+        print("  The raw profile is still available for manual inspection.")
+        return
+
+    total_node_time = sum(float(item["duration_s"]) for item in providers.values())
+    for provider, stats in sorted(
+        providers.items(), key=lambda item: float(item[1]["duration_s"]), reverse=True,
+    ):
+        duration_s = float(stats["duration_s"])
+        share = duration_s / total_node_time * 100 if total_node_time else 0.0
+        print(
+            f"  {provider}: {int(stats['nodes'])} nodes, "
+            f"{duration_s:.3f}s cumulative node time ({share:.1f}%)"
+        )
+
+    if cpu_nodes:
+        print("Slowest CPU-assigned nodes")
+        for duration_s, name, op_name in sorted(cpu_nodes, reverse=True)[:10]:
+            print(f"  {duration_s:.3f}s  {op_name}: {name}")
+
+    print(
+        "  Note: node durations are cumulative operator-event times; "
+        "they can overlap and are not wall-clock time."
+    )
 
 
 def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
@@ -126,26 +181,45 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
         print(f"  maximum chunks: {max_chunks}")
 
         if device == "cuda":
-            model_paths = _prewarm_strict_cuda(
-                demucs_onnx, model_dir, "fp16weights",
-            )
+            if "CUDAExecutionProvider" not in set(ort.get_available_providers()):
+                raise RuntimeError(
+                    "CUDAExecutionProvider is unavailable; ONNX Runtime providers: "
+                    + ", ".join(sorted(ort.get_available_providers()))
+                )
+            provider = "CUDAExecutionProvider"
             providers = ["CUDAExecutionProvider"]
         else:
             provider = device
-            model_paths = demucs_onnx.prewarm(
-                models=["htdemucs_6s"], precision="fp16weights",
-                providers=provider, cache_dir=str(model_dir),
-            )
             providers = resolve_providers(provider)
 
+        # prewarm() resolves/downloads the exact package model. Its cached
+        # session is then discarded because SessionPool does not expose
+        # SessionOptions; profiling must be enabled before InferenceSession
+        # is constructed.
+        model_paths = demucs_onnx.prewarm(
+            models=["htdemucs_6s"], precision="fp16weights",
+            providers=provider, cache_dir=str(model_dir),
+        )
         model_path = model_paths.get("htdemucs_6s")
         if model_path is None:
             raise RuntimeError("Could not prepare the htdemucs_6s ONNX model")
+        demucs_onnx.session_pool().clear()
+
+        profile_dir = model_dir / "diagnostics"
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        profile_prefix = profile_dir / (
+            f"htdemucs_6s_{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+        )
+        session_options = ort.SessionOptions()
+        session_options.enable_profiling = True
+        session_options.profile_file_prefix = str(profile_prefix)
+        session = ort.InferenceSession(
+            str(model_path), sess_options=session_options, providers=providers,
+        )
 
         audio, native_rate = demucs_onnx.load_audio(
             str(input_path), target_sr=SAMPLE_RATE,
         )
-        session = demucs_onnx.session_pool().get(model_path, providers)
         active_providers = tuple(session.get_providers())
         if not active_providers:
             raise RuntimeError("ONNX Runtime session did not report an execution provider")
@@ -176,7 +250,12 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
         print(f"  overlap: 25%; stride: {stride:,} samples")
         print(f"  chunks in full track: {total_chunks}")
         print(f"  active providers: {', '.join(active_providers)}")
+        try:
+            print(f"  provider options: {session.get_provider_options()}")
+        except Exception:
+            pass
         print(f"  model: {model_path}")
+        print(f"  profile directory: {profile_dir}")
         print("  running bounded inference (no stem files will be written)")
 
         diagnostic_started = time.perf_counter()
@@ -207,6 +286,9 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
             )
 
         diagnostic_elapsed = time.perf_counter() - diagnostic_started
+        profile_path = Path(session.end_profiling())
+        print(f"  ONNX Runtime profile: {profile_path}")
+        _print_onnx_profile_summary(profile_path)
         inference_total = sum(run_times)
         print("Diagnostic summary")
         print(f"  chunks measured: {chunks_to_run}/{total_chunks}")
