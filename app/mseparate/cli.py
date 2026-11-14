@@ -288,7 +288,6 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
         finally:
             profile_path = Path(session.end_profiling())
         diagnostic_elapsed = time.perf_counter() - diagnostic_started
-        profile_path = Path(session.end_profiling())
         print(f"  ONNX Runtime profile: {profile_path}")
         _print_onnx_profile_summary(profile_path)
         inference_total = sum(run_times)
