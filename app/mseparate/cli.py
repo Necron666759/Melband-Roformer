@@ -206,7 +206,7 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
         profile_dir = model_dir / "diagnostics"
         profile_dir.mkdir(parents=True, exist_ok=True)
         profile_prefix = profile_dir / (
-            f"htdemucs_6s_{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+            f"htdemucs_6s_{time.time_ns()}_{os.getpid()}"
         )
         session_options = ort.SessionOptions()
         session_options.enable_profiling = True
@@ -287,9 +287,9 @@ def _run_demucs_diagnostic(input_path: Path, model_dir: Path, device: str,
 
         finally:
             profile_path = Path(session.end_profiling())
+            print(f"  ONNX Runtime profile: {profile_path}")
+            _print_onnx_profile_summary(profile_path)
         diagnostic_elapsed = time.perf_counter() - diagnostic_started
-        print(f"  ONNX Runtime profile: {profile_path}")
-        _print_onnx_profile_summary(profile_path)
         inference_total = sum(run_times)
         print("Diagnostic summary")
         print(f"  chunks measured: {chunks_to_run}/{total_chunks}")
@@ -370,7 +370,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--execute", action="store_true",
                         help="Run the planned separation tasks (default unless --analysis-only, --plan-only or --prepare-models is used)")
     parser.add_argument("--diagnose", type=int, metavar="N",
-                        help="Run an HT-Demucs ONNX diagnostic on at most N chunks; writes no stems")
+                        help="Profile at most N HT-Demucs ONNX chunks; writes no stems and saves an ORT JSON profile")
     parser.add_argument("--no-download", action="store_true",
                         help="Never access the network; execution requires all model assets to be verified locally")
     parser.add_argument("--prepare-models", action="store_true",
