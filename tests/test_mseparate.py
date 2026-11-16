@@ -162,7 +162,6 @@ def test_incompatible_audio_does_not_schedule_model():
     plan = build_plan(analysis=audio, registry=registry)
     assert {task.model_id for task in plan.tasks} == {
         "bs-roformer-anvuew-vocals",
-        "demucs-onnx-htdemucs-6s",
         "mvsep-mega53-bass-specialist-candidate",
         "mvsep-mega53-kick-specialist-candidate",
         "mvsep-mega53-drums-specialist-candidate",
@@ -171,9 +170,7 @@ def test_incompatible_audio_does_not_schedule_model():
     }
     by_model = {task.model_id: task for task in plan.tasks}
     assert by_model["bs-roformer-anvuew-vocals"].target_stems == ("instrumental", "vocals")
-    assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
-        "other", "guitar", "piano",
-    }
+    assert "demucs-onnx-htdemucs-6s" not in by_model
     assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
 
@@ -694,3 +691,13 @@ def test_zfturbo_53_stem_is_pinned_cpu_and_cuda_low_vram_verified_but_manual_onl
     assert cuda_validation["peak_cuda_allocated_gib"] == 2.03
     assert cuda_validation["peak_cuda_reserved_gib"] == 2.18
     assert cuda_validation["all_outputs_finite"] is True
+
+
+
+def test_htdemucs_cannot_be_selected_through_normal_preference():
+    registry = load_registry(bundled_registry_path())
+    with pytest.raises(ValueError, match="mseparate-demucs"):
+        build_plan(
+            registry=registry,
+            preferred_model_id="demucs-onnx-htdemucs-6s",
+        )

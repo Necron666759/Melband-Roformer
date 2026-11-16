@@ -183,7 +183,7 @@ def test_no_download_uses_huggingface_offline_mode(tmp_path, monkeypatch):
     assert "HF_HUB_OFFLINE" not in os.environ
     adapter.unload()
 
-def test_planner_schedules_all_six_demucs_stems():
+def test_planner_excludes_htdemucs_from_normal_routing():
     from mseparate.planner import build_plan
     from mseparate.types import AnalysisReport, AudioMetadata
 
@@ -193,10 +193,8 @@ def test_planner_schedules_all_six_demucs_stems():
         audio=AudioMetadata("mix.wav", 12.0, 48000, 2, 576000, "PCM_16"),
     )
     plan = build_plan(analysis=analysis, registry={model.model_id: model})
-    assert len(plan.tasks) == 1
-    assert plan.tasks[0].model_id == model.model_id
-    assert set(plan.tasks[0].target_stems) == set(DemucsOnnxAdapter.STEMS)
-    assert not any("demucs-onnx-htdemucs-6s: requires 44100 Hz" in note for note in plan.notes)
+    assert not plan.tasks
+    assert any("dedicated mseparate-demucs command" in note for note in plan.notes)
 
  
 def _run_real_demucs_onnx_integration(tmp_path, device):

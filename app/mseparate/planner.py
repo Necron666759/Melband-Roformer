@@ -130,9 +130,18 @@ def build_plan(
     """
     if max_depth < 0:
         raise ValueError("max_depth must be zero or greater")
+    available_registry = registry or {}
+    if preferred_model_id is not None:
+        preferred_manifest = available_registry.get(preferred_model_id)
+        if preferred_manifest is not None and preferred_manifest.backend == "demucs-onnx":
+            raise ValueError(
+                "HT-Demucs 6-stem is intentionally excluded from normal routing; "
+                "use the dedicated 'mseparate-demucs' terminal command"
+            )
     candidates = [
-        model for model in eligible_models(registry or {})
-        if model.auto_route or model.model_id == preferred_model_id
+        model for model in eligible_models(available_registry)
+        if model.backend != "demucs-onnx"
+        and (model.auto_route or model.model_id == preferred_model_id)
     ]
     source_predictions = [
         item for item in (analysis.predictions if analysis else [])
@@ -229,6 +238,7 @@ def build_plan(
         "Overlapping routes prefer a manifest-declared specialist, then an explicitly preferred model, then manifest planner_priority and source salience. Priority is an operator routing preference, not a measured quality score; CLAP/acoustic scores do not estimate model quality or calibrated source presence.",
         "CLAP source-family matches are relative similarities, not calibrated source-presence probabilities. Electronic genre matches are contextual hints only and never trigger a stem route by themselves.",
         "Synth leads, pads, arpeggios, synth bass, vocoder-like vocals and electronic FX are analyzed separately where CLAP can distinguish them; overlapping descriptions remain approximate."
+        "HT-Demucs 6-stem (ONNX) is excluded from normal automatic and preferred-model routing because measured inference is exceptionally slow; use the dedicated mseparate-demucs command for explicit runs.",
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
     if allow_resample:

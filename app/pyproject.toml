@@ -48,6 +48,7 @@ demucs-onnx = ["demucs-onnx==0.3.4"]
 melband-roformer = "melband_roformer_wrapper.cli:main"
 melband-roformer-gui = "melband_roformer_wrapper.gui:main"
 mseparate = "mseparate.cli:main"
+mseparate-demucs = "mseparate.demucs_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
