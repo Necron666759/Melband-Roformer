@@ -70,6 +70,14 @@ def filter_registry_for_device(
         free_bytes, total_bytes = memory
         free_gib = free_bytes / _GIB
         total_gib = total_bytes / _GIB
+        required_total = float(model.min_vram_gb)
+        required_free = float(model.min_free_vram_gb or model.min_vram_gb)
+        # Prefer the upstream/default inference profile whenever it fits.
+        # A verified reduced-chunk profile is a fallback, never an upgrade.
+        if total_gib >= required_total and free_gib >= required_free:
+            accepted[model.model_id] = model
+            continue
+
         profile = model.low_vram_profile or {}
         profile_status = profile.get("status")
         profile_total = float(profile.get("min_total_vram_gb") or 0)
@@ -90,17 +98,12 @@ def filter_registry_for_device(
             )
             continue
 
-        required_total = float(model.min_vram_gb)
-        required_free = float(model.min_free_vram_gb or model.min_vram_gb)
-        if total_gib < required_total or free_gib < required_free:
-            notes.append(
-                f"{model.model_id} skipped before download/inference: "
-                f"{free_gib:.2f} GiB free / {total_gib:.2f} GiB total; "
-                f"requires at least {required_free:g} GiB free and "
-                f"{required_total:g} GiB total VRAM. "
-                "No CPU fallback is permitted for this model."
-            )
-            continue
-        accepted[model.model_id] = model
+        notes.append(
+            f"{model.model_id} skipped before download/inference: "
+            f"{free_gib:.2f} GiB free / {total_gib:.2f} GiB total; "
+            f"requires at least {required_free:g} GiB free and "
+            f"{required_total:g} GiB total VRAM. "
+            "No CPU fallback is permitted for this model."
+        )
 
     return accepted, tuple(notes)
