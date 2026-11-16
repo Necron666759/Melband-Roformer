@@ -462,7 +462,8 @@
       "pymss model catalogue at c78bc27265d1d2bad20e429f615c063239837be2 lists synth as a supported bs_roformer model and reports checkpoint size 77616988 bytes. This catalog entry is evidence of runtime-family support, not a real inference test of this exact asset through mseparate.",
       "An external exact-checkpoint smoke test is recorded for python-audio-separator, not pymss. The repository-specific pymss smoke test is being run separately; do not mark this model available until that test passes.",
       "The derivative Hugging Face repository and independent registry both report the weight license as unknown. The upstream ZFTurbo source-code/repository license must not be assumed to grant redistribution or use rights for this derivative checkpoint; license_status therefore remains review_required.",
-      "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete."
+      "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete.",
+      "Real-weight validation is implemented by scripts/smoke_mseparate_real_models.py and .github/workflows/mseparate-real-model-smoke.yml; only a passing run of that workflow can clear the runtime gate."
     ],
     "assets": [
       {
@@ -514,7 +515,8 @@
       "pymss model catalogue at c78bc27265d1d2bad20e429f615c063239837be2 lists keys as a supported bs_roformer model and reports checkpoint size 77616219 bytes. This catalog entry is evidence of runtime-family support, not a real inference test of this exact asset through mseparate.",
       "An external exact-checkpoint smoke test is recorded for python-audio-separator, not pymss. The repository-specific pymss smoke test is being run separately; do not mark this model available until that test passes.",
       "The derivative Hugging Face repository and independent registry both report the weight license as unknown. The upstream ZFTurbo source-code/repository license must not be assumed to grant redistribution or use rights for this derivative checkpoint; license_status therefore remains review_required.",
-      "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete."
+      "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete.",
+      "Real-weight validation is implemented by scripts/smoke_mseparate_real_models.py and .github/workflows/mseparate-real-model-smoke.yml; only a passing run of that workflow can clear the runtime gate."
     ],
     "assets": [
       {
