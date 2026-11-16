@@ -168,7 +168,8 @@ def build_plan(
     ]
     if not candidates:
         return ExecutionPlan(1, (), (
-            "No verified, enabled model manifests are available; neural inference was not scheduled.",
+            "No verified, enabled models are available for normal routing; neural inference was not scheduled.",
+            "HT-Demucs 6-stem (ONNX) is excluded from normal automatic and preferred-model routing because measured inference is exceptionally slow; use the dedicated mseparate-demucs command for explicit runs.",
         ), max_depth)
     features = analysis.measurements if analysis else {}
     audio = analysis.audio if analysis else None
