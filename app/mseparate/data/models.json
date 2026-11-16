@@ -437,12 +437,12 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "synth-specialist",
-    "status": "candidate",
+    "status": "available",
     "sample_rate": 44100,
     "channels": "stereo",
     "input_formats": [
@@ -485,9 +485,9 @@
     "planner_priority": 100,
     "runtime_validation": "verified",
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -499,10 +499,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "runtime_verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   },
   {
@@ -511,12 +512,12 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "keyboard-specialist",
-    "status": "candidate",
+    "status": "available",
     "sample_rate": 44100,
     "channels": "stereo",
     "input_formats": [
@@ -559,9 +560,9 @@
     "planner_priority": 0,
     "runtime_validation": "verified",
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -573,10 +574,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "runtime_verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   },
   {
@@ -585,9 +587,9 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "bass",
     "status": "candidate",
@@ -610,7 +612,7 @@
     "notes": [
       "Dedicated single-target derivative for bass; the matching MVSep resource entry declares output stems bass and other.",
       "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
     ],
     "assets": [
       {
@@ -628,9 +630,9 @@
     ],
     "planner_priority": 0,
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -642,10 +644,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "pending_runtime_validation",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   },
   {
@@ -654,9 +657,9 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "drums",
     "status": "candidate",
@@ -679,7 +682,7 @@
     "notes": [
       "Dedicated single-target derivative for kick; the matching MVSep resource entry declares output stems kick and other.",
       "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
     ],
     "assets": [
       {
@@ -697,9 +700,9 @@
     ],
     "planner_priority": 0,
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -711,10 +714,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "pending_runtime_validation",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   },
   {
@@ -723,9 +727,9 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "drums",
     "status": "candidate",
@@ -748,7 +752,7 @@
     "notes": [
       "Dedicated single-target derivative for drums; the matching MVSep resource entry declares output stems drums and other.",
       "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
     ],
     "assets": [
       {
@@ -766,9 +770,9 @@
     ],
     "planner_priority": 0,
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -780,10 +784,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "pending_runtime_validation",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   },
   {
@@ -792,9 +797,9 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "keyboard-specialist",
     "status": "candidate",
@@ -817,7 +822,7 @@
     "notes": [
       "Dedicated single-target derivative for organ; the matching MVSep resource entry declares output stems organ and other.",
       "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
     ],
     "assets": [
       {
@@ -835,9 +840,9 @@
     ],
     "planner_priority": 0,
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -849,10 +854,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "pending_runtime_validation",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   },
   {
@@ -861,9 +867,9 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "keyboard-specialist",
     "status": "candidate",
@@ -886,7 +892,7 @@
     "notes": [
       "Dedicated single-target derivative for digital-piano; the matching MVSep resource entry declares output stems digital-piano and other.",
       "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
     ],
     "assets": [
       {
@@ -904,9 +910,9 @@
     ],
     "planner_priority": 0,
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -918,10 +924,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "pending_runtime_validation",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   },
   {
@@ -930,9 +937,9 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "drums",
     "status": "candidate",
@@ -955,7 +962,7 @@
     "notes": [
       "Dedicated single-target derivative for percussion; the matching MVSep resource entry declares output stems percussion and other.",
       "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
     ],
     "assets": [
       {
@@ -973,9 +980,9 @@
     ],
     "planner_priority": 0,
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -987,10 +994,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "pending_runtime_validation",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   },
   {
@@ -999,9 +1007,9 @@
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
     "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
-    "license": null,
-    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
-    "license_status": "review_required",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
     "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
     "category": "drums",
     "status": "candidate",
@@ -1024,7 +1032,7 @@
     "notes": [
       "Dedicated single-target derivative for hh; the matching MVSep resource entry declares output stems hh and other.",
       "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
     ],
     "assets": [
       {
@@ -1042,9 +1050,9 @@
     ],
     "planner_priority": 0,
     "license_review": {
-      "status": "blocked",
+      "status": "accepted_by_maintainer",
       "weight_license": "MIT",
-      "weight_license_status": "confirmed_for_original_53_stem_weights_by_original_author",
+      "weight_license_status": "confirmed_by_original_author",
       "weight_license_evidence": [
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -1056,10 +1064,11 @@
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
         "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
       ],
-      "compatibility_status": "not_assessed",
-      "reviewed_by": "repository maintainers (preliminary evidence review)",
+      "compatibility_status": "pending_runtime_validation",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
-      "rationale": "The original author stated that the Mega 53 weights are MIT-licensed and that redistribution/conversion is permitted, but explicitly disclaimed copyright in all training audio and provided no training-data provenance or legal guarantee. The exact Hugging Face mirror does not declare its own license. Dataset rights and the chain of rights for these per-stem derivatives therefore remain unverified; this model family must remain blocked from download, bundling, redistribution and automatic planning."
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
     }
   }
 ]
