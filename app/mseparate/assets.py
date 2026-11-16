@@ -241,7 +241,11 @@ def ensure_model_assets(manifest: ModelManifest, models_root: str | Path, *,
     Candidate or license-review-pending weights must never be downloaded as a
     side effect of preparation. They remain metadata-only until approval.
     """
-    if manifest.status != "available" or manifest.license_status != "verified":
+    review_blocked = (
+        manifest.license_review is not None
+        and manifest.license_review.get("status") != "approved"
+    )
+    if manifest.status != "available" or manifest.license_status != "verified" or review_blocked:
         return [
             AssetResult(
                 asset.role, "blocked",
