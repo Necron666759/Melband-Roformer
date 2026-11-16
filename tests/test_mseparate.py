@@ -671,6 +671,6 @@ def test_zfturbo_53_stem_is_pinned_preparable_but_runtime_gated():
     assert model.native_stems[25:27] == ("keys", "kick")
     assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
     assert all(asset.sha256 and asset.size_bytes for asset in model.assets)
-    assert model.min_vram_gb == 16
-    assert model.min_free_vram_gb == 14
+    assert model.min_vram_gb == 14
+    assert model.min_free_vram_gb == 13
     assert model.low_vram_profile["status"] == "unverified"

@@ -193,7 +193,6 @@ def main() -> int:
     parser.add_argument("--models", nargs="*", default=list(MODEL_IDS), choices=MODEL_IDS)
     parser.add_argument("--discover-checksums", action="store_true", help="Download unpinned assets, calculate SHA-256/size, then run real inference")
     parser.add_argument("--low-vram-profile", action="store_true", help="Test the experimental 10-second chunk profile on CUDA; this does not enable it for automatic routing")
-    parser.add_argument("--low-vram-profile", action="store_true", help="Test the experimental 10-second chunk profile; this does not enable it for automatic routing")
     args = parser.parse_args()
 
     registry = load_registry(bundled_registry_path())
