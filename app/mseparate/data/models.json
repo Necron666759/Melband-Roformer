@@ -713,7 +713,7 @@
         "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_kick_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_kick_mvsep.ckpt",
         "required": true,
-        "sha256": "ad914b83f9ef13bedf9608771f4a86174e27a84f7f235dc2d1dd91bab85fbc",
+        "sha256": "ad914b83f9ef13bedf9608771f4f1a86174e27a84f7f235dc2d1dd91bab85fbc",
         "size_bytes": 77616219
       },
       {
