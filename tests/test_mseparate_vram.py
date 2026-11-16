@@ -92,3 +92,17 @@ def test_vram_probe_failure_fails_closed():
     )
     assert registry == {}
     assert "probe failed" in notes[0]
+
+
+def test_verified_low_vram_profile_does_not_override_normal_profile_when_it_fits():
+    model = _model()
+    profile = dict(model.low_vram_profile)
+    profile["status"] = "verified"
+    model = replace(model, low_vram_profile=profile)
+    registry, notes = filter_registry_for_device(
+        {"mega-53": model}, "cuda",
+        memory_probe=lambda: (15 * 1024**3, 24 * 1024**3),
+    )
+    assert registry["mega-53"] is model
+    assert registry["mega-53"].inference_params == model.inference_params
+    assert notes == ()
