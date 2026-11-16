@@ -131,6 +131,29 @@ def build_plan(
     if max_depth < 0:
         raise ValueError("max_depth must be zero or greater")
     candidates = eligible_models(registry or {})
+    source_predictions = [
+        item for item in (analysis.predictions if analysis else [])
+        if item.get("kind", "source") == "source"
+    ]
+    # Newly enabled electronic specialists must not become default tasks on
+    # unrelated/unknown audio. Require an explicit source-family prediction.
+    specialist_evidence = {
+        "synth-specialist": any(
+            str(item.get("source", "")).startswith("synth_")
+            or item.get("source") == "synthesizer"
+            for item in source_predictions
+        ),
+        "keyboard-specialist": any(
+            item.get("source") in {"synth_keys", "piano"}
+            for item in source_predictions
+        ),
+    }
+    candidates = [
+        model for model in candidates
+        if (model.category or "").strip().lower().replace("_", "-")
+        not in specialist_evidence
+        or specialist_evidence[(model.category or "").strip().lower().replace("_", "-")]
+    ]
     if not candidates:
         return ExecutionPlan(1, (), (
             "No verified, enabled model manifests are available; neural inference was not scheduled.",
