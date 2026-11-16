@@ -162,6 +162,9 @@ def test_backend_is_unloaded_even_when_load_raises_part_way(tmp_path):
     summary = manager.execute(plan, {"model-a": _manifest("model-a")}, {"mix": source})
 
     assert summary.failed == 1
+    assert summary.results[0].status == "failed"
+    assert summary.results[0].outputs == ()
+    assert "failed during load" in summary.results[0].message
     assert state["active"] == 0
     assert state["events"] == [("partial-load", "model-a"), ("unload",)]
 
