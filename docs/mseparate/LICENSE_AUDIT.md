@@ -53,3 +53,15 @@ An alternative is not accepted merely because its model card says MIT; it must p
 - 'eligible_models' already requires verified license status before planner selection.
 
 The CI check is a fail-closed evidence/schema gate, not an automated legal opinion. A human maintainer must review the primary sources. Existing model entries present before this policy was introduced are a legacy baseline and are not silently certified by this new check; they require a separate audit before their license status is represented as fully cleared.
+
+
+## Alternative dataset lead checked immediately
+
+**Slakh2100 is a research lead, not yet an approved replacement.**
+
+- The original [Slakh project website](https://www.slakh.com/) and [dataset-generation repository](https://github.com/ethman/slakh-generation) describe aligned MIDI/audio rendered from MIDI and state CC BY 4.0 for Slakh2100. This is promising for specialist Synth/Keys training.
+- However, a Hugging Face mirror currently declares CC-BY-NC-SA-4.0 for Slakh2100 ([mirror card](https://huggingface.co/datasets/projectlosangeles/Slakh2100)), which conflicts with the original project's CC BY 4.0 statement.
+- The generation repository says the original dataset used Kontakt Komplete 12 and sample-based virtual instruments. The licenses/redistribution rights for those underlying sample libraries and patches must also be established; the dataset-level CC BY statement alone is not enough to clear every embedded sample.
+- The inspected Zenodo 16 kHz derivative describes a redistribution license attachment, but the rendered metadata did not expose a clear SPDX value in the Rights section ([Zenodo record](https://zenodo.org/records/7708270)).
+
+Therefore Slakh is **not approved for training or redistribution yet**. The next alternative path is to obtain clarification from the dataset maintainers and inspect the original archive's license/patch notices, or build a controlled synthetic corpus using only project-created synthesis patches and assets with documented redistribution rights.
