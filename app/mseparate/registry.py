@@ -14,7 +14,7 @@ _LICENSE_STATES = {"verified", "review_required", "rejected"}
 _MODEL_STATES = {"candidate", "available", "incompatible", "unavailable", "disabled"}
 _CHANNEL_POLICIES = {"mono", "stereo", "mono_or_stereo", None}
 _RUNTIME_VALIDATION_STATES = {"unverified", "verified", "failed"}
-_LICENSE_REVIEW_STATES = {"approved", "blocked", "rejected"}
+_LICENSE_REVIEW_STATES = {"approved", "accepted_by_maintainer", "blocked", "rejected"}
 
 
 class RegistryError(ValueError):
@@ -165,7 +165,7 @@ def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
         )
         if model.status != "available" or model.license_status != "verified":
             continue
-        if model.license_review is not None and model.license_review.get("status") != "approved":
+        if model.license_review is not None and model.license_review.get("status") not in {"approved", "accepted_by_maintainer"}:
             continue
         if needs_runtime_validation and model.runtime_validation != "verified":
             continue
