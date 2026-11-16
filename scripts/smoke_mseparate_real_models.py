@@ -33,7 +33,7 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def make_fixture(path: Path, seconds: float = 8.0, sample_rate: int = 44100) -> None:
+def make_fixture(path: Path, seconds: float = 20.0, sample_rate: int = 44100) -> None:
     frames = int(seconds * sample_rate)
     time = np.arange(frames, dtype=np.float32) / sample_rate
     left = (
@@ -83,7 +83,7 @@ def run_model(manifest, models_root: Path, fixture: Path, output_root: Path, dev
         if len(outputs) != 1 or outputs[0].stem != manifest.target_stems[0]:
             raise RuntimeError(f"unexpected output contract: {outputs!r}")
         samples, sample_rate = sf.read(outputs[0].path, dtype="float32", always_2d=True)
-        if sample_rate != manifest.sample_rate or samples.shape != (8 * sample_rate, 2):
+        if sample_rate != manifest.sample_rate or samples.shape != (20 * sample_rate, 2):
             raise RuntimeError(
                 f"invalid output shape/rate: shape={samples.shape}, rate={sample_rate}"
             )
