@@ -159,7 +159,11 @@ def check_policy(
         if not owners:
             problems.append(f"{raw_path}: weight file is not mapped to a model manifest asset")
             continue
-        if not any(model.get("license_review", {}).get("status") == "approved" for model in owners):
+        if not any(
+            isinstance(model.get("license_review"), dict)
+            and model["license_review"].get("status") == "approved"
+            for model in owners
+        ):
             problems.append(f"{raw_path}: weight file cannot be committed without an approved license_review")
 
     return problems
