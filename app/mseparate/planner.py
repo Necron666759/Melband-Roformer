@@ -12,17 +12,29 @@ def _stem_score(stem: str, features: dict, predictions: list[dict] | None = None
     """Use semantic source rankings when available, else conservative signal heuristics."""
     name = stem.lower()
     aliases = {
-        "vocals": ("vocals",), "voice": ("vocals",),
-        "drums": ("drums",), "percussion": ("drums",),
-        "bass": ("bass",), "guitar": ("guitar",),
-        "piano": ("piano",), "keyboard": ("piano",),
-        "synth": ("synthesizer",), "strings": ("strings",),
-        "brass": ("brass",), "woodwind": ("woodwinds",),
-        "effect": ("sound_effects",),
-        "other": ("synthesizer", "strings", "brass", "woodwinds", "sound_effects"),
+        "vocals": ("vocals", "synth_vocals"), "voice": ("vocals", "synth_vocals"),
+        "drums": ("drums", "electronic_drums", "breakbeats"),
+        "percussion": ("drums", "electronic_drums", "breakbeats"),
+        "bass": ("bass", "synth_bass"), "guitar": ("guitar",),
+        "piano": ("piano", "synth_keys"), "keyboard": ("piano", "synth_keys"),
+        "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp",
+                  "synth_keys", "synth_strings", "synth_brass", "synth_bass", "synth_fx"),
+        "pad": ("synth_pad",), "lead": ("synth_lead",),
+        "arp": ("synth_arp",), "arpeggio": ("synth_arp",),
+        "effect": ("sound_effects", "synth_fx"), "fx": ("synth_fx",),
+        "strings": ("strings", "synth_strings"),
+        "brass": ("brass", "synth_brass"), "woodwind": ("woodwinds",),
+        "other": ("synthesizer", "synth_lead", "synth_pad", "synth_arp",
+                  "synth_keys", "synth_strings", "synth_brass", "synth_bass",
+                  "synth_fx", "strings", "brass", "woodwinds", "sound_effects", "samples"),
     }
     if predictions:
-        lookup = {str(item.get("source")): float(item.get("score", 0.0)) for item in predictions}
+        # Genre matches are useful context for reporting, but only source
+        # predictions may influence stem-to-model routing.
+        lookup = {
+            str(item.get("source")): float(item.get("score", 0.0))
+            for item in predictions if item.get("kind", "source") == "source"
+        }
         candidates = [key for token, values in aliases.items() if token in name
                       for key in values if key in lookup]
         if candidates:
@@ -76,6 +88,12 @@ def _model_specialization(stem: str, model: ModelManifest) -> int:
         "bass": {"bass"},
         "guitar": {"guitar"},
         "piano": {"piano", "keyboard"},
+        "synth": {"synth", "synth-specialist", "electronic"},
+        "synth-pad": {"synth", "synth-specialist", "electronic"},
+        "synth-lead": {"synth", "synth-specialist", "electronic"},
+        "synth-bass": {"synth", "synth-specialist", "electronic"},
+        "synth-fx": {"synth", "synth-specialist", "electronic"},
+        "electronic-drums": {"electronic-drums", "drums", "percussion"},
     }
     accepted = aliases.get(stem.lower(), {stem.lower()})
     return 1 if category in accepted else 0
@@ -166,7 +184,8 @@ def build_plan(
         "Hard input-format and channel constraints are checked before model ranking; models without backend-declared sample-rate conversion support require explicit --allow-resample.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
         "Overlapping routes prefer a manifest-declared specialist, then an explicitly preferred model, then manifest planner_priority and source salience. Priority is an operator routing preference, not a measured quality score; CLAP/acoustic scores do not estimate model quality or calibrated source presence.",
-        "CLAP detects broad semantic audio-text matches; it cannot reliably identify every individual synthesizer patch or guarantee clean isolation.",
+        "CLAP source-family matches are relative similarities, not calibrated source-presence probabilities. Electronic genre matches are contextual hints only and never trigger a stem route by themselves.",
+        "Synth leads, pads, arpeggios, synth bass, vocoder-like vocals and electronic FX are analyzed separately where CLAP can distinguish them; overlapping descriptions remain approximate."
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
     if allow_resample:
