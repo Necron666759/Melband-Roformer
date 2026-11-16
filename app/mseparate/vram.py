@@ -48,7 +48,8 @@ def filter_registry_for_device(
         if device != "cuda":
             notes.append(
                 f"{model.model_id} skipped: requires CUDA with at least "
-                f"{model.min_vram_gb:g} GiB VRAM; selected device is {device!r}."
+                f"{model.min_vram_gb:g} GiB VRAM; selected device is {device!r}. "
+                "No CPU fallback is permitted for this model."
             )
             continue
         if not probed:

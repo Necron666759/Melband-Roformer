@@ -200,7 +200,7 @@ def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
         category = (model.category or "").strip().lower().replace("_", "-")
         needs_runtime_validation = (
             model.backend == "bs-roformer-pymss"
-            and category in {"synth-specialist", "keyboard-specialist"}
+            and category in {"synth-specialist", "keyboard-specialist", "mega-multi-stem"}
         )
         if needs_runtime_validation and model.runtime_validation != "verified":
             continue

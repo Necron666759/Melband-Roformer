@@ -409,7 +409,7 @@
     "notes": [
       "Official ZFTurbo v1.0.21 release publishes the 53-stem BS-RoFormer checkpoint and matching YAML; all 53 native output names and their order match the upstream release.",
       "The original author confirmed MIT licensing and redistribution permission for the original 53-stem weights. Training-data provenance remains unknown; this is recorded separately and is not claimed as cleared.",
-      "Upstream recommends at least 16 GB VRAM and warns that inference is memory-intensive even at batch_size=1. The runtime gate requires at least 16 GiB total capacity and 14 GiB currently free; this is a conservative admission policy, not a measured peak-memory claim.",
+      "Upstream recommends at least 16 GB VRAM and warns that inference is memory-intensive even at batch_size=1. The admission gate approximates a 16 GB marketed GPU as 14 GiB physical capacity and requires 13 GiB currently free; these are conservative policy thresholds, not a measured peak-memory claim.",
       "An experimental 10-second chunk profile (chunk_size=441000, overlap_size=220500) is recorded for testing on 8 GB GPUs. It remains unverified and is never selected automatically.",
       "Outputs can overlap and are not guaranteed to sum to the mixture. Do not treat all 53 stems as additive or construct a residual from them.",
       "The model is broadly trained for instrument families; its synth output does not make it an electronic-genre-specific specialist.",
@@ -417,16 +417,16 @@
     ],
     "runtime_validation": "unverified",
     "upstream_version": "ZFTurbo Music-Source-Separation-Training v1.0.21 / pymss==2.3.5",
-    "min_vram_gb": 16,
-    "min_free_vram_gb": 14,
+    "min_vram_gb": 14,
+    "min_free_vram_gb": 13,
     "inference_params": {
       "batch_size": 1,
       "normalize": false
     },
     "low_vram_profile": {
       "status": "unverified",
-      "min_total_vram_gb": 8,
-      "min_free_vram_gb": 7,
+      "min_total_vram_gb": 7,
+      "min_free_vram_gb": 6,
       "inference_params": {
         "batch_size": 1,
         "chunk_size": 441000,

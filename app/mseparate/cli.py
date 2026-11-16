@@ -445,7 +445,7 @@ def main(argv: list[str] | None = None) -> int:
         execute_requested = args.execute or not (args.analysis_only or args.plan_only or args.prepare_models)
         effective_device = args.device
         device_fallback_reason = None
-        if (execute_requested or args.prepare_models) and args.device == "auto":
+        if (execute_requested or args.prepare_models or args.plan_only) and args.device == "auto":
             effective_device, device_fallback_reason = _resolve_auto_device()
             if device_fallback_reason:
                 print("Warning: " + device_fallback_reason, file=sys.stderr)
