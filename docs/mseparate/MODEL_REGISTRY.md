@@ -13,7 +13,8 @@ Status: schema requirements; this file does not certify or enable any model weig
 | `source_url` | Canonical project/model source |
 | `license` | SPDX identifier or explicit unknown |
 | `license_url` | License evidence |
-| `license_status` | `verified`, `review_required`, or `rejected`; this is not a substitute for the full `license_review` record |\n| `license_review` | Required for every new/changed model record: review state, primary-source weight-license evidence, redistribution grant, training-data rights/evidence, project compatibility, reviewer, date and rationale |
+| `license_status` | `verified`, `review_required`, or `rejected`; this is not a substitute for the full `license_review` record |
+| `license_review` | Required for every new/changed model record: review state, primary-source weight-license evidence, redistribution grant, training-data rights/evidence, project compatibility, reviewer, date and rationale |
 | `assets` | Required checkpoint/config assets |
 | `native_stems` | Actual trained/native output stems |
 | `target_stems` | Meaningful targets the model can produce |
