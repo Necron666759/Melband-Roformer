@@ -59,6 +59,7 @@ class ModelManifest:
     input_formats: tuple[str, ...] = ()
     category: str | None = None
     planner_priority: int = 0
+    runtime_validation: str = "unverified"
     upstream_version: str | None = None
     notes: tuple[str, ...] = ()
     status: str = "candidate"
