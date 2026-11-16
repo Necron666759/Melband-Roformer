@@ -436,7 +436,7 @@
     "name": "MVSep Mega 53 | Synth specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": null,
     "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
     "license_status": "review_required",
@@ -460,20 +460,20 @@
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
-      "Dedicated single-target derivative for synth; the matching MVSep resource entry declares output stems synth and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "Dedicated single-target derivative from the MVSep Mega 53 family; MVSep resource metadata declares this exact target plus other.",
+      "Asset URLs are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327 (the repository currently exposes one verified upload commit).",
+      "The upstream ZFTurbo Mega 53 checkpoint author has stated that the model weights are MIT-licensed; the third-party single-stem derivative repository itself does not publish per-file SHA-256 values. Do not enable automatic download or inference until checkpoint and config digests are independently computed and recorded, then strict-load and short-forward tests pass in the pinned pymss runtime."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_synth_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_synth_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_synth_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_synth_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_synth_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_synth_mvsep_config.yaml",
         "required": true
       }
@@ -485,7 +485,7 @@
     "name": "MVSep Mega 53 | Keys specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": null,
     "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
     "license_status": "review_required",
@@ -509,20 +509,20 @@
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
-      "Dedicated single-target derivative for keys; the matching MVSep resource entry declares output stems keys and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+      "Dedicated single-target derivative from the MVSep Mega 53 family; MVSep resource metadata declares this exact target plus other.",
+      "Asset URLs are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327 (the repository currently exposes one verified upload commit).",
+      "The upstream ZFTurbo Mega 53 checkpoint author has stated that the model weights are MIT-licensed; the third-party single-stem derivative repository itself does not publish per-file SHA-256 values. Do not enable automatic download or inference until checkpoint and config digests are independently computed and recorded, then strict-load and short-forward tests pass in the pinned pymss runtime."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_keys_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_keys_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_keys_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_keys_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_keys_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_keys_mvsep_config.yaml",
         "required": true
       }
