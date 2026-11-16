@@ -172,7 +172,7 @@ def test_incompatible_audio_does_not_schedule_model():
     by_model = {task.model_id: task for task in plan.tasks}
     assert by_model["bs-roformer-anvuew-vocals"].target_stems == ("instrumental", "vocals")
     assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
-        "drums", "bass", "other", "guitar", "piano",
+        "other", "guitar", "piano",
     }
     assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
@@ -366,7 +366,7 @@ def test_planner_prefers_vocal_specialist_over_general_demucs_route():
         "vocals", "instrumental",
     }
     assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
-        "drums", "bass", "other", "guitar", "piano",
+        "other", "guitar", "piano",
     }
     assert "manifest-declared specialist" in by_model[
         "melband-roformer-kim-vocals"
