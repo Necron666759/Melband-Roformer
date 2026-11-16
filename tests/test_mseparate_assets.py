@@ -238,3 +238,29 @@ def test_candidate_with_unverified_license_cannot_download_assets(tmp_path, asse
     assert "license must be verified" in results[0].message
     assert _AssetHandler.range_requests == []
     assert not (tmp_path / "models" / "candidate-model" / "weights" / "model.ckpt").exists()
+
+
+
+def test_blocked_license_review_excludes_model_from_planner():
+    from mseparate.registry import eligible_models, parse_manifest
+
+    manifest = parse_manifest({
+        "model_id": "blocked-model", "name": "Blocked", "architecture": "test",
+        "backend": "test", "source_url": "https://example.invalid/model",
+        "license": "MIT", "license_status": "verified", "status": "available",
+        "license_review": {"status": "blocked", "training_data_status": "unknown"},
+        "assets": [{
+            "role": "checkpoint", "url": "https://example.invalid/model.ckpt",
+            "relative_path": "model.ckpt", "sha256": "a" * 64,
+        }],
+    })
+    assert eligible_models({manifest.model_id: manifest}) == []
+
+
+def test_registry_rejects_invalid_license_review_state():
+    with pytest.raises(RegistryError, match="license_review.status"):
+        parse_manifest({
+            "model_id": "bad-review", "name": "Bad", "architecture": "test",
+            "backend": "test", "source_url": "https://example.invalid/model",
+            "license_review": {"status": "maybe"},
+        })
