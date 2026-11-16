@@ -253,6 +253,78 @@ def build_plan(
     return ExecutionPlan(1, tuple(tasks), tuple(notes), max_depth)
 
 
+
+def add_vocal_comparison_tasks(
+    plan: ExecutionPlan,
+    *,
+    analysis: AnalysisReport,
+    registry: dict[str, ModelManifest],
+    allow_resample: bool = False,
+) -> ExecutionPlan:
+    """Append explicit alternative runs for all eligible primary vocal models.
+
+    These tasks generate comparable candidate files from the same mix. They
+    are opt-in because they increase inference time and do not by themselves
+    identify a perceptual winner.
+    """
+    existing = {
+        task.model_id for task in plan.tasks
+        if "vocals" in task.target_stems and task.input_stem_id == "mix"
+    }
+    candidates = []
+    rejected = []
+    for model in eligible_models(registry):
+        category = (model.category or "").strip().lower().replace("_", "-")
+        if category not in {"vocal", "vocals"} or not model.auto_route:
+            continue
+        if model.backend not in {"melband-roformer", "bs-roformer-pymss", "mdx23c-pymss"}:
+            continue
+        if "vocals" not in _model_outputs(model) or model.model_id in existing:
+            continue
+        checked_audio = (
+            replace(analysis.audio, sample_rate=model.sample_rate)
+            if allow_resample and model.sample_rate is not None
+            else analysis.audio
+        )
+        compatible, reason = model_audio_compatibility(model, checked_audio)
+        if not compatible:
+            rejected.append(f"{model.model_id}: {reason}")
+            continue
+        candidates.append(model)
+
+    additions = []
+    for index, model in enumerate(sorted(candidates, key=lambda item: item.model_id), start=1):
+        additions.append(ExecutionTask(
+            task_id=f"compare-vocals-{index:02d}",
+            model_id=model.model_id,
+            input_stem_id="mix",
+            target_stems=("vocals",),
+            depth=0,
+            score=0.0,
+            confidence=0.0,
+            rationale=(
+                "Explicit vocal-model comparison candidate; generated from the same input mix. "
+                "This output is an alternative, not an additive stem or a quality verdict."
+            ),
+        ))
+
+    notes = list(plan.notes)
+    if additions:
+        notes.append(
+            "Explicit vocal comparison is enabled: alternative primary vocal models run sequentially "
+            "against the original mix; candidate outputs are kept separate and are never summed."
+        )
+        notes.append(
+            "Post-inference CLAP ranks provide semantic source-alignment hints only; they do not "
+            "measure separation quality or automatically select a winner."
+        )
+    else:
+        notes.append(
+            "Explicit vocal comparison found no additional eligible and input-compatible primary vocal models."
+        )
+    notes.extend(rejected)
+    return replace(plan, tasks=(*plan.tasks, *additions), notes=tuple(notes))
+
 def validate_plan(plan: ExecutionPlan) -> None:
     ids = [task.task_id for task in plan.tasks]
     if len(ids) != len(set(ids)):

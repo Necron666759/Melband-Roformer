@@ -13,7 +13,7 @@ from .assets import ensure_model_assets
 from .audio import analyze_audio
 from .execution import ExecutionManager
 from .melband import MelBandCLIAdapter
-from .planner import build_plan, validate_plan
+from .planner import add_vocal_comparison_tasks, build_plan, validate_plan
 from .registry import RegistryError, bundled_registry_path, eligible_models, load_registry, preparable_models
 from .reporting import print_analysis, print_execution_summary, print_plan
 from .storage import data_root, ensure_layout, write_json_atomic
@@ -392,6 +392,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Allow temporary WAV sample-rate conversion to satisfy model input rates; outputs keep the model sample rate")
     parser.add_argument("--no-deep-analysis", action="store_true",
                         help="Skip post-inference CLAP analysis of separated stems and residual-source hints")
+    parser.add_argument("--compare-vocal-models", action="store_true",
+                        help="Run every eligible primary vocal model sequentially on the same mix to generate separate comparison candidates")
     parser.add_argument("--verbose", action="store_true", help="Print additional diagnostics")
     parser.add_argument("--report", nargs="?", const="mseparate-report.json",
                         help="Write a JSON report (optional path; default: mseparate-report.json)")
@@ -489,6 +491,11 @@ def main(argv: list[str] | None = None) -> int:
         plan = build_plan(max_depth=args.max_depth, analysis=report, registry=filtered_registry,
                           preferred_model_id=args.prefer_model,
                           allow_resample=args.allow_resample)
+        if args.compare_vocal_models:
+            plan = add_vocal_comparison_tasks(
+                plan, analysis=report, registry=filtered_registry,
+                allow_resample=args.allow_resample,
+            )
         if vram_notes:
             plan = replace(plan, notes=(*plan.notes, *vram_notes))
         validate_plan(plan)

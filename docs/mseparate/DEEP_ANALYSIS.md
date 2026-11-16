@@ -49,3 +49,26 @@ mseparate input.wav --no-deep-analysis
 
 This disables only post-inference output analysis. The normal input analysis
 used for routing remains unchanged.
+
+
+## Explicit primary-vocal model comparison
+
+The normal route still selects one primary vocal model according to manifest
+routing preferences. To generate alternative vocal candidates from the same
+input mix, run:
+
+```bash
+mseparate input.wav --compare-vocal-models
+```
+
+This opt-in mode runs the eligible, input-compatible primary vocal models
+(MelBand RoFormer Kim, BS-RoFormer Anvuew and MDX23C ZFTurbo) sequentially.
+It produces separate candidate files for each model; candidates are not
+summed, subtracted or treated as interchangeable without review. The extra
+runs increase processing time and asset requirements.
+
+The post-inference analysis groups candidates by stem and orders them by
+expected-source CLAP rank. This is only a semantic source-alignment
+comparison, not an objective separation-quality score. No winner is
+automatically selected. This mode exists to collect side-by-side candidates
+for listening and future benchmark-based routing decisions.
