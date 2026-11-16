@@ -124,7 +124,7 @@ def test_synth_and_keys_require_both_runtime_and_license_approval_before_plannin
 
     # Simulate later explicit legal approval and verify specialist routing.
     approved = {
-        model_id: replace(model, status="available", license_status="verified")
+        model_id: replace(model, status="available", license_status="verified", license_review={"status": "approved"})
         for model_id, model in registry.items()
         if model_id in {synth_id, keys_id}
     }
