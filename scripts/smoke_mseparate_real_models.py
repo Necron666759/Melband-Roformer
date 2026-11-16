@@ -8,10 +8,124 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
+import os
+import shutil
+import subprocess
+import sys
+import tarfile
 import tempfile
 from dataclasses import replace
 from pathlib import Path
 from urllib.request import Request, urlopen
+
+# Make the source checkout importable when this file is launched directly
+# from scripts/ (without requiring PYTHONPATH=app).
+APP_DIR = Path(__file__).resolve().parents[1] / "app"
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
+
+
+def _missing_runtime_modules() -> list[str]:
+    required = ("numpy", "soundfile", "torch", "pymss", "tqdm", "soxr")
+    return [name for name in required if importlib.util.find_spec(name) is None]
+
+
+def _bootstrap_runtime() -> None:
+    """Re-exec with a cached, isolated CPython + the application's pinned MSS runtime.
+
+    The smoke test is intentionally self-contained: a fresh Debian/Ubuntu
+    checkout needs only Python 3 and network access. The portable interpreter
+    is the same python-build-standalone release used by build-appimage.sh.
+    """
+    requested_device = "cuda" if "--device" in sys.argv and
+        sys.argv.index("--device") + 1 < len(sys.argv) and
+        sys.argv[sys.argv.index("--device") + 1] == "cuda" else "cpu"
+
+    missing = _missing_runtime_modules()
+    cpu_only_torch = False
+    if "torch" not in missing and requested_device == "cuda":
+        try:
+            import torch as _torch
+            cpu_only_torch = _torch.version.cuda is None
+        except Exception:
+            cpu_only_torch = True
+
+    if not missing and not cpu_only_torch:
+        return
+    if os.environ.get("MSEPARATE_SMOKE_BOOTSTRAPPED") == "1":
+        raise RuntimeError(
+            "The isolated smoke-test Python is still missing runtime modules: "
+            + ", ".join(_missing_runtime_modules())
+        )
+
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    cache_root = cache_home / "mseparate-smoke"
+    python_root = cache_root / "python"
+    python = python_root / "bin" / "python3"
+    if not python.is_file():
+        cache_root.mkdir(parents=True, exist_ok=True)
+        asset = "cpython-3.13.15+20260825-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+        archive = Path(__file__).resolve().parents[1] / ".appimage-build" / "tools" / asset
+        if not archive.is_file():
+            archive = cache_root / asset
+            if not archive.is_file():
+                url = (
+                    "https://github.com/astral-sh/python-build-standalone/releases/"
+                    "download/20260825/cpython-3.13.15%2B20260825-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+                )
+                print(f"Downloading portable CPython 3.13.15: {url}", flush=True)
+                request = Request(url, headers={"User-Agent": "mseparate-real-model-smoke/1.0"})
+                with urlopen(request, timeout=60) as response, archive.open("wb") as output:
+                    while True:
+                        block = response.read(1024 * 1024)
+                        if not block:
+                            break
+                        output.write(block)
+
+        print(f"Preparing isolated Python runtime in {python_root}", flush=True)
+        extract_root = cache_root / "extract"
+        shutil.rmtree(extract_root, ignore_errors=True)
+        extract_root.mkdir(parents=True, exist_ok=True)
+        try:
+            with tarfile.open(archive, "r:gz") as bundle:
+                bundle.extractall(extract_root, filter="data")
+            extracted_python = extract_root / "python"
+            if not (extracted_python / "bin" / "python3").is_file():
+                raise RuntimeError("Portable CPython archive has an unexpected layout")
+            shutil.rmtree(python_root, ignore_errors=True)
+            shutil.move(str(extracted_python), str(python_root))
+        finally:
+            shutil.rmtree(extract_root, ignore_errors=True)
+
+    if not python.is_file():
+        raise RuntimeError(f"Could not prepare portable Python at {python}")
+
+    print(
+        "Installing the pinned smoke-test runtime (PyTorch 2.13.0 CUDA 13.0, "
+        "torchaudio 2.11.0, pymss 2.3.5). First run downloads several GB; "
+        "subsequent runs reuse the cache.",
+        flush=True,
+    )
+    subprocess.run(
+        [
+            str(python), "-m", "pip", "install",
+            "--disable-pip-version-check",
+            "--index-url", "https://download.pytorch.org/whl/cu130",
+            "--extra-index-url", "https://pypi.org/simple",
+            "torch==2.13.0", "torchaudio==2.11.0", "pymss==2.3.5",
+            "numpy", "soundfile", "tqdm", "soxr",
+        ],
+        check=True,
+    )
+    env = os.environ.copy()
+    env["MSEPARATE_SMOKE_BOOTSTRAPPED"] = "1"
+    current_pythonpath = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(APP_DIR) + (os.pathsep + current_pythonpath if current_pythonpath else "")
+    os.execve(str(python), [str(python), str(Path(__file__).resolve()), *sys.argv[1:]], env)
+
+
+_bootstrap_runtime()
 
 import numpy as np
 import soundfile as sf
@@ -195,6 +309,24 @@ def main() -> int:
     parser.add_argument("--discover-checksums", action="store_true", help="Download unpinned assets, calculate SHA-256/size, then run real inference")
     parser.add_argument("--low-vram-profile", action="store_true", help="Test the experimental 10-second chunk profile on CUDA; this does not enable it for automatic routing")
     args = parser.parse_args()
+
+    if args.device == "cuda":
+        import torch
+        if not torch.cuda.is_available():
+            raise SystemExit(
+                "CUDA is unavailable in the smoke-test runtime. This test uses the "
+                "application's PyTorch 2.13.0+cu130 build and requires an NVIDIA "
+                "driver >= 580.65.06. Check nvidia-smi and update the driver if needed. "
+                f"torch={torch.__version__}, torch CUDA build={torch.version.cuda!r}"
+            )
+        props = torch.cuda.get_device_properties(0)
+        free_bytes, total_bytes = torch.cuda.mem_get_info(0)
+        print(
+            f"CUDA device: {props.name}; VRAM total={total_bytes / (1024 ** 3):.2f} GiB, "
+            f"free={free_bytes / (1024 ** 3):.2f} GiB; "
+            f"PyTorch={torch.__version__}, CUDA runtime={torch.version.cuda}",
+            flush=True,
+        )
 
     registry = load_registry(bundled_registry_path())
     with tempfile.TemporaryDirectory(prefix="mseparate-real-model-smoke-") as temp:
