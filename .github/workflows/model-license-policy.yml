@@ -1,0 +1,42 @@
+name: Model weight license policy
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/mseparate/data/models.json"
+      - "app/mseparate/data/**/*.json"
+      - "scripts/check_model_license_policy.py"
+      - "**/*.ckpt"
+      - "**/*.pt"
+      - "**/*.pth"
+      - "**/*.safetensors"
+      - "**/*.onnx"
+      - "**/*.bin"
+      - "**/*.h5"
+      - "**/*.hdf5"
+      - "**/*.model"
+      - "**/*.tflite"
+
+permissions:
+  contents: read
+
+jobs:
+  license-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check model license and redistribution policy
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python scripts/check_model_license_policy.py \
+            --base-ref "$BASE_REF" \
+            --head-ref "$HEAD_REF"
