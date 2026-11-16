@@ -20,7 +20,7 @@ WEIGHT_SUFFIXES = {
     ".ckpt", ".pt", ".pth", ".safetensors", ".onnx", ".bin", ".h5",
     ".hdf5", ".model", ".tflite",
 }
-URL_RE = re.compile(r"^https?://\\S+$")
+URL_RE = re.compile(r"^https?://\S+$")
 SPDX_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.+-]*$")
 
 
