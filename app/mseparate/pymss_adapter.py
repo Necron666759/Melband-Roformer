@@ -155,7 +155,7 @@ class PymssAdapter:
             store_dirs={},
             debug=True,
             progress_callback=self._progress,
-            inference_params={"batch_size": 1, "normalize": False},
+            inference_params={**{"batch_size": 1, "normalize": False}, **manifest.inference_params},
         )
         self._model_id = manifest.model_id
         self._device = str(getattr(self._separator, "device", device))

@@ -31,6 +31,7 @@ MODEL_IDS = (
     "mvsep-mega53-digital-piano-specialist-candidate",
     "mvsep-mega53-percussion-specialist-candidate",
     "mvsep-mega53-hh-specialist-candidate",
+    "zfturbo-bs-roformer-53stem-candidate",
 )
 
 
@@ -114,8 +115,13 @@ def run_model(manifest, models_root: Path, fixture: Path, output_root: Path, dev
     model_output = output_root / manifest.model_id
     try:
         adapter.load(manifest, model_dir, device)
-        outputs = adapter.infer(fixture, model_output, manifest.target_stems)
-        expected_stems = set(manifest.target_stems)
+        smoke_stems = (
+            ("bass", "kick", "keys", "synth", "vocal")
+            if manifest.model_id == "zfturbo-bs-roformer-53stem-candidate"
+            else manifest.target_stems
+        )
+        outputs = adapter.infer(fixture, model_output, smoke_stems)
+        expected_stems = set(smoke_stems)
         actual_stems = {item.stem for item in outputs}
         if actual_stems != expected_stems:
             raise RuntimeError(
@@ -134,6 +140,16 @@ def run_model(manifest, models_root: Path, fixture: Path, output_root: Path, dev
                 f"PASS: {item.stem}, {samples.shape}, {sample_rate} Hz, RMS={rms:.6f}",
                 flush=True,
             )
+        if device == "cuda":
+            import torch
+            torch.cuda.synchronize()
+            print(
+                "CUDA peak memory: allocated={:.2f} GiB, reserved={:.2f} GiB".format(
+                    torch.cuda.max_memory_allocated(0) / (1024 ** 3),
+                    torch.cuda.max_memory_reserved(0) / (1024 ** 3),
+                ),
+                flush=True,
+            )
     finally:
         adapter.unload()
 
@@ -143,6 +159,7 @@ def main() -> int:
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--models", nargs="*", default=list(MODEL_IDS), choices=MODEL_IDS)
     parser.add_argument("--discover-checksums", action="store_true", help="Download unpinned assets, calculate SHA-256/size, then run real inference")
+    parser.add_argument("--low-vram-profile", action="store_true", help="Test the experimental 10-second chunk profile; this does not enable it for automatic routing")
     args = parser.parse_args()
 
     registry = load_registry(bundled_registry_path())
@@ -151,7 +168,7 @@ def main() -> int:
         fixture = root / "fixture.wav"
         make_fixture(fixture)
         for model_id in args.models:
-            run_model(registry[model_id], root / "models", fixture, root / "outputs", args.device, args.discover_checksums)
+            run_model(registry[model_id], root / "models", fixture, root / "outputs", args.device, args.discover_checksums, args.low_vram_profile)
     print("\nAll requested real-model smoke tests passed.", flush=True)
     return 0
 

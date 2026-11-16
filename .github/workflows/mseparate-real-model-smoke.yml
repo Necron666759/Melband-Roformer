@@ -20,7 +20,7 @@ concurrency:
 jobs:
   real-model-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,4 +33,4 @@ jobs:
       - name: Verify pinned hashes, strict-load and infer Mega 53 specialists
         env:
           PYTHONPATH: app
-        run: python scripts/smoke_mseparate_real_models.py --device cpu --models mvsep-mega53-bass-specialist-candidate mvsep-mega53-kick-specialist-candidate mvsep-mega53-drums-specialist-candidate mvsep-mega53-organ-specialist-candidate mvsep-mega53-digital-piano-specialist-candidate mvsep-mega53-percussion-specialist-candidate mvsep-mega53-hh-specialist-candidate
+        run: python scripts/smoke_mseparate_real_models.py --device cpu --models mvsep-mega53-bass-specialist-candidate mvsep-mega53-kick-specialist-candidate mvsep-mega53-drums-specialist-candidate mvsep-mega53-organ-specialist-candidate mvsep-mega53-digital-piano-specialist-candidate mvsep-mega53-percussion-specialist-candidate mvsep-mega53-hh-specialist-candidate zfturbo-bs-roformer-53stem-candidate

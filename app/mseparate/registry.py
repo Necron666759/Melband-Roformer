@@ -105,6 +105,26 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
     channels = data.get("channels")
     if channels not in _CHANNEL_POLICIES:
         raise RegistryError(f"channels must be one of {sorted(x for x in _CHANNEL_POLICIES if x)} or null")
+    min_vram_gb = data.get("min_vram_gb")
+    min_free_vram_gb = data.get("min_free_vram_gb")
+    for key, value in (("min_vram_gb", min_vram_gb), ("min_free_vram_gb", min_free_vram_gb)):
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0):
+            raise RegistryError(f"{key} must be a positive number or null")
+    inference_params = data.get("inference_params", {})
+    if not isinstance(inference_params, dict) or any(not isinstance(key, str) for key in inference_params):
+        raise RegistryError("inference_params must be an object with string keys")
+    low_vram_profile = data.get("low_vram_profile")
+    if low_vram_profile is not None:
+        if not isinstance(low_vram_profile, dict):
+            raise RegistryError("low_vram_profile must be an object or null")
+        if low_vram_profile.get("status") not in {"unverified", "verified", "disabled"}:
+            raise RegistryError("low_vram_profile.status must be unverified, verified or disabled")
+        if not isinstance(low_vram_profile.get("inference_params", {}), dict):
+            raise RegistryError("low_vram_profile.inference_params must be an object")
+        for key in ("min_total_vram_gb", "min_free_vram_gb"):
+            value = low_vram_profile.get(key)
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0):
+                raise RegistryError(f"low_vram_profile.{key} must be a positive number")
     for key in ("category", "upstream_version"):
         if data.get(key) is not None and (not isinstance(data[key], str) or not data[key].strip()):
             raise RegistryError(f"{key} must be a non-empty string or null")
@@ -127,6 +147,9 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         channels=channels, input_formats=tuple(x.lower().lstrip(".") for x in strings("input_formats")),
         category=data.get("category"), planner_priority=planner_priority,
         runtime_validation=runtime_validation, license_review=license_review,
+        min_vram_gb=float(min_vram_gb) if min_vram_gb is not None else None,
+        min_free_vram_gb=float(min_free_vram_gb) if min_free_vram_gb is not None else None,
+        inference_params=dict(inference_params), low_vram_profile=low_vram_profile,
         upstream_version=data.get("upstream_version"), notes=notes, status=status,
     )
 
@@ -150,6 +173,22 @@ def load_registry(path: str | Path) -> dict[str, ModelManifest]:
     return result
 
 
+def preparable_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
+    """Return license-cleared models with pinned assets, even before runtime smoke validation."""
+    result = []
+    for model in registry.values():
+        if model.status != "available" or model.license_status != "verified":
+            continue
+        if model.license_review is not None and model.license_review.get("status") not in {"approved", "accepted_by_maintainer"}:
+            continue
+        if not all((not asset.required) or bool(asset.sha256) for asset in model.assets):
+            continue
+        if not model.assets and model.backend != "demucs-onnx":
+            continue
+        result.append(model)
+    return result
+
+
 def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
     """Return models that pass independent runtime, license and asset gates.
 
@@ -157,21 +196,13 @@ def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
     runtime smoke test in addition to the normal availability and license gates.
     """
     eligible = []
-    for model in registry.values():
+    for model in preparable_models(registry):
         category = (model.category or "").strip().lower().replace("_", "-")
         needs_runtime_validation = (
             model.backend == "bs-roformer-pymss"
             and category in {"synth-specialist", "keyboard-specialist"}
         )
-        if model.status != "available" or model.license_status != "verified":
-            continue
-        if model.license_review is not None and model.license_review.get("status") not in {"approved", "accepted_by_maintainer"}:
-            continue
         if needs_runtime_validation and model.runtime_validation != "verified":
-            continue
-        if not all((not asset.required) or bool(asset.sha256) for asset in model.assets):
-            continue
-        if not model.assets and model.backend != "demucs-onnx":
             continue
         eligible.append(model)
     return eligible

@@ -61,6 +61,10 @@ class ModelManifest:
     planner_priority: int = 0
     runtime_validation: str = "unverified"
     license_review: dict[str, Any] | None = field(default=None, compare=False, hash=False)
+    min_vram_gb: float | None = None
+    min_free_vram_gb: float | None = None
+    inference_params: dict[str, Any] = field(default_factory=dict, compare=False, hash=False)
+    low_vram_profile: dict[str, Any] | None = field(default=None, compare=False, hash=False)
     upstream_version: str | None = None
     notes: tuple[str, ...] = ()
     status: str = "candidate"

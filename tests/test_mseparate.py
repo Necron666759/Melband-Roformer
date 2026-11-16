@@ -649,3 +649,28 @@ def test_demucs_strict_cuda_requires_disable_fallback_support(tmp_path):
 
     with pytest.raises(RuntimeError, match="disable_fallback"):
         _prewarm_strict_cuda(FakeRuntime(), tmp_path, "fp16weights")
+
+
+
+def test_zfturbo_53_stem_is_pinned_preparable_but_runtime_gated():
+    from mseparate.registry import preparable_models
+
+    registry = load_registry(bundled_registry_path())
+    model = registry["zfturbo-bs-roformer-53stem-candidate"]
+    eligible = {item.model_id for item in eligible_models(registry)}
+    preparable = {item.model_id for item in preparable_models(registry)}
+    assert model.status == "available"
+    assert model.license == "MIT"
+    assert model.license_status == "verified"
+    assert model.license_review["status"] == "accepted_by_maintainer"
+    assert model.license_review["training_data_status"] == "unknown"
+    assert model.runtime_validation == "unverified"
+    assert model.model_id in preparable
+    assert model.model_id not in eligible
+    assert len(model.native_stems) == 53
+    assert model.native_stems[25:27] == ("keys", "kick")
+    assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
+    assert all(asset.sha256 and asset.size_bytes for asset in model.assets)
+    assert model.min_vram_gb == 16
+    assert model.min_free_vram_gb == 14
+    assert model.low_vram_profile["status"] == "unverified"

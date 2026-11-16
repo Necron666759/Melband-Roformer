@@ -192,10 +192,13 @@ def test_bs_roformer_adapter_supports_single_native_non_vocal_stem(tmp_path, mon
 
     adapter = BSRoformerAdapter()
     assert adapter.compatibility(manifest) == (True, "")
+    manifest = ModelManifest(**{**manifest.__dict__, "inference_params": {"chunk_size": 441000, "overlap_size": 220500}})
     adapter.load(manifest, tmp_path, "cpu")
     outputs = adapter.infer(source, tmp_path / "synth-out", ("synth",))
 
     assert state["kwargs"]["model_type"] == "bs_roformer"
+    assert state["kwargs"]["inference_params"]["chunk_size"] == 441000
+    assert state["kwargs"]["inference_params"]["overlap_size"] == 220500
     assert state["stems"] == ("synth",)
     assert len(outputs) == 1
     samples, rate = sf.read(outputs[0].path, dtype="float32", always_2d=True)

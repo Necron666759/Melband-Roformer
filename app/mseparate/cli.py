@@ -14,10 +14,11 @@ from .audio import analyze_audio
 from .execution import ExecutionManager
 from .melband import MelBandCLIAdapter
 from .planner import build_plan, validate_plan
-from .registry import RegistryError, bundled_registry_path, eligible_models, load_registry
+from .registry import RegistryError, bundled_registry_path, eligible_models, load_registry, preparable_models
 from .reporting import print_analysis, print_execution_summary, print_plan
 from .storage import data_root, ensure_layout, write_json_atomic
 from .types import to_jsonable
+from .vram import filter_registry_for_device
 
 
 def _registry_path(paths: dict[str, Path], override: str | None) -> Path:
@@ -444,7 +445,7 @@ def main(argv: list[str] | None = None) -> int:
         execute_requested = args.execute or not (args.analysis_only or args.plan_only or args.prepare_models)
         effective_device = args.device
         device_fallback_reason = None
-        if execute_requested and args.device == "auto":
+        if (execute_requested or args.prepare_models) and args.device == "auto":
             effective_device, device_fallback_reason = _resolve_auto_device()
             if device_fallback_reason:
                 print("Warning: " + device_fallback_reason, file=sys.stderr)
@@ -473,16 +474,21 @@ def main(argv: list[str] | None = None) -> int:
                     no_download=args.no_download,
                 )
             report = replace(report, predictions=predictions)
-        plan = build_plan(max_depth=args.max_depth, analysis=report, registry=registry,
+        filtered_registry, vram_notes = filter_registry_for_device(registry, effective_device)
+        for note in vram_notes:
+            print("VRAM preflight: " + note, file=sys.stderr)
+        plan = build_plan(max_depth=args.max_depth, analysis=report, registry=filtered_registry,
                           preferred_model_id=args.prefer_model,
                           allow_resample=args.allow_resample)
+        if vram_notes:
+            plan = replace(plan, notes=(*plan.notes, *vram_notes))
         validate_plan(plan)
 
         asset_results: list[dict] = []
         prepared_models: set[str] = set()
-        models_to_prepare = eligible_models(registry) if args.prepare_models else []
+        models_to_prepare = preparable_models(filtered_registry) if args.prepare_models else []
         if execute_requested:
-            by_id = {model.model_id: model for model in eligible_models(registry)}
+            by_id = {model.model_id: model for model in eligible_models(filtered_registry)}
             for task in plan.tasks:
                 model = by_id.get(task.model_id)
                 if model is not None and model.model_id not in prepared_models:
@@ -595,24 +601,42 @@ def main(argv: list[str] | None = None) -> int:
                         file=sys.stderr,
                     )
                     effective_device = "cpu"
-                    cpu_manager = ExecutionManager(
-                        {
-                            "melband-roformer": lambda: MelBandCLIAdapter(
-                                timeout=args.inference_timeout or None
-                            ),
-                            "demucs-onnx": lambda: DemucsOnnxAdapter(
-                                no_download=args.no_download,
-                            ),
-                            "bs-roformer-pymss": BSRoformerAdapter,
-                            "mdx23c-pymss": MDX23CAdapter,
-                        },
-                        models_root=paths["models"],
-                        output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
-                        device="cpu",
+                    cpu_only_tasks = tuple(
+                        task for task in plan.tasks
+                        if not (registry.get(task.model_id) and registry[task.model_id].min_vram_gb is not None)
                     )
-                    execution_summary = cpu_manager.execute(
-                        plan, registry, {"mix": input_path},
-                    )
+                    if cpu_only_tasks:
+                        skipped_vram_ids = sorted({
+                            task.model_id for task in plan.tasks if task not in cpu_only_tasks
+                        })
+                        cpu_plan = replace(
+                            plan, tasks=cpu_only_tasks,
+                            notes=(*plan.notes, "VRAM-gated models were not retried on CPU: "
+                                   + ", ".join(skipped_vram_ids)),
+                        )
+                        cpu_manager = ExecutionManager(
+                            {
+                                "melband-roformer": lambda: MelBandCLIAdapter(
+                                    timeout=args.inference_timeout or None
+                                ),
+                                "demucs-onnx": lambda: DemucsOnnxAdapter(
+                                    no_download=args.no_download,
+                                ),
+                                "bs-roformer-pymss": BSRoformerAdapter,
+                                "mdx23c-pymss": MDX23CAdapter,
+                            },
+                            models_root=paths["models"],
+                            output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
+                            device="cpu",
+                        )
+                        execution_summary = cpu_manager.execute(
+                            cpu_plan, registry, {"mix": input_path},
+                        )
+                    else:
+                        print(
+                            "CPU fallback skipped: VRAM-gated model tasks are never retried on CPU.",
+                            file=sys.stderr,
+                        )
 
     except (OSError, ValueError, RuntimeError, RegistryError) as exc:
         print(f"mseparate: {exc}", file=sys.stderr)
@@ -658,6 +682,7 @@ def main(argv: list[str] | None = None) -> int:
             "allow_resample": args.allow_resample,
             "effective_device": effective_device,
             "device_fallback_reason": device_fallback_reason,
+            "vram_preflight_notes": list(vram_notes),
             "asset_results": asset_results,
         }
         try:

@@ -260,14 +260,14 @@
   },
   {
     "model_id": "zfturbo-bs-roformer-53stem-candidate",
-    "name": "ZFTurbo BS-RoFormer | 53 stems (candidate)",
+    "name": "ZFTurbo BS-RoFormer | 53 stems",
     "architecture": "BS-RoFormer",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases",
-    "license": null,
-    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training",
-    "license_status": "review_required",
-    "status": "candidate",
+    "source_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "status": "available",
     "category": "mega-multi-stem",
     "sample_rate": 44100,
     "channels": "stereo",
@@ -300,8 +300,8 @@
       "harp",
       "harpsichord",
       "hh",
-      "kick",
       "keys",
+      "kick",
       "lead-vocal",
       "mandolin",
       "marimba",
@@ -356,8 +356,8 @@
       "harp",
       "harpsichord",
       "hh",
-      "kick",
       "keys",
+      "kick",
       "lead-vocal",
       "mandolin",
       "marimba",
@@ -387,14 +387,72 @@
     ],
     "dummy_stems": [],
     "refinement_targets": [],
-    "assets": [],
-    "planner_priority": 0,
+    "assets": [
+      {
+        "role": "config",
+        "url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/download/v1.0.21/mvsep_mega_model_bs_roformer_53_stems.yaml",
+        "relative_path": "mvsep_mega_model_bs_roformer_53_stems.yaml",
+        "sha256": "7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103",
+        "size_bytes": 4184,
+        "required": true
+      },
+      {
+        "role": "checkpoint",
+        "url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/download/v1.0.21/mvsep_mega_model_bs_roformer_53_stems_v1.ckpt",
+        "relative_path": "mvsep_mega_model_bs_roformer_53_stems_v1.ckpt",
+        "sha256": "c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f",
+        "size_bytes": 1368919887,
+        "required": true
+      }
+    ],
+    "planner_priority": 15,
     "notes": [
-      "Official ZFTurbo release describes a 53-output BS-RoFormer checkpoint, including a synth stem; outputs may overlap and are not guaranteed to sum to the mix.",
-      "The upstream release warns that inference is memory-intensive and recommends at least 16 GB VRAM; the 53-stem model may not fit an 8 GB GPU.",
-      "This is a broad instrument model with a synth output, not an electronic-genre-specific specialist.",
-      "Kept disabled until the exact release assets, weight license, config/checkpoint hashes, output mapping, and local inference compatibility are verified."
-    ]
+      "Official ZFTurbo v1.0.21 release publishes the 53-stem BS-RoFormer checkpoint and matching YAML; all 53 native output names and their order match the upstream release.",
+      "The original author confirmed MIT licensing and redistribution permission for the original 53-stem weights. Training-data provenance remains unknown; this is recorded separately and is not claimed as cleared.",
+      "Upstream recommends at least 16 GB VRAM and warns that inference is memory-intensive even at batch_size=1. The runtime gate requires at least 16 GiB total capacity and 14 GiB currently free; this is a conservative admission policy, not a measured peak-memory claim.",
+      "An experimental 10-second chunk profile (chunk_size=441000, overlap_size=220500) is recorded for testing on 8 GB GPUs. It remains unverified and is never selected automatically.",
+      "Outputs can overlap and are not guaranteed to sum to the mixture. Do not treat all 53 stems as additive or construct a residual from them.",
+      "The model is broadly trained for instrument families; its synth output does not make it an electronic-genre-specific specialist.",
+      "The model is available for pinned asset preparation but excluded from automatic routing until a strict real-checkpoint CPU inference smoke test passes."
+    ],
+    "runtime_validation": "unverified",
+    "upstream_version": "ZFTurbo Music-Source-Separation-Training v1.0.21 / pymss==2.3.5",
+    "min_vram_gb": 16,
+    "min_free_vram_gb": 14,
+    "inference_params": {
+      "batch_size": 1,
+      "normalize": false
+    },
+    "low_vram_profile": {
+      "status": "unverified",
+      "min_total_vram_gb": 8,
+      "min_free_vram_gb": 7,
+      "inference_params": {
+        "batch_size": 1,
+        "chunk_size": 441000,
+        "overlap_size": 220500,
+        "normalize": false
+      },
+      "warning": "Experimental 10-second chunk profile. Not enabled for automatic routing until a real CUDA smoke test and peak-VRAM measurement pass."
+    },
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245"
+      ],
+      "compatibility_status": "pending_real_model_smoke",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed MIT licensing and redistribution permission for the original 53-stem weights. Training-data provenance remains unknown and is not represented as dataset-rights clearance. Runtime validation remains a separate mandatory gate."
+    }
   },
   {
     "model_id": "mvsep-synth-specialist-candidate",
