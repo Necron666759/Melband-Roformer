@@ -190,6 +190,7 @@ def run_model(manifest, models_root: Path, fixture: Path, output_root: Path, dev
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    parser.add_argument("--models-dir", type=Path, default=None, help="Persistent model cache directory; defaults to a temporary directory")
     parser.add_argument("--models", nargs="*", default=list(MODEL_IDS), choices=MODEL_IDS)
     parser.add_argument("--discover-checksums", action="store_true", help="Download unpinned assets, calculate SHA-256/size, then run real inference")
     parser.add_argument("--low-vram-profile", action="store_true", help="Test the experimental 10-second chunk profile on CUDA; this does not enable it for automatic routing")
@@ -199,9 +200,11 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="mseparate-real-model-smoke-") as temp:
         root = Path(temp)
         fixture = root / "fixture.wav"
+        models_root = args.models_dir.expanduser() if args.models_dir else root / "models"
+        models_root.mkdir(parents=True, exist_ok=True)
         make_fixture(fixture)
         for model_id in args.models:
-            run_model(registry[model_id], root / "models", fixture, root / "outputs", args.device, args.discover_checksums, args.low_vram_profile)
+            run_model(registry[model_id], models_root, fixture, root / "outputs", args.device, args.discover_checksums, args.low_vram_profile)
     print("\nAll requested real-model smoke tests passed.", flush=True)
     return 0
 
