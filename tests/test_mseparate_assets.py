@@ -221,3 +221,20 @@ def test_http_errors_are_reported_without_installing_bad_asset(tmp_path, asset_s
     with pytest.raises(AssetError, match="Could not install asset"):
         ensure_asset(tmp_path / "model-a", asset, retries=1)
     assert not (tmp_path / "model-a" / asset.relative_path).exists()
+
+
+
+def test_candidate_with_unverified_license_cannot_download_assets(tmp_path, asset_server):
+    from mseparate.types import ModelManifest
+
+    manifest = ModelManifest(
+        model_id="candidate-model", name="Candidate", architecture="test", backend="test",
+        source_url="https://example.invalid", license=None, license_url=None,
+        license_status="review_required", assets=(_asset(asset_server),),
+        status="candidate",
+    )
+    results = ensure_model_assets(manifest, tmp_path / "models")
+    assert results[0].status == "blocked"
+    assert "license must be verified" in results[0].message
+    assert _AssetHandler.range_requests == []
+    assert not (tmp_path / "models" / "candidate-model" / "weights" / "model.ckpt").exists()
