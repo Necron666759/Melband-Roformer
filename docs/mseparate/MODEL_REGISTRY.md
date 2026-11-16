@@ -13,7 +13,7 @@ Status: schema requirements; this file does not certify or enable any model weig
 | `source_url` | Canonical project/model source |
 | `license` | SPDX identifier or explicit unknown |
 | `license_url` | License evidence |
-| `license_status` | `verified`, `review_required`, or `rejected` |
+| `license_status` | `verified`, `review_required`, or `rejected`; this is not a substitute for the full `license_review` record |\n| `license_review` | Required for every new/changed model record: review state, primary-source weight-license evidence, redistribution grant, training-data rights/evidence, project compatibility, reviewer, date and rationale |
 | `assets` | Required checkpoint/config assets |
 | `native_stems` | Actual trained/native output stems |
 | `target_stems` | Meaningful targets the model can produce |
@@ -31,7 +31,7 @@ Each asset record includes relative local path, URL, expected byte size where kn
 ## Eligibility rules
 
 1. Reject disabled, incompatible, unavailable or license-rejected entries.
-2. Require verified license status before automatic use.
+2. Require verified license status before automatic use. New/changed model records must also pass the separate fail-closed `license_review` policy; unknown training-data rights are not cleared.
 3. Require all mandatory assets to be present and checksum-valid before planning inference.
 4. Verify the backend adapter and runtime compatibility.
 5. Distinguish native, dummy and derived outputs in both planning and user-facing reporting.
@@ -73,3 +73,14 @@ The first asset manager implementation is in `app/mseparate/assets.py` and uses 
 - The current implementation uses an exclusive lock file to avoid concurrent writers to the same asset.
 
 The asset manager now has pinned, license-reviewed model records for MelBand RoFormer, HT-Demucs, BS-RoFormer Anvuew vocals and MDX23C ZFTurbo vocals. Each newly enabled checkpoint and config is SHA-256/size verified before backend loading. Additional models remain candidates until their own license, URL, checksum, output semantics and backend compatibility are reviewed.
+
+
+## License and redistribution gate
+
+New model records may be added as blocked candidates for research, but their weights cannot be downloaded, bundled, redistributed or routed until a complete license review is approved. A model-card SPDX label alone is insufficient.
+
+The review must cover (a) the exact checkpoint and derivative/conversion chain, (b) explicit redistribution/modification rights, (c) training-data provenance and dataset permissions, and (d) compatibility with the project's license and public distribution. Non-commercial-only terms are not accepted for a free-software distribution target. Unknown or undocumented training-data rights mean blocked, not approved.
+
+The pull-request gate is implemented by `scripts/check_model_license_policy.py` and `.github/workflows/model-license-policy.yml`. Binary model-weight files must be mapped to a manifest and have an approved review. Runtime asset preparation independently refuses models that are not both `available` and `license_status=verified`.
+
+See [LICENSE_AUDIT.md](LICENSE_AUDIT.md) for the Mega 53 findings and current block decision. The new CI policy applies to changes after its introduction; existing registry entries are a legacy baseline and are not retroactively certified by the CI check.
