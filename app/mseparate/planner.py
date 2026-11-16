@@ -130,7 +130,10 @@ def build_plan(
     """
     if max_depth < 0:
         raise ValueError("max_depth must be zero or greater")
-    candidates = eligible_models(registry or {})
+    candidates = [
+        model for model in eligible_models(registry or {})
+        if model.auto_route or model.model_id == preferred_model_id
+    ]
     source_predictions = [
         item for item in (analysis.predictions if analysis else [])
         if item.get("kind", "source") == "source"
