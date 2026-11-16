@@ -60,7 +60,7 @@ class ModelManifest:
     category: str | None = None
     planner_priority: int = 0
     runtime_validation: str = "unverified"
-    license_review: dict[str, Any] | None = None
+    license_review: dict[str, Any] | None = field(default=None, compare=False, hash=False)
     upstream_version: str | None = None
     notes: tuple[str, ...] = ()
     status: str = "candidate"
