@@ -115,20 +115,25 @@ def run_model(manifest, models_root: Path, fixture: Path, output_root: Path, dev
     try:
         adapter.load(manifest, model_dir, device)
         outputs = adapter.infer(fixture, model_output, manifest.target_stems)
-        if len(outputs) != 1 or outputs[0].stem != manifest.target_stems[0]:
-            raise RuntimeError(f"unexpected output contract: {outputs!r}")
-        samples, sample_rate = sf.read(outputs[0].path, dtype="float32", always_2d=True)
-        if sample_rate != manifest.sample_rate or samples.shape != (20 * sample_rate, 2):
+        expected_stems = set(manifest.target_stems)
+        actual_stems = {item.stem for item in outputs}
+        if actual_stems != expected_stems:
             raise RuntimeError(
-                f"invalid output shape/rate: shape={samples.shape}, rate={sample_rate}"
+                f"unexpected output stems: expected {sorted(expected_stems)}, got {sorted(actual_stems)}"
             )
-        if not np.isfinite(samples).all() or float(np.sqrt(np.mean(samples ** 2))) <= 1e-7:
-            raise RuntimeError("output is silent or contains NaN/Inf")
-        print(
-            f"PASS: {outputs[0].stem}, {samples.shape}, {sample_rate} Hz, "
-            f"RMS={float(np.sqrt(np.mean(samples ** 2))):.6f}",
-            flush=True,
-        )
+        for item in outputs:
+            samples, sample_rate = sf.read(item.path, dtype="float32", always_2d=True)
+            if sample_rate != manifest.sample_rate or samples.shape != (20 * sample_rate, 2):
+                raise RuntimeError(
+                    f"invalid {item.stem} output shape/rate: shape={samples.shape}, rate={sample_rate}"
+                )
+            rms = float(np.sqrt(np.mean(samples ** 2)))
+            if not np.isfinite(samples).all() or rms <= 1e-7:
+                raise RuntimeError(f"{item.stem} output is silent or contains NaN/Inf")
+            print(
+                f"PASS: {item.stem}, {samples.shape}, {sample_rate} Hz, RMS={rms:.6f}",
+                flush=True,
+            )
     finally:
         adapter.unload()
 
