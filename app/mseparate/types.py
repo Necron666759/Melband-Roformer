@@ -59,6 +59,7 @@ class ModelManifest:
     input_formats: tuple[str, ...] = ()
     category: str | None = None
     planner_priority: int = 0
+    auto_route: bool = True
     runtime_validation: str = "unverified"
     license_review: dict[str, Any] | None = field(default=None, compare=False, hash=False)
     min_vram_gb: float | None = None
