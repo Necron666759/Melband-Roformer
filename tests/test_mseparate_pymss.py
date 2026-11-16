@@ -157,3 +157,65 @@ def test_pymss_adapter_rejects_corrupt_or_unpinned_asset(tmp_path, monkeypatch):
     else:
         raise AssertionError("corrupt checkpoint must not reach pymss")
 
+
+
+
+def test_bs_roformer_adapter_supports_single_native_non_vocal_stem(tmp_path, monkeypatch):
+    state = {}
+
+    class FakeSeparator:
+        def __init__(self, **kwargs):
+            state["kwargs"] = kwargs
+
+        def separate(self, mix, *, pbar, stems):
+            state["stems"] = tuple(stems)
+            return {"synth": np.full((mix.shape[1], mix.shape[0]), 0.2, dtype=np.float32)}
+
+        def close(self):
+            state["closed"] = True
+
+    monkeypatch.setitem(sys.modules, "pymss", SimpleNamespace(MSSeparator=FakeSeparator))
+    base = _manifest(tmp_path, "bs-roformer-pymss")
+    manifest = ModelManifest(
+        **{
+            **base.__dict__,
+            "model_id": "fixture-synth-model",
+            "name": "Fixture synth model",
+            "native_stems": ("synth",),
+            "derived_stems": (),
+            "target_stems": ("synth",),
+            "category": "synth-specialist",
+        }
+    )
+    source = tmp_path / "synth-input.wav"
+    sf.write(source, np.full((2048, 2), 0.05, dtype=np.float32), 44100, subtype="FLOAT")
+
+    adapter = BSRoformerAdapter()
+    assert adapter.compatibility(manifest) == (True, "")
+    adapter.load(manifest, tmp_path, "cpu")
+    outputs = adapter.infer(source, tmp_path / "synth-out", ("synth",))
+
+    assert state["kwargs"]["model_type"] == "bs_roformer"
+    assert state["stems"] == ("synth",)
+    assert len(outputs) == 1
+    samples, rate = sf.read(outputs[0].path, dtype="float32", always_2d=True)
+    assert rate == 44100
+    assert samples.shape == (2048, 2)
+    assert np.allclose(samples, 0.2)
+    adapter.unload()
+    assert state["closed"] is True
+
+
+def test_bs_roformer_non_vocal_model_cannot_declare_instrumental_residual(tmp_path):
+    base = _manifest(tmp_path, "bs-roformer-pymss")
+    manifest = ModelManifest(
+        **{
+            **base.__dict__,
+            "native_stems": ("synth",),
+            "derived_stems": ("instrumental",),
+            "target_stems": ("synth", "instrumental"),
+        }
+    )
+    compatible, reason = BSRoformerAdapter().compatibility(manifest)
+    assert compatible is False
+    assert "requires vocals" in reason
