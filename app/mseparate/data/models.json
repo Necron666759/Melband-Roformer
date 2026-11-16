@@ -458,12 +458,12 @@
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
-      "Checkpoint and config SHA-256 values are recorded from the independent HAGerox/Stem-Separator-Models registry (snapshot 2026-10-27); the checkpoint digest is independently corroborated by YacobiHime/stem-splitter SHA256SUMS. These are published reference digests, not yet recomputed locally in this repository's environment.",
       "pymss model catalogue at c78bc27265d1d2bad20e429f615c063239837be2 lists synth as a supported bs_roformer model and reports checkpoint size 77616988 bytes. This catalog entry is evidence of runtime-family support, not a real inference test of this exact asset through mseparate.",
-      "An external exact-checkpoint smoke test is recorded for python-audio-separator, not pymss. The repository-specific pymss smoke test is being run separately; do not mark this model available until that test passes.",
       "The derivative Hugging Face repository and independent registry both report the weight license as unknown. The upstream ZFTurbo source-code/repository license must not be assumed to grant redistribution or use rights for this derivative checkpoint; license_status therefore remains review_required.",
       "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete.",
-      "Real-weight validation is implemented by scripts/smoke_mseparate_real_models.py and .github/workflows/mseparate-real-model-smoke.yml; only a passing run of that workflow can clear the runtime gate."
+      "Real-weight validation is implemented by scripts/smoke_mseparate_real_models.py and .github/workflows/mseparate-real-model-smoke.yml; only a passing run of that workflow can clear the runtime gate.",
+      "Repository CI real-model smoke test passed on CPU with pymss==2.3.5: exact checkpoint SHA-256/size verified, strict checkpoint load succeeded, and a 20-second stereo inference produced finite non-silent output at 44100 Hz. CUDA execution has not yet been validated.",
+      "Runtime validation is independent of license review. The model remains candidate with license_status=review_required and is excluded from automatic planning until the derivative-weight license is verified."
     ],
     "assets": [
       {
@@ -482,7 +482,8 @@
         "sha256": "3a0489996305cedf1e44f086f9b0fe9c387c86104f972092b4c9ba5ac8e15b42"
       }
     ],
-    "planner_priority": 100
+    "planner_priority": 100,
+    "runtime_validation": "verified"
   },
   {
     "model_id": "mvsep-mega53-keys-specialist-candidate",
@@ -511,12 +512,12 @@
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
-      "Checkpoint and config SHA-256 values are recorded from the independent HAGerox/Stem-Separator-Models registry (snapshot 2026-10-27); the checkpoint digest is independently corroborated by YacobiHime/stem-splitter SHA256SUMS. These are published reference digests, not yet recomputed locally in this repository's environment.",
       "pymss model catalogue at c78bc27265d1d2bad20e429f615c063239837be2 lists keys as a supported bs_roformer model and reports checkpoint size 77616219 bytes. This catalog entry is evidence of runtime-family support, not a real inference test of this exact asset through mseparate.",
-      "An external exact-checkpoint smoke test is recorded for python-audio-separator, not pymss. The repository-specific pymss smoke test is being run separately; do not mark this model available until that test passes.",
       "The derivative Hugging Face repository and independent registry both report the weight license as unknown. The upstream ZFTurbo source-code/repository license must not be assumed to grant redistribution or use rights for this derivative checkpoint; license_status therefore remains review_required.",
       "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete.",
-      "Real-weight validation is implemented by scripts/smoke_mseparate_real_models.py and .github/workflows/mseparate-real-model-smoke.yml; only a passing run of that workflow can clear the runtime gate."
+      "Real-weight validation is implemented by scripts/smoke_mseparate_real_models.py and .github/workflows/mseparate-real-model-smoke.yml; only a passing run of that workflow can clear the runtime gate.",
+      "Repository CI real-model smoke test passed on CPU with pymss==2.3.5: exact checkpoint SHA-256/size verified, strict checkpoint load succeeded, and a 20-second stereo inference produced finite non-silent output at 44100 Hz. CUDA execution has not yet been validated.",
+      "Runtime validation is independent of license review. The model remains candidate with license_status=review_required and is excluded from automatic planning until the derivative-weight license is verified."
     ],
     "assets": [
       {
@@ -535,7 +536,8 @@
         "sha256": "ca9d5cb14ed0af13efd91e2e0e6ed3b81c2391b013c720f09c62ce6f2ebdfd89"
       }
     ],
-    "planner_priority": 0
+    "planner_priority": 0,
+    "runtime_validation": "verified"
   },
   {
     "model_id": "mvsep-mega53-bass-specialist-candidate",
