@@ -236,7 +236,22 @@ def ensure_asset(model_dir: str | Path, asset: ModelAsset, *,
 def ensure_model_assets(manifest: ModelManifest, models_root: str | Path, *,
                         no_download: bool = False, timeout: float = 30.0,
                         retries: int = 3) -> list[AssetResult]:
-    """Check/download all assets independently; one failure never skips peers."""
+    """Check/download assets only for explicitly enabled, license-approved models.
+
+    Candidate or license-review-pending weights must never be downloaded as a
+    side effect of preparation. They remain metadata-only until approval.
+    """
+    if manifest.status != "available" or manifest.license_status != "verified":
+        return [
+            AssetResult(
+                asset.role, "blocked",
+                message=(
+                    "Model asset preparation is blocked: model must be available "
+                    "and its redistribution license must be verified"
+                ),
+            )
+            for asset in manifest.assets
+        ]
     base_path = Path(models_root).expanduser()
     if base_path.is_symlink():
         return [AssetResult(asset.role, "failed", message=f"Refusing model store symlink: {base_path}") for asset in manifest.assets]
