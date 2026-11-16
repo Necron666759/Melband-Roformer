@@ -59,6 +59,12 @@ def test_unverified_electronic_model_candidates_are_not_executable():
     assert "zfturbo-bs-roformer-53stem-candidate" not in eligible
     assert "mvsep-synth-specialist-candidate" not in eligible
     assert registry["mvsep-synth-specialist-candidate"].license_status == "review_required"
+    for stem in ("synth", "keys", "bass", "kick", "drums", "organ", "digital-piano", "percussion", "hh"):
+        model = registry[f"mvsep-mega53-{stem}-specialist-candidate"]
+        assert model not in eligible
+        assert model.license_status == "review_required"
+        assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
+        assert all(asset.sha256 is None for asset in model.assets)
 
 
 def test_planner_prefers_synth_specialist_for_synth_pad_output():
