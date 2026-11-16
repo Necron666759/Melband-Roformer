@@ -411,10 +411,10 @@
       "Official ZFTurbo v1.0.21 release publishes the 53-stem BS-RoFormer checkpoint and matching YAML; all 53 native output names and their order match the upstream release.",
       "The original author confirmed MIT licensing and redistribution permission for the original 53-stem weights. Training-data provenance remains unknown; this is recorded separately and is not claimed as cleared.",
       "Upstream recommends at least 16 GB VRAM and warns that inference is memory-intensive even at batch_size=1. The upstream 16 GB recommendation is approximately 14.9 GiB; the admission gate requires 14.5 GiB physical capacity and 13 GiB currently free. These are conservative policy thresholds, not a measured peak-memory claim.",
-      "An experimental 10-second chunk profile (chunk_size=441000, overlap_size=220500) is recorded for testing on 8 GB GPUs. It remains unverified and is never selected automatically.",
+      "The 10-second chunk profile (chunk_size=441000, overlap_size=220500) has passed a real CUDA smoke test on an NVIDIA GeForce RTX 3060 Ti (7.68 GiB VRAM); measured peak was 2.03 GiB allocated / 2.18 GiB reserved. It remains a manual-only profile and requires at least 7 GiB total VRAM and 6 GiB currently free.",
       "Outputs can overlap and are not guaranteed to sum to the mixture. Do not treat all 53 stems as additive or construct a residual from them.",
       "The model is broadly trained for instrument families; its synth output does not make it an electronic-genre-specific specialist.",
-      "Strict real-checkpoint CPU smoke passed in GitHub Actions run 43900540645 using pymss==2.3.5; CUDA and low-VRAM operation remain unvalidated. The model is eligible for routing only after the CUDA VRAM preflight passes."
+      "Strict real-checkpoint CPU smoke passed in GitHub Actions run 43900540645. A real CUDA low-VRAM smoke also passed on NVIDIA GeForce RTX 3060 Ti using PyTorch 2.13.0+cu130 and pymss==2.3.5; see low_vram_profile.validation_details. Automatic routing remains disabled pending comparative quality and routing evaluation."
     ],
     "runtime_validation": "verified",
     "runtime_validation_details": {
@@ -424,9 +424,22 @@
       "device": "cpu",
       "inference_duration_seconds": 20,
       "sample_rate": 44100,
-      "output_shape": [882000, 2],
-      "outputs_validated": ["finite", "non_silent", "expected_shape", "expected_sample_rate"],
-      "selected_stems": ["bass", "keys", "synth", "vocal"]
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ],
+      "selected_stems": [
+        "bass",
+        "keys",
+        "synth",
+        "vocal"
+      ]
     },
     "upstream_version": "ZFTurbo Music-Source-Separation-Training v1.0.21 / pymss==2.3.5",
     "min_vram_gb": 14.5,
@@ -436,7 +449,7 @@
       "normalize": false
     },
     "low_vram_profile": {
-      "status": "unverified",
+      "status": "verified",
       "min_total_vram_gb": 7,
       "min_free_vram_gb": 6,
       "inference_params": {
@@ -445,7 +458,39 @@
         "overlap_size": 220500,
         "normalize": false
       },
-      "warning": "Experimental 10-second chunk profile. Not enabled for automatic routing until a real CUDA smoke test and peak-VRAM measurement pass."
+      "warning": "Verified 10-second chunk profile. Tested on RTX 3060 Ti (7.68 GiB VRAM); measured peak 2.03 GiB allocated / 2.18 GiB reserved. Requires at least 6 GiB currently free; reduced chunking may lower throughput. This profile is used only when the standard VRAM gate does not fit.",
+      "validation_details": {
+        "validation": "real_checkpoint_cuda_inference_passed",
+        "hardware": "NVIDIA GeForce RTX 3060 Ti",
+        "total_vram_gib": 7.68,
+        "free_vram_before_load_gib": 6.38,
+        "free_vram_before_inference_gib": 6.19,
+        "runtime": "Python 3.13.15 / PyTorch 2.13.0+cu130 / CUDA 13.0 / pymss==2.3.5",
+        "profile": {
+          "chunk_size": 441000,
+          "overlap_size": 220500,
+          "batch_size": 1,
+          "amp": true
+        },
+        "peak_cuda_allocated_gib": 2.03,
+        "peak_cuda_reserved_gib": 2.18,
+        "sample_rate": 44100,
+        "output_shape": [
+          882000,
+          2
+        ],
+        "selected_stems": [
+          "bass",
+          "keys",
+          "synth",
+          "vocal"
+        ],
+        "all_outputs_finite": true,
+        "inference_rtf": 0.05,
+        "checkpoint_sha256": "c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f",
+        "config_sha256": "7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103",
+        "evidence": "User-provided local smoke_mseparate_real_models.py output, 2026-11-17"
+      }
     },
     "license_review": {
       "status": "accepted_by_maintainer",
