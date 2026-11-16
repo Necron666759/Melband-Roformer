@@ -38,9 +38,11 @@ def _bootstrap_runtime() -> None:
     checkout needs only Python 3 and network access. The portable interpreter
     is the same python-build-standalone release used by build-appimage.sh.
     """
-    requested_device = "cuda" if "--device" in sys.argv and
-        sys.argv.index("--device") + 1 < len(sys.argv) and
-        sys.argv[sys.argv.index("--device") + 1] == "cuda" else "cpu"
+    try:
+        device_arg = sys.argv.index("--device") + 1
+        requested_device = sys.argv[device_arg] if device_arg < len(sys.argv) else "cpu"
+    except ValueError:
+        requested_device = "cpu"
 
     missing = _missing_runtime_modules()
     cpu_only_torch = False
