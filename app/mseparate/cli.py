@@ -390,6 +390,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prefer-model", help="Prefer this eligible model ID for overlapping stem routes (see --list-models)")
     parser.add_argument("--allow-resample", action="store_true",
                         help="Allow temporary WAV sample-rate conversion to satisfy model input rates; outputs keep the model sample rate")
+    parser.add_argument("--no-deep-analysis", action="store_true",
+                        help="Skip post-inference CLAP analysis of separated stems and residual-source hints")
     parser.add_argument("--verbose", action="store_true", help="Print additional diagnostics")
     parser.add_argument("--report", nargs="?", const="mseparate-report.json",
                         help="Write a JSON report (optional path; default: mseparate-report.json)")
@@ -415,6 +417,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.diagnose is not None and (args.execute or args.analysis_only or args.plan_only or args.prepare_models or args.report):
         parser.error("--diagnose cannot be combined with --execute, --analysis-only, --plan-only, --prepare-models or --report")
 
+    candidate_analysis_report = None
     try:
         paths = ensure_layout()
         if args.models_dir:
@@ -644,6 +647,32 @@ def main(argv: list[str] | None = None) -> int:
                             file=sys.stderr,
                         )
 
+        if execution_summary is not None and execution_summary.succeeded and not args.no_deep_analysis:
+            from .candidate_analysis import analyze_execution_candidates
+            ledger_path = Path(args.output_dir).expanduser() / "mseparate-stems" / "quarantine.json"
+            try:
+                candidate_analysis_report = analyze_execution_candidates(
+                    execution_summary,
+                    mix_path=input_path,
+                    mix_predictions=report.predictions,
+                    device=effective_device,
+                    cache_dir=paths["models"] / "source-analysis",
+                    no_download=args.no_download,
+                    ledger_path=ledger_path,
+                )
+            except Exception as exc:
+                candidate_analysis_report = {
+                    "schema_version": 1,
+                    "status": "unavailable",
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "notes": ["Deep analysis failed; inference outputs were preserved unchanged."],
+                }
+                print(
+                    "Warning: post-inference deep analysis was unavailable: "
+                    f"{type(exc).__name__}: {exc}",
+                    file=sys.stderr,
+                )
+
     except (OSError, ValueError, RuntimeError, RegistryError) as exc:
         print(f"mseparate: {exc}", file=sys.stderr)
         return 2
@@ -661,6 +690,12 @@ def main(argv: list[str] | None = None) -> int:
         print_plan(plan)
         if not eligible_models(registry):
             print("Model registry: no license-verified, enabled models are currently eligible.")
+    if candidate_analysis_report is not None:
+        if candidate_analysis_report.get("status") == "unavailable":
+            print("Deep output analysis unavailable: " + candidate_analysis_report["error"])
+        else:
+            from .candidate_analysis import print_candidate_analysis
+            print_candidate_analysis(candidate_analysis_report)
     if execution_summary is not None:
         print_execution_summary(execution_summary)
         if execution_summary.succeeded:
@@ -683,6 +718,7 @@ def main(argv: list[str] | None = None) -> int:
             "inference_attempted": inference_attempted,
             "inference_performed": inference_performed,
             "execution": to_jsonable(execution_summary) if execution_summary is not None else None,
+            "deep_output_analysis": to_jsonable(candidate_analysis_report),
             "execution_blocked": execution_blocked,
             "requested_device": args.device,
             "allow_resample": args.allow_resample,
