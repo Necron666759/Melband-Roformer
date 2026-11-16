@@ -35,13 +35,19 @@ def _print_models(registry) -> None:
         return
     eligible = {model.model_id for model in eligible_models(registry)}
     for model in sorted(registry.values(), key=lambda item: item.model_id):
-        state = "eligible" if model.model_id in eligible else "not eligible"
+        state = (
+            "eligible" if model.model_id in eligible and model.auto_route
+            else "eligible (manual selection only)" if model.model_id in eligible
+            else "not eligible"
+        )
         outputs = ", ".join(model.target_stems or model.native_stems or model.derived_stems) or "none declared"
         print(f"  {model.model_id} [{state}]")
         print(f"    {model.name}")
         print(f"    Architecture/backend: {model.architecture} / {model.backend}")
         print(f"    Category: {model.category or 'unspecified'}; outputs: {outputs}")
         print(f"    Planner priority: {model.planner_priority} (routing preference, not quality)")
+        if not model.auto_route:
+            print("    Automatic routing: disabled; explicit model selection only")
         print(f"    License: {model.license or 'unknown'} ({model.license_status}); status: {model.status}")
         if model.sample_rate or model.channels:
             print(f"    Input: {model.sample_rate or 'any'} Hz; {model.channels or 'any channels'}")
