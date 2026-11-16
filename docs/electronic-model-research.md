@@ -84,3 +84,12 @@ synth specialists.
 All three external model entries remain candidates and are excluded from
 automatic execution until the missing provenance, licensing, checksums and
 runtime requirements are resolved.
+
+
+## Synth and Keys single-stem candidates
+
+The MVSep Mega 53 resource catalog declares dedicated BS-RoFormer single-target checkpoints for both `synth` and `keys`, each with a matching YAML config and a complementary `other` output. The corresponding third-party Hugging Face repository describes each file as a single-stem derivative of ZFTurbo's Mega 53 release. The repository's upload revision is pinned in the registry to `0677941f9cdfd891a6bc3336229244e197035327`.
+
+The upstream Mega 53 model author has explicitly stated that the 53-stem weights are MIT-licensed. This supports the upstream weight license, but does not replace integrity verification for the extracted single-stem checkpoint/config pair. The derivative repository does not publish per-file SHA-256 values. Consequently, both records remain `candidate` and are excluded from `eligible_models()` until independent digests are recorded and strict-load plus short forward tests are completed.
+
+The shared `PymssAdapter` now accepts arbitrary manifest-declared native stems, rather than requiring every BS-RoFormer model to output vocals. Vocal models retain their existing mixture-minus-vocals instrumental residual behavior; a non-vocal model cannot declare that residual without a native vocals estimate. CPU contract tests cover direct single-stem inference. These tests validate the adapter contract with a fake separator, not the real Synth/Keys weights or CUDA performance.
