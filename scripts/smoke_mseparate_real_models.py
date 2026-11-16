@@ -38,11 +38,14 @@ def _bootstrap_runtime() -> None:
     checkout needs only Python 3 and network access. The portable interpreter
     is the same python-build-standalone release used by build-appimage.sh.
     """
-    try:
-        device_arg = sys.argv.index("--device") + 1
-        requested_device = sys.argv[device_arg] if device_arg < len(sys.argv) else "cpu"
-    except ValueError:
-        requested_device = "cpu"
+    requested_device = "cpu"
+    for index, argument in enumerate(sys.argv[1:], start=1):
+        if argument.startswith("--device="):
+            requested_device = argument.split("=", 1)[1]
+            break
+        if argument == "--device" and index + 1 < len(sys.argv):
+            requested_device = sys.argv[index + 1]
+            break
 
     missing = _missing_runtime_modules()
     cpu_only_torch = False
@@ -84,6 +87,18 @@ def _bootstrap_runtime() -> None:
                         if not block:
                             break
                         output.write(block)
+
+        expected_archive_sha256 = "8af9a8214c71b2dd698005e39fab87aad02a994330508857da4e6d1ba7e6ddb6"
+        archive_hash = hashlib.sha256()
+        with archive.open("rb") as archive_stream:
+            for block in iter(lambda: archive_stream.read(1024 * 1024), b""):
+                archive_hash.update(block)
+        actual_archive_sha256 = archive_hash.hexdigest()
+        if actual_archive_sha256 != expected_archive_sha256:
+            raise RuntimeError(
+                "Portable CPython archive SHA-256 mismatch: "
+                f"expected {expected_archive_sha256}, got {actual_archive_sha256}"
+            )
 
         print(f"Preparing isolated Python runtime in {python_root}", flush=True)
         extract_root = cache_root / "extract"
