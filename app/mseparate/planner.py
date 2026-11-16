@@ -91,11 +91,17 @@ def _model_specialization(stem: str, model: ModelManifest) -> int:
         "synth": {"synth", "synth-specialist", "electronic"},
         "synth-pad": {"synth", "synth-specialist", "electronic"},
         "synth-lead": {"synth", "synth-specialist", "electronic"},
+        "synth-arp": {"synth", "synth-specialist", "electronic"},
+        "synth-keys": {"synth", "synth-specialist", "electronic"},
+        "synth-strings": {"synth", "synth-specialist", "electronic"},
+        "synth-brass": {"synth", "synth-specialist", "electronic"},
         "synth-bass": {"synth", "synth-specialist", "electronic"},
         "synth-fx": {"synth", "synth-specialist", "electronic"},
+        "synth-vocals": {"synth", "synth-specialist", "electronic"},
         "electronic-drums": {"electronic-drums", "drums", "percussion"},
     }
-    accepted = aliases.get(stem.lower(), {stem.lower()})
+    stem_key = stem.lower().replace("_", "-")
+    accepted = aliases.get(stem_key, {stem_key})
     return 1 if category in accepted else 0
 
 
