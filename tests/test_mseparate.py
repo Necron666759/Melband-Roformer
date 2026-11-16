@@ -664,7 +664,7 @@ def test_demucs_strict_cuda_requires_disable_fallback_support(tmp_path):
 
 
 
-def test_zfturbo_53_stem_is_pinned_and_cpu_runtime_verified_but_vram_gated():
+def test_zfturbo_53_stem_is_pinned_cpu_and_cuda_low_vram_verified_but_manual_only():
     from mseparate.registry import preparable_models
 
     registry = load_registry(bundled_registry_path())
@@ -686,4 +686,11 @@ def test_zfturbo_53_stem_is_pinned_and_cpu_runtime_verified_but_vram_gated():
     assert all(asset.sha256 and asset.size_bytes for asset in model.assets)
     assert model.min_vram_gb == 14.5
     assert model.min_free_vram_gb == 13
-    assert model.low_vram_profile["status"] == "unverified"
+    assert model.low_vram_profile["status"] == "verified"
+    assert model.low_vram_profile["min_total_vram_gb"] == 7
+    assert model.low_vram_profile["min_free_vram_gb"] == 6
+    cuda_validation = model.low_vram_profile["validation_details"]
+    assert cuda_validation["hardware"] == "NVIDIA GeForce RTX 3060 Ti"
+    assert cuda_validation["peak_cuda_allocated_gib"] == 2.03
+    assert cuda_validation["peak_cuda_reserved_gib"] == 2.18
+    assert cuda_validation["all_outputs_finite"] is True
