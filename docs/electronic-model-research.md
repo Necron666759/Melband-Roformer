@@ -18,23 +18,45 @@ SHA-256 hashes, a confirmed weight license, and output-stem mapping.
 - This is the most directly relevant specialist discovered for electronic
   music. However, no public downloadable checkpoint, matching configuration,
   local inference backend or redistribution license was verified.
-- Registry ID: `mvsep-synth-specialist-candidate`; deliberately disabled.
+- The hosted MVSep Synth algorithm is not the same artifact as the public
+  Mega 53 `synth` checkpoint. Registry ID:
+  `mvsep-synth-specialist-candidate`; deliberately disabled.
 
-### ZFTurbo BS-RoFormer 53-stem
+### MVSep Mega 53 single-stem derivatives
+
+- Model catalogue: https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1
+- Resource index: https://huggingface.co/noblebarkrr/mvsepless_resources
+- This is more useful than treating the 53-stem checkpoint as one monolithic
+  inference. The public resource index exposes separate BS-RoFormer checkpoints
+  and YAML files for individual targets, each returning the requested stem and
+  `other` residual.
+- Electronic-production-relevant targets include `synth`, `keys`, `bass`,
+  `kick`, `drums`, `organ`, `digital-piano`, `percussion` and `hh`.
+  This lets the planner request only specialists that audio analysis considers
+  plausible rather than load all 53 models.
+- The public model folder lists the individual checkpoint files at about
+  77.6 MB each, plus small YAML configs. These file sizes do not predict
+  inference speed; actual performance must be benchmarked on the target GPU.
+- The resource index provides direct checkpoint/config URLs, but the exact
+  weight-specific license, immutable file revision, SHA-256 checksums and
+  compatibility with the project's installed pymss version still need
+  verification. The corresponding registry entries are candidates and remain
+  disabled until those gates are completed.
+
+### ZFTurbo BS-RoFormer 53-stem parent model
 
 - Reference: https://github.com/ZFTurbo/Music-Source-Separation-Training/releases
 - The upstream release describes 53 output classes, including `synth`,
   `bass`, `drums`, `kick`, `snare`, `hh`, `keys`, `organ`,
   `digital-piano`, vocals and a wide range of acoustic instruments.
-- The release notes warn that the model is memory-intensive and recommend at
-  least 16 GB VRAM. Individual stems may be weaker than dedicated specialists,
-  and stems may overlap rather than sum to the original mix.
+- The release notes warn that the full multi-stem model is memory-intensive and
+  recommend at least 16 GB VRAM. Individual stems may be weaker than dedicated
+  specialists, and stems may overlap rather than sum to the original mix.
 - This is a broad multi-instrument model, not a model trained exclusively on
   electronic genres. Its single `synth` stem does not separate pads, leads,
   arpeggios and synth bass individually.
-- Exact asset provenance, weight license, config/checkpoint hashes and local
-  runtime compatibility still need verification. Registry ID:
-  `zfturbo-bs-roformer-53stem-candidate`; deliberately disabled.
+- The parent model remains a disabled candidate pending asset and runtime
+  verification.
 
 ### BS-RoFormer SW Fixed (6 stems)
 
