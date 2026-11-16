@@ -58,7 +58,8 @@ def test_mega53_specialists_keep_independent_technical_gates():
     registry = load_registry(bundled_registry_path())
     eligible = {model.model_id for model in eligible_models(registry)}
     assert "bs-roformer-sw-6stem-candidate" not in eligible
-    assert "zfturbo-bs-roformer-53stem-candidate" not in eligible
+    assert "zfturbo-bs-roformer-53stem-candidate" in eligible
+    assert registry["zfturbo-bs-roformer-53stem-candidate"].auto_route is False
     assert "mvsep-synth-specialist-candidate" not in eligible
     assert registry["mvsep-synth-specialist-candidate"].license_status == "review_required"
     for stem in ("synth", "keys", "bass", "kick", "drums", "organ", "digital-piano", "percussion", "hh"):
