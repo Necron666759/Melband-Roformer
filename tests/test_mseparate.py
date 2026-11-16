@@ -163,6 +163,11 @@ def test_incompatible_audio_does_not_schedule_model():
     assert {task.model_id for task in plan.tasks} == {
         "bs-roformer-anvuew-vocals",
         "demucs-onnx-htdemucs-6s",
+        "mvsep-mega53-bass-specialist-candidate",
+        "mvsep-mega53-kick-specialist-candidate",
+        "mvsep-mega53-drums-specialist-candidate",
+        "mvsep-mega53-percussion-specialist-candidate",
+        "mvsep-mega53-hh-specialist-candidate",
     }
     by_model = {task.model_id: task for task in plan.tasks}
     assert by_model["bs-roformer-anvuew-vocals"].target_stems == ("instrumental", "vocals")
@@ -351,6 +356,11 @@ def test_planner_prefers_vocal_specialist_over_general_demucs_route():
     assert set(by_model) == {
         "melband-roformer-kim-vocals",
         "demucs-onnx-htdemucs-6s",
+        "mvsep-mega53-bass-specialist-candidate",
+        "mvsep-mega53-kick-specialist-candidate",
+        "mvsep-mega53-drums-specialist-candidate",
+        "mvsep-mega53-percussion-specialist-candidate",
+        "mvsep-mega53-hh-specialist-candidate",
     }
     assert set(by_model["melband-roformer-kim-vocals"].target_stems) == {
         "vocals", "instrumental",
