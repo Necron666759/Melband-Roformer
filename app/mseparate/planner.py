@@ -15,8 +15,12 @@ def _stem_score(stem: str, features: dict, predictions: list[dict] | None = None
         "vocals": ("vocals", "synth_vocals"), "voice": ("vocals", "synth_vocals"),
         "drums": ("drums", "electronic_drums", "breakbeats"),
         "percussion": ("drums", "electronic_drums", "breakbeats"),
+        "kick": ("drums", "electronic_drums"),
+        "hh": ("drums", "electronic_drums"),
         "bass": ("bass", "synth_bass"), "guitar": ("guitar",),
         "piano": ("piano", "synth_keys"), "keyboard": ("piano", "synth_keys"),
+        "keys": ("synth_keys", "piano"), "organ": ("synth_keys", "piano"),
+        "digital-piano": ("piano", "synth_keys"),
         "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp",
                   "synth_keys", "synth_strings", "synth_brass", "synth_bass", "synth_fx"),
         "pad": ("synth_pad",), "lead": ("synth_lead",),
@@ -99,6 +103,11 @@ def _model_specialization(stem: str, model: ModelManifest) -> int:
         "synth-fx": {"synth", "synth-specialist", "electronic"},
         "synth-vocals": {"synth", "synth-specialist", "electronic"},
         "electronic-drums": {"electronic-drums", "drums", "percussion"},
+        "kick": {"drums", "percussion", "electronic-drums"},
+        "hh": {"drums", "percussion", "electronic-drums"},
+        "keys": {"keyboard-specialist", "keys", "synth"},
+        "organ": {"keyboard-specialist", "organ", "keys"},
+        "digital-piano": {"keyboard-specialist", "piano", "keys"},
     }
     stem_key = stem.lower().replace("_", "-")
     accepted = aliases.get(stem_key, {stem_key})
