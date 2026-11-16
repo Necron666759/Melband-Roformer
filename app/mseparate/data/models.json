@@ -586,7 +586,7 @@
     "name": "MVSep Mega 53 | Bass specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": "MIT",
     "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
     "license_status": "verified",
@@ -611,19 +611,18 @@
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative for bass; the matching MVSep resource entry declares output stems bass and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
+      "Checkpoint and matching YAML are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327. SHA-256 and exact byte sizes are calculated from the downloaded bytes by the real-model smoke workflow before strict loading; manifest values will be committed only after a successful run."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_bass_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_bass_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_bass_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_bass_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_bass_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_bass_mvsep_config.yaml",
         "required": true
       }
@@ -656,7 +655,7 @@
     "name": "MVSep Mega 53 | Kick specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": "MIT",
     "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
     "license_status": "verified",
@@ -681,19 +680,18 @@
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative for kick; the matching MVSep resource entry declares output stems kick and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
+      "Checkpoint and matching YAML are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327. SHA-256 and exact byte sizes are calculated from the downloaded bytes by the real-model smoke workflow before strict loading; manifest values will be committed only after a successful run."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_kick_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_kick_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_kick_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_kick_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_kick_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_kick_mvsep_config.yaml",
         "required": true
       }
@@ -726,7 +724,7 @@
     "name": "MVSep Mega 53 | Drums specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": "MIT",
     "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
     "license_status": "verified",
@@ -751,19 +749,18 @@
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative for drums; the matching MVSep resource entry declares output stems drums and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
+      "Checkpoint and matching YAML are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327. SHA-256 and exact byte sizes are calculated from the downloaded bytes by the real-model smoke workflow before strict loading; manifest values will be committed only after a successful run."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_drums_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_drums_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_drums_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_drums_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_drums_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_drums_mvsep_config.yaml",
         "required": true
       }
@@ -796,7 +793,7 @@
     "name": "MVSep Mega 53 | Organ specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": "MIT",
     "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
     "license_status": "verified",
@@ -821,19 +818,18 @@
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative for organ; the matching MVSep resource entry declares output stems organ and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
+      "Checkpoint and matching YAML are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327. SHA-256 and exact byte sizes are calculated from the downloaded bytes by the real-model smoke workflow before strict loading; manifest values will be committed only after a successful run."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_organ_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_organ_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_organ_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_organ_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_organ_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_organ_mvsep_config.yaml",
         "required": true
       }
@@ -866,7 +862,7 @@
     "name": "MVSep Mega 53 | Digital piano specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": "MIT",
     "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
     "license_status": "verified",
@@ -891,19 +887,18 @@
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative for digital-piano; the matching MVSep resource entry declares output stems digital-piano and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
+      "Checkpoint and matching YAML are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327. SHA-256 and exact byte sizes are calculated from the downloaded bytes by the real-model smoke workflow before strict loading; manifest values will be committed only after a successful run."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_digital-piano_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_digital-piano_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_digital-piano_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_digital-piano_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_digital-piano_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_digital-piano_mvsep_config.yaml",
         "required": true
       }
@@ -936,7 +931,7 @@
     "name": "MVSep Mega 53 | Percussion specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": "MIT",
     "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
     "license_status": "verified",
@@ -961,19 +956,18 @@
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative for percussion; the matching MVSep resource entry declares output stems percussion and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
+      "Checkpoint and matching YAML are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327. SHA-256 and exact byte sizes are calculated from the downloaded bytes by the real-model smoke workflow before strict loading; manifest values will be committed only after a successful run."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_percussion_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_percussion_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_percussion_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_percussion_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_percussion_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_percussion_mvsep_config.yaml",
         "required": true
       }
@@ -1006,7 +1000,7 @@
     "name": "MVSep Mega 53 | Hi-hat specialist (candidate)",
     "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
     "backend": "bs-roformer-pymss",
-    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
     "license": "MIT",
     "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
     "license_status": "verified",
@@ -1031,19 +1025,18 @@
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative for hh; the matching MVSep resource entry declares output stems hh and other.",
-      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
-      "License block removed by maintainer decision. This entry remains a technical candidate until immutable asset revision, SHA-256 digests, output behavior and pymss compatibility are verified."
+      "Checkpoint and matching YAML are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327. SHA-256 and exact byte sizes are calculated from the downloaded bytes by the real-model smoke workflow before strict loading; manifest values will be committed only after a successful run."
     ],
     "assets": [
       {
         "role": "checkpoint",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_hh_mvsep.ckpt?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_hh_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_hh_mvsep.ckpt",
         "required": true
       },
       {
         "role": "config",
-        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_hh_mvsep_config.yaml?download=true",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_hh_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_hh_mvsep_config.yaml",
         "required": true
       }
