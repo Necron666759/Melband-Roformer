@@ -43,7 +43,11 @@ def test_blocked_candidate_with_unknown_training_data_is_not_approved_but_valid_
         "license_review": {
             "status": "blocked",
             "weight_license": "MIT",
+            "weight_license_evidence": ["https://example.org/upstream-owner-statement"],
             "training_data_status": "unknown",
+            "reviewed_by": "maintainer",
+            "reviewed_on": "2026-11-16",
+            "rationale": "Upstream license grant exists, but training data rights remain undocumented and blocked.",
         },
     }
     assert _POLICY.validate_review(model) == []
