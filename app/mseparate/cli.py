@@ -596,7 +596,7 @@ def main(argv: list[str] | None = None) -> int:
                         for item in failed_tasks
                     )
                     print(
-                        "Warning: CUDA inference failed; retrying the complete plan on CPU. "
+                        "Warning: CUDA inference failed; retrying CPU-eligible tasks on CPU; VRAM-gated models will be skipped. "
                         + device_fallback_reason,
                         file=sys.stderr,
                     )
