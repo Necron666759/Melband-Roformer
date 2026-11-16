@@ -238,12 +238,12 @@ def ensure_model_assets(manifest: ModelManifest, models_root: str | Path, *,
                         retries: int = 3) -> list[AssetResult]:
     """Check/download assets only for explicitly enabled, license-approved models.
 
-    Candidate or license-review-pending weights must never be downloaded as a
-    side effect of preparation. They remain metadata-only until approval.
+    Candidate models remain unavailable until explicitly marked available. A maintainer-accepted
+    license decision is distinct from formal legal clearance.
     """
     review_blocked = (
         manifest.license_review is not None
-        and manifest.license_review.get("status") != "approved"
+        and manifest.license_review.get("status") not in {"approved", "accepted_by_maintainer"}
     )
     if manifest.status != "available" or manifest.license_status != "verified" or review_blocked:
         return [
