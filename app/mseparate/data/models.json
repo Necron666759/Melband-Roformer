@@ -430,5 +430,446 @@
       "No public downloadable checkpoint, configuration, local inference backend, or redistribution license was verified during this research. This registry entry is informational and intentionally ineligible for execution.",
       "The synth-family list describes content grouped into the synth output; it is not evidence that the model emits a separate stem for every listed subtype."
     ]
+  },
+  {
+    "model_id": "mvsep-mega53-synth-specialist-candidate",
+    "name": "MVSep Mega 53 | Synth specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "synth-specialist",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "synth",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "synth",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for synth; the matching MVSep resource entry declares output stems synth and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_synth_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_synth_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_synth_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_synth_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 100
+  },
+  {
+    "model_id": "mvsep-mega53-keys-specialist-candidate",
+    "name": "MVSep Mega 53 | Keys specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "keyboard-specialist",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "keys",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "keys",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for keys; the matching MVSep resource entry declares output stems keys and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_keys_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_keys_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_keys_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_keys_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "mvsep-mega53-bass-specialist-candidate",
+    "name": "MVSep Mega 53 | Bass specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "bass",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "bass",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "bass",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for bass; the matching MVSep resource entry declares output stems bass and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_bass_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_bass_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_bass_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_bass_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "mvsep-mega53-kick-specialist-candidate",
+    "name": "MVSep Mega 53 | Kick specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "drums",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "kick",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "kick",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for kick; the matching MVSep resource entry declares output stems kick and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_kick_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_kick_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_kick_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_kick_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "mvsep-mega53-drums-specialist-candidate",
+    "name": "MVSep Mega 53 | Drums specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "drums",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "drums",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "drums",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for drums; the matching MVSep resource entry declares output stems drums and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_drums_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_drums_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_drums_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_drums_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "mvsep-mega53-organ-specialist-candidate",
+    "name": "MVSep Mega 53 | Organ specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "keyboard-specialist",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "organ",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "organ",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for organ; the matching MVSep resource entry declares output stems organ and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_organ_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_organ_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_organ_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_organ_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "mvsep-mega53-digital-piano-specialist-candidate",
+    "name": "MVSep Mega 53 | Digital piano specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "keyboard-specialist",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "digital-piano",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "digital-piano",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for digital-piano; the matching MVSep resource entry declares output stems digital-piano and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_digital-piano_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_digital-piano_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_digital-piano_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_digital-piano_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "mvsep-mega53-percussion-specialist-candidate",
+    "name": "MVSep Mega 53 | Percussion specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "drums",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "percussion",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "percussion",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for percussion; the matching MVSep resource entry declares output stems percussion and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_percussion_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_percussion_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_percussion_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_percussion_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "mvsep-mega53-hh-specialist-candidate",
+    "name": "MVSep Mega 53 | Hi-hat specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/main/v1",
+    "license": null,
+    "license_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems",
+    "license_status": "review_required",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "drums",
+    "status": "candidate",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "hh",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "hh",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for hh; the matching MVSep resource entry declares output stems hh and other.",
+      "The public Hugging Face repository exposes a checkpoint and matching YAML configuration, but no verified immutable revision, SHA-256 digest or explicit weight-specific redistribution grant has yet been established.",
+      "This entry is deliberately disabled. Do not download or execute it until provenance, licensing, exact file hashes, output behavior and pymss compatibility are verified."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_hh_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_hh_mvsep.ckpt",
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/main/v1/bs_mega_53stem_hh_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_hh_mvsep_config.yaml",
+        "required": true
+      }
+    ],
+    "planner_priority": 0
   }
 ]
