@@ -102,6 +102,9 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
     planner_priority = data.get("planner_priority", 0)
     if not isinstance(planner_priority, int) or isinstance(planner_priority, bool) or not -1000 <= planner_priority <= 1000:
         raise RegistryError("planner_priority must be an integer between -1000 and 1000")
+    auto_route = data.get("auto_route", True)
+    if not isinstance(auto_route, bool):
+        raise RegistryError("auto_route must be a boolean")
     channels = data.get("channels")
     if channels not in _CHANNEL_POLICIES:
         raise RegistryError(f"channels must be one of {sorted(x for x in _CHANNEL_POLICIES if x)} or null")
@@ -146,7 +149,7 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         refinement_targets=strings("refinement_targets"), sample_rate=sample_rate,
         channels=channels, input_formats=tuple(x.lower().lstrip(".") for x in strings("input_formats")),
         category=data.get("category"), planner_priority=planner_priority,
-        runtime_validation=runtime_validation, license_review=license_review,
+        auto_route=auto_route, runtime_validation=runtime_validation, license_review=license_review,
         min_vram_gb=float(min_vram_gb) if min_vram_gb is not None else None,
         min_free_vram_gb=float(min_free_vram_gb) if min_free_vram_gb is not None else None,
         inference_params=dict(inference_params), low_vram_profile=low_vram_profile,
