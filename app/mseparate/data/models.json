@@ -406,6 +406,7 @@
       }
     ],
     "planner_priority": 15,
+    "auto_route": false,
     "notes": [
       "Official ZFTurbo v1.0.21 release publishes the 53-stem BS-RoFormer checkpoint and matching YAML; all 53 native output names and their order match the upstream release.",
       "The original author confirmed MIT licensing and redistribution permission for the original 53-stem weights. Training-data provenance remains unknown; this is recorded separately and is not claimed as cleared.",
