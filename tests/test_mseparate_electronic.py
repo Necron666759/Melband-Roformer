@@ -54,7 +54,7 @@ def test_synth_specialist_category_matches_underscored_stem_names():
     assert _model_specialization("synth_pad", manifest) == 1
 
 
-def test_unverified_electronic_model_candidates_are_not_executable():
+def test_electronic_candidates_keep_independent_technical_gates():
     registry = load_registry(bundled_registry_path())
     eligible = {model.model_id for model in eligible_models(registry)}
     assert "bs-roformer-sw-6stem-candidate" not in eligible
@@ -63,14 +63,19 @@ def test_unverified_electronic_model_candidates_are_not_executable():
     assert registry["mvsep-synth-specialist-candidate"].license_status == "review_required"
     for stem in ("synth", "keys", "bass", "kick", "drums", "organ", "digital-piano", "percussion", "hh"):
         model = registry[f"mvsep-mega53-{stem}-specialist-candidate"]
-        assert model not in eligible
-        assert model.license_status == "review_required"
+        assert model.license_status == "verified"
+        assert model.license_review["status"] == "accepted_by_maintainer"
+        assert model.license_review["training_data_status"] == "unknown"
         assert model.runtime_validation == ("verified" if stem in ("synth", "keys") else "unverified")
         assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
         if stem in ("synth", "keys"):
+            assert model.model_id in eligible
+            assert model.status == "available"
             assert all(asset.sha256 and len(asset.sha256) == 64 for asset in model.assets)
             assert all(asset.size_bytes is not None for asset in model.assets if asset.role == "checkpoint")
         else:
+            assert model.model_id not in eligible
+            assert model.status == "candidate"
             assert all(asset.sha256 is None for asset in model.assets)
 
 
@@ -111,20 +116,16 @@ def test_planner_prefers_synth_specialist_for_synth_pad_output():
     assert "manifest-declared specialist" in plan.tasks[0].rationale
 
 
-def test_synth_and_keys_require_both_runtime_and_license_approval_before_planning():
+def test_synth_and_keys_are_plannable_after_maintainer_accepts_mit_grant():
     registry = load_registry(bundled_registry_path())
     synth_id = "mvsep-mega53-synth-specialist-candidate"
     keys_id = "mvsep-mega53-keys-specialist-candidate"
 
-    # Runtime compatibility must not bypass the independent license gate.
     assert registry[synth_id].runtime_validation == "verified"
     assert registry[keys_id].runtime_validation == "verified"
-    assert synth_id not in {m.model_id for m in eligible_models(registry)}
-    assert keys_id not in {m.model_id for m in eligible_models(registry)}
-
-    # Simulate later explicit legal approval and verify specialist routing.
+    assert {m.model_id for m in eligible_models(registry)} >= {synth_id, keys_id}
     approved = {
-        model_id: replace(model, status="available", license_status="verified", license_review={"status": "approved"})
+        model_id: replace(model, status="available", license_status="verified", license_review={"status": "accepted_by_maintainer"})
         for model_id, model in registry.items()
         if model_id in {synth_id, keys_id}
     }
