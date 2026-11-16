@@ -64,7 +64,15 @@ def test_unverified_electronic_model_candidates_are_not_executable():
         assert model not in eligible
         assert model.license_status == "review_required"
         assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
-        assert all(asset.sha256 is None for asset in model.assets)
+        assert all(asset.sha256 and len(asset.sha256) == 64 for asset in model.assets)
+        assert all(asset.size_bytes is None or asset.size_bytes > 0 for asset in model.assets)
+    for stem in ("synth", "keys"):
+        model = registry[f"mvsep-mega53-{stem}-specialist-candidate"]
+        assert model not in eligible
+        assert model.license_status == "review_required"
+        assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
+        assert all(asset.sha256 and len(asset.sha256) == 64 for asset in model.assets)
+        assert all(asset.size_bytes is not None for asset in model.assets if asset.role == "checkpoint")
 
 
 def test_planner_prefers_synth_specialist_for_synth_pad_output():
