@@ -177,6 +177,17 @@ def test_incompatible_audio_does_not_schedule_model():
     assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
 
+def test_manual_only_zfturbo_requires_explicit_preference():
+    registry = load_registry(bundled_registry_path())
+    model_id = "zfturbo-bs-roformer-53stem-candidate"
+
+    automatic = build_plan(registry=registry)
+    assert model_id not in {task.model_id for task in automatic.tasks}
+
+    explicit = build_plan(registry=registry, preferred_model_id=model_id)
+    assert model_id in {task.model_id for task in explicit.tasks}
+
+
 def test_planner_can_opt_into_melband_sample_rate_conversion():
     from mseparate.types import AnalysisReport, AudioMetadata
 
@@ -668,6 +679,7 @@ def test_zfturbo_53_stem_is_pinned_and_cpu_runtime_verified_but_vram_gated():
     assert model.runtime_validation == "verified"
     assert model.model_id in preparable
     assert model.model_id in eligible
+    assert model.auto_route is False
     assert len(model.native_stems) == 53
     assert model.native_stems[25:27] == ("keys", "kick")
     assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
