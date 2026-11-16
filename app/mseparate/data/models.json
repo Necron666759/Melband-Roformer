@@ -458,23 +458,27 @@
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
-      "Dedicated single-target derivative from the MVSep Mega 53 family; MVSep resource metadata declares this exact target plus other.",
-      "Asset URLs are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327 (the repository currently exposes one verified upload commit).",
-      "The upstream ZFTurbo Mega 53 checkpoint author has stated that the model weights are MIT-licensed; the third-party single-stem derivative repository itself does not publish per-file SHA-256 values. Do not enable automatic download or inference until checkpoint and config digests are independently computed and recorded, then strict-load and short-forward tests pass in the pinned pymss runtime.",
-      "Only the requested target stem is exposed to mseparate; the companion 'other' output declared in the upstream config is not advertised as an independently useful target."
+      "Checkpoint and config SHA-256 values are recorded from the independent HAGerox/Stem-Separator-Models registry (snapshot 2026-10-27); the checkpoint digest is independently corroborated by YacobiHime/stem-splitter SHA256SUMS. These are published reference digests, not yet recomputed locally in this repository's environment.",
+      "pymss model catalogue at c78bc27265d1d2bad20e429f615c063239837be2 lists synth as a supported bs_roformer model and reports checkpoint size 77616988 bytes. This catalog entry is evidence of runtime-family support, not a real inference test of this exact asset through mseparate.",
+      "An external exact-checkpoint smoke test is recorded for python-audio-separator, not pymss. The repository-specific pymss smoke test is being run separately; do not mark this model available until that test passes.",
+      "The derivative Hugging Face repository and independent registry both report the weight license as unknown. The upstream ZFTurbo source-code/repository license must not be assumed to grant redistribution or use rights for this derivative checkpoint; license_status therefore remains review_required.",
+      "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete."
     ],
     "assets": [
       {
         "role": "checkpoint",
         "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_synth_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_synth_mvsep.ckpt",
-        "required": true
+        "required": true,
+        "sha256": "04749df7e2fab770a0d26bf9aa4850c1a6cd89547fc8bfe9c9d223602c0afb82",
+        "size_bytes": 77616988
       },
       {
         "role": "config",
         "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_synth_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_synth_mvsep_config.yaml",
-        "required": true
+        "required": true,
+        "sha256": "3a0489996305cedf1e44f086f9b0fe9c387c86104f972092b4c9ba5ac8e15b42"
       }
     ],
     "planner_priority": 100
@@ -506,23 +510,27 @@
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
-      "Dedicated single-target derivative from the MVSep Mega 53 family; MVSep resource metadata declares this exact target plus other.",
-      "Asset URLs are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327 (the repository currently exposes one verified upload commit).",
-      "The upstream ZFTurbo Mega 53 checkpoint author has stated that the model weights are MIT-licensed; the third-party single-stem derivative repository itself does not publish per-file SHA-256 values. Do not enable automatic download or inference until checkpoint and config digests are independently computed and recorded, then strict-load and short-forward tests pass in the pinned pymss runtime.",
-      "Only the requested target stem is exposed to mseparate; the companion 'other' output declared in the upstream config is not advertised as an independently useful target."
+      "Checkpoint and config SHA-256 values are recorded from the independent HAGerox/Stem-Separator-Models registry (snapshot 2026-10-27); the checkpoint digest is independently corroborated by YacobiHime/stem-splitter SHA256SUMS. These are published reference digests, not yet recomputed locally in this repository's environment.",
+      "pymss model catalogue at c78bc27265d1d2bad20e429f615c063239837be2 lists keys as a supported bs_roformer model and reports checkpoint size 77616219 bytes. This catalog entry is evidence of runtime-family support, not a real inference test of this exact asset through mseparate.",
+      "An external exact-checkpoint smoke test is recorded for python-audio-separator, not pymss. The repository-specific pymss smoke test is being run separately; do not mark this model available until that test passes.",
+      "The derivative Hugging Face repository and independent registry both report the weight license as unknown. The upstream ZFTurbo source-code/repository license must not be assumed to grant redistribution or use rights for this derivative checkpoint; license_status therefore remains review_required.",
+      "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete."
     ],
     "assets": [
       {
         "role": "checkpoint",
         "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_keys_mvsep.ckpt?download=true",
         "relative_path": "bs_mega_53stem_keys_mvsep.ckpt",
-        "required": true
+        "required": true,
+        "sha256": "4bc2bde8c5b26d5e22720304deace45dfeaffb2d02dc07922a8f2be17d82c844",
+        "size_bytes": 77616219
       },
       {
         "role": "config",
         "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_keys_mvsep_config.yaml?download=true",
         "relative_path": "bs_mega_53stem_keys_mvsep_config.yaml",
-        "required": true
+        "required": true,
+        "sha256": "ca9d5cb14ed0af13efd91e2e0e6ed3b81c2391b013c720f09c62ce6f2ebdfd89"
       }
     ],
     "planner_priority": 0
