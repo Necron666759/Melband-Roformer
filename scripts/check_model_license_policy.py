@@ -76,13 +76,39 @@ def validate_review(model: dict[str, Any]) -> list[str]:
             problems.append(f"{model_id}: blocked review requires a substantive rationale")
         return problems
 
+    if state == "accepted_by_maintainer":
+        problems = []
+        if license_status != "verified":
+            problems.append(f"{model_id}: maintainer-accepted review requires license_status=verified")
+        if model_status not in {"candidate", "available"}:
+            problems.append(f"{model_id}: maintainer-accepted review requires candidate or available status")
+        if review.get("weight_license") != "MIT":
+            problems.append(f"{model_id}: maintainer-accepted Mega 53 review must retain the confirmed MIT weight license")
+        if review.get("redistribution_permission") != "author_confirmed_for_original_53_stem_weights_and_conversions":
+            problems.append(f"{model_id}: maintainer-accepted review must retain the author's redistribution statement")
+        if review.get("training_data_status") != "unknown":
+            problems.append(f"{model_id}: unresolved training-data provenance must remain explicitly recorded as unknown")
+        if not _urls(review.get("weight_license_evidence")):
+            problems.append(f"{model_id}: maintainer-accepted review requires the original author's weight-license evidence")
+        if not isinstance(review.get("acceptance_basis"), str) or len(review["acceptance_basis"].strip()) < 30:
+            problems.append(f"{model_id}: maintainer-accepted review requires an explicit acceptance basis")
+        if not isinstance(review.get("reviewed_by"), str) or not review["reviewed_by"].strip():
+            problems.append(f"{model_id}: reviewed_by is required")
+        try:
+            dt.date.fromisoformat(review.get("reviewed_on"))
+        except (TypeError, ValueError):
+            problems.append(f"{model_id}: reviewed_on must be an ISO date (YYYY-MM-DD)")
+        if not isinstance(review.get("rationale"), str) or len(review["rationale"].strip()) < 30:
+            problems.append(f"{model_id}: rationale must document the accepted risk and remaining uncertainty")
+        return problems
+
     if state == "rejected":
         if license_status != "rejected" or model_status != "disabled":
             return [f"{model_id}: rejected review requires license_status=rejected and status=disabled"]
         return []
 
     if state != "approved":
-        return [f"{model_id}: license_review.status must be approved, blocked, or rejected"]
+        return [f"{model_id}: license_review.status must be approved, accepted_by_maintainer, blocked, or rejected"]
 
     problems: list[str] = []
     license_id = model.get("license")
@@ -171,7 +197,7 @@ def check_policy(
             continue
         if not any(
             isinstance(model.get("license_review"), dict)
-            and model["license_review"].get("status") == "approved"
+            and model["license_review"].get("status") in {"approved", "accepted_by_maintainer"}
             for model in owners
         ):
             problems.append(f"{raw_path}: weight file cannot be committed without an approved license_review")
