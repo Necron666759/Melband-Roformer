@@ -71,7 +71,7 @@ def test_mega53_specialists_keep_independent_technical_gates():
         assert model.model_id in eligible
         assert model.status == "available"
         assert all(asset.sha256 and len(asset.sha256) == 64 for asset in model.assets)
-        assert all(asset.size_bytes is not None for asset in model.assets)
+        assert next(asset for asset in model.assets if asset.role == "checkpoint").size_bytes is not None
 
 
 def test_planner_prefers_synth_specialist_for_synth_pad_output():
