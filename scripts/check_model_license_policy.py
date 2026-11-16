@@ -64,6 +64,16 @@ def validate_review(model: dict[str, Any]) -> list[str]:
             problems.append(f"{model_id}: blocked review cannot have status=available")
         if review.get("training_data_status") not in {"unknown", "restricted", "not_cleared"}:
             problems.append(f"{model_id}: blocked review must state why training data is not cleared")
+        if not _urls(review.get("weight_license_evidence")):
+            problems.append(f"{model_id}: blocked review must retain the weight-license evidence examined")
+        if not isinstance(review.get("reviewed_by"), str) or not review["reviewed_by"].strip():
+            problems.append(f"{model_id}: blocked review requires reviewed_by")
+        try:
+            dt.date.fromisoformat(review.get("reviewed_on"))
+        except (TypeError, ValueError):
+            problems.append(f"{model_id}: blocked review requires reviewed_on as YYYY-MM-DD")
+        if not isinstance(review.get("rationale"), str) or len(review["rationale"].strip()) < 30:
+            problems.append(f"{model_id}: blocked review requires a substantive rationale")
         return problems
 
     if state == "rejected":
