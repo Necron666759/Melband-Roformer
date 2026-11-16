@@ -9,7 +9,7 @@ from mseparate.types import AnalysisReport, AudioMetadata
 
 def test_clap_catalog_distinguishes_electronic_source_families():
     assert {"synth_lead", "synth_pad", "synth_arp", "synth_bass", "synth_fx"} <= set(SOURCES)
-    assert {"electronic_drums", "breakbeats", "samples"} <= set(SOURCES)
+    assert {"electronic_drums", "kick", "snare", "hi_hat", "breakbeats", "samples"} <= set(SOURCES)
     assert {"techno", "house", "trance", "drum_and_bass", "dubstep"} <= set(GENRES)
 
 
