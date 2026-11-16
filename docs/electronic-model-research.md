@@ -37,11 +37,15 @@ SHA-256 hashes, a confirmed weight license, and output-stem mapping.
 - The public model folder lists the individual checkpoint files at about
   77.6 MB each, plus small YAML configs. These file sizes do not predict
   inference speed; actual performance must be benchmarked on the target GPU.
-- The resource index provides direct checkpoint/config URLs, but the exact
-  weight-specific license, immutable file revision, SHA-256 checksums and
-  compatibility with the project's installed pymss version still need
-  verification. The corresponding registry entries are candidates and remain
-  disabled until those gates are completed.
+- An independent registry snapshot pins both artifacts to revision
+  `0677941f9cdfd891a6bc3336229244e197035327` and publishes checkpoint and
+  config SHA-256 values. The Synth and Keys checkpoint hashes are also
+  corroborated by a separate `SHA256SUMS` manifest. The bundled registry now
+  records these published digests and the PyMSS catalog's checkpoint byte sizes.
+- The external registry labels the exact derivative weights' license as
+  unknown. The upstream project's code/repository license is not treated as
+  an automatic license grant for these extracted weights. Both records remain
+  disabled pending a weight-specific rights review and a real pymss inference test.
 
 ### ZFTurbo BS-RoFormer 53-stem parent model
 
@@ -93,3 +97,29 @@ The MVSep Mega 53 resource catalog declares dedicated BS-RoFormer single-target 
 The upstream Mega 53 model author has explicitly stated that the 53-stem weights are MIT-licensed. This supports the upstream weight license, but does not replace integrity verification for the extracted single-stem checkpoint/config pair. The derivative repository does not publish per-file SHA-256 values. Consequently, both records remain `candidate` and are excluded from `eligible_models()` until independent digests are recorded and strict-load plus short forward tests are completed.
 
 The shared `PymssAdapter` now accepts arbitrary manifest-declared native stems, rather than requiring every BS-RoFormer model to output vocals. Vocal models retain their existing mixture-minus-vocals instrumental residual behavior; a non-vocal model cannot declare that residual without a native vocals estimate. CPU contract tests cover direct single-stem inference. These tests validate the adapter contract with a fake separator, not the real Synth/Keys weights or CUDA performance.
+
+
+## Synth and Keys asset verification status
+
+The exact Hugging Face revision is pinned to
+`0677941f9cdfd891a6bc3336229244e197035327`.
+
+| Asset | Synth SHA-256 | Keys SHA-256 |
+|---|---|---|
+| Checkpoint | `04749df7e2fab770a0d26bf9aa4850c1a6cd89547fc8bfe9c9d223602c0afb82` | `4bc2bde8c5b26d5e22720304deace45dfeaffb2d02dc07922a8f2be17d82c844` |
+| YAML config | `3a0489996305cedf1e44f086f9b0fe9c387c86104f972092b4c9ba5ac8e15b42` | `ca9d5cb14ed0af13efd91e2e0e6ed3b81c2391b013c720f09c62ce6f2ebdfd89` |
+
+Checkpoint sizes reported by the pinned PyMSS model catalog:
+- Synth: 77,616,988 bytes.
+- Keys: 77,616,219 bytes.
+
+Digest provenance:
+- [HAGerox/Stem-Separator-Models registry snapshot](https://github.com/HAGerox/Stem-Separator-Models/blob/6c87b47412d4faf8d9e8c530d12b4d66764f2cdc/registry.json) publishes all four hashes and the immutable Hugging Face revision.
+- [YacobiHime/stem-splitter SHA256SUMS](https://github.com/YacobiHime/stem-splitter/blob/c474faf52eef3e9be1b5ceb2f2b31669ceff0acd/models/SHA256SUMS.txt) independently corroborates both checkpoint hashes.
+- [PyMSS model catalog](https://github.com/pymss-project/pymss/blob/c78bc27265d1d2bad20e429f615c063239837be2/pymss/resources/model_catalog.json) lists both checkpoints as supported `bs_roformer` assets with the byte sizes above.
+
+These are independently published reference digests; the current development environment could not download the binary artifacts to recompute them locally. A new integration smoke script and GitHub Actions workflow now download each asset through mseparate's SHA-256-verifying asset manager, load it through the project's pinned `pymss==2.3.5` adapter, and run an 8-second stereo forward pass. PyMSS' current BS-RoFormer loader calls `model.load_state_dict(state_dict, assign=True)` without overriding PyTorch's default `strict=True`; a successful constructor therefore checks the checkpoint key set strictly. The real model smoke workflow result must be inspected before calling the runtime test passed.
+
+The independent external smoke evidence is for `python-audio-separator`, not pymss. The PyMSS catalog's `supported: true` is a compatibility declaration, not proof that this exact checkpoint has already passed the new mseparate test.
+
+The derivative model registry reports the weight license as unknown. For that reason both candidates remain `status: candidate`, `license_status: review_required`, and excluded from `eligible_models()`, even after digests are pinned. No automatic routing or redistribution is enabled.
