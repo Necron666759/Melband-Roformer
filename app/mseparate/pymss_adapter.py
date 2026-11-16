@@ -100,13 +100,15 @@ class PymssAdapter:
     def compatibility(self, manifest: ModelManifest) -> tuple[bool, str]:
         if manifest.backend != self.BACKEND:
             return False, f"Manifest backend must be {self.BACKEND!r}"
-        if "vocals" not in manifest.native_stems:
-            return False, "MSST vocal adapter requires vocals as a native output"
+        if not manifest.native_stems:
+            return False, "MSST adapter requires at least one native output stem"
         supported = set(manifest.native_stems) | set(manifest.derived_stems)
         if set(manifest.target_stems) - supported:
             return False, "MSST adapter target stems must be native or explicitly derived"
         if set(manifest.derived_stems) - {"instrumental"}:
             return False, "MSST adapter currently supports only the mixture-minus-vocals instrumental residual"
+        if "instrumental" in manifest.derived_stems and "vocals" not in manifest.native_stems:
+            return False, "The instrumental residual requires vocals as a native model output"
         assets = {asset.role: asset for asset in manifest.assets}
         missing = {"checkpoint", "config"} - set(assets)
         if missing:
