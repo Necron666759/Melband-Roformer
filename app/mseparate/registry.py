@@ -13,6 +13,7 @@ _MODEL_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _LICENSE_STATES = {"verified", "review_required", "rejected"}
 _MODEL_STATES = {"candidate", "available", "incompatible", "unavailable", "disabled"}
 _CHANNEL_POLICIES = {"mono", "stereo", "mono_or_stereo", None}
+_RUNTIME_VALIDATION_STATES = {"unverified", "verified", "failed"}
 
 
 class RegistryError(ValueError):
@@ -88,6 +89,9 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
     sample_rate = data.get("sample_rate")
     if sample_rate is not None and (not isinstance(sample_rate, int) or isinstance(sample_rate, bool) or sample_rate <= 0):
         raise RegistryError("sample_rate must be a positive integer or null")
+    runtime_validation = data.get("runtime_validation", "unverified")
+    if runtime_validation not in _RUNTIME_VALIDATION_STATES:
+        raise RegistryError(f"Invalid runtime_validation: {runtime_validation!r}")
     planner_priority = data.get("planner_priority", 0)
     if not isinstance(planner_priority, int) or isinstance(planner_priority, bool) or not -1000 <= planner_priority <= 1000:
         raise RegistryError("planner_priority must be an integer between -1000 and 1000")
@@ -115,7 +119,7 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         refinement_targets=strings("refinement_targets"), sample_rate=sample_rate,
         channels=channels, input_formats=tuple(x.lower().lstrip(".") for x in strings("input_formats")),
         category=data.get("category"), planner_priority=planner_priority,
-        upstream_version=data.get("upstream_version"), notes=notes, status=status,
+        runtime_validation=runtime_validation, upstream_version=data.get("upstream_version"), notes=notes, status=status,
     )
 
 
@@ -139,14 +143,28 @@ def load_registry(path: str | Path) -> dict[str, ModelManifest]:
 
 
 def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
-    """Return only models that pass metadata, license and pinned-asset gates."""
-    return [
-        model for model in registry.values()
-        if model.status == "available"
-        and model.license_status == "verified"
-        and all((not asset.required) or bool(asset.sha256) for asset in model.assets)
-        and (bool(model.assets) or model.backend == "demucs-onnx")
-    ]
+    """Return models that pass independent runtime, license and asset gates.
+
+    Non-vocal BS-RoFormer specialists require an explicit successful real-model
+    runtime smoke test in addition to the normal availability and license gates.
+    """
+    eligible = []
+    for model in registry.values():
+        category = (model.category or "").strip().lower().replace("_", "-")
+        needs_runtime_validation = (
+            model.backend == "bs-roformer-pymss"
+            and category in {"synth-specialist", "keyboard-specialist"}
+        )
+        if model.status != "available" or model.license_status != "verified":
+            continue
+        if needs_runtime_validation and model.runtime_validation != "verified":
+            continue
+        if not all((not asset.required) or bool(asset.sha256) for asset in model.assets):
+            continue
+        if not model.assets and model.backend != "demucs-onnx":
+            continue
+        eligible.append(model)
+    return eligible
 
 
 def model_audio_compatibility(model: ModelManifest, audio: AudioMetadata) -> tuple[bool, str]:
