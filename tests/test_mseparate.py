@@ -510,7 +510,8 @@ def test_cli_executes_by_default_and_retries_cuda_failure_on_cpu(tmp_path, monke
     assert rc == 0
     assert calls == ["cuda", "cpu"]
     output = capsys.readouterr()
-    assert "retrying the complete plan on CPU" in output.err
+    assert "retrying CPU-eligible tasks on CPU" in output.err
+    assert "VRAM-gated models will be skipped" in output.err
     assert "Execution results" in output.out
     payload = json.loads(report.read_text())
     assert payload["inference_performed"] is True
@@ -652,7 +653,7 @@ def test_demucs_strict_cuda_requires_disable_fallback_support(tmp_path):
 
 
 
-def test_zfturbo_53_stem_is_pinned_preparable_but_runtime_gated():
+def test_zfturbo_53_stem_is_pinned_and_cpu_runtime_verified_but_vram_gated():
     from mseparate.registry import preparable_models
 
     registry = load_registry(bundled_registry_path())
@@ -664,13 +665,13 @@ def test_zfturbo_53_stem_is_pinned_preparable_but_runtime_gated():
     assert model.license_status == "verified"
     assert model.license_review["status"] == "accepted_by_maintainer"
     assert model.license_review["training_data_status"] == "unknown"
-    assert model.runtime_validation == "unverified"
+    assert model.runtime_validation == "verified"
     assert model.model_id in preparable
-    assert model.model_id not in eligible
+    assert model.model_id in eligible
     assert len(model.native_stems) == 53
     assert model.native_stems[25:27] == ("keys", "kick")
     assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
     assert all(asset.sha256 and asset.size_bytes for asset in model.assets)
-    assert model.min_vram_gb == 14
+    assert model.min_vram_gb == 14.5
     assert model.min_free_vram_gb == 13
     assert model.low_vram_profile["status"] == "unverified"
