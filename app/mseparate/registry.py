@@ -14,6 +14,7 @@ _LICENSE_STATES = {"verified", "review_required", "rejected"}
 _MODEL_STATES = {"candidate", "available", "incompatible", "unavailable", "disabled"}
 _CHANNEL_POLICIES = {"mono", "stereo", "mono_or_stereo", None}
 _RUNTIME_VALIDATION_STATES = {"unverified", "verified", "failed"}
+_LICENSE_REVIEW_STATES = {"approved", "blocked", "rejected"}
 
 
 class RegistryError(ValueError):
@@ -77,6 +78,12 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         raise RegistryError(f"Invalid license_status: {license_status!r}")
     if status not in _MODEL_STATES:
         raise RegistryError(f"Invalid model status: {status!r}")
+    license_review = data.get("license_review")
+    if license_review is not None:
+        if not isinstance(license_review, dict):
+            raise RegistryError("license_review must be an object or null")
+        if license_review.get("status") not in _LICENSE_REVIEW_STATES:
+            raise RegistryError(f"Invalid license_review.status: {license_review.get('status')!r}")
 
     def strings(key: str) -> tuple[str, ...]:
         value = data.get(key, [])
@@ -119,7 +126,8 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         refinement_targets=strings("refinement_targets"), sample_rate=sample_rate,
         channels=channels, input_formats=tuple(x.lower().lstrip(".") for x in strings("input_formats")),
         category=data.get("category"), planner_priority=planner_priority,
-        runtime_validation=runtime_validation, upstream_version=data.get("upstream_version"), notes=notes, status=status,
+        runtime_validation=runtime_validation, license_review=license_review,
+        upstream_version=data.get("upstream_version"), notes=notes, status=status,
     )
 
 
@@ -156,6 +164,8 @@ def eligible_models(registry: dict[str, ModelManifest]) -> list[ModelManifest]:
             and category in {"synth-specialist", "keyboard-specialist"}
         )
         if model.status != "available" or model.license_status != "verified":
+            continue
+        if model.license_review is not None and model.license_review.get("status") != "approved":
             continue
         if needs_runtime_validation and model.runtime_validation != "verified":
             continue
