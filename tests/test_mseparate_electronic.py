@@ -54,7 +54,7 @@ def test_synth_specialist_category_matches_underscored_stem_names():
     assert _model_specialization("synth_pad", manifest) == 1
 
 
-def test_electronic_candidates_keep_independent_technical_gates():
+def test_mega53_specialists_keep_independent_technical_gates():
     registry = load_registry(bundled_registry_path())
     eligible = {model.model_id for model in eligible_models(registry)}
     assert "bs-roformer-sw-6stem-candidate" not in eligible
@@ -66,17 +66,12 @@ def test_electronic_candidates_keep_independent_technical_gates():
         assert model.license_status == "verified"
         assert model.license_review["status"] == "accepted_by_maintainer"
         assert model.license_review["training_data_status"] == "unknown"
-        assert model.runtime_validation == ("verified" if stem in ("synth", "keys") else "unverified")
+        assert model.runtime_validation == "verified"
         assert {asset.role for asset in model.assets} == {"checkpoint", "config"}
-        if stem in ("synth", "keys"):
-            assert model.model_id in eligible
-            assert model.status == "available"
-            assert all(asset.sha256 and len(asset.sha256) == 64 for asset in model.assets)
-            assert all(asset.size_bytes is not None for asset in model.assets if asset.role == "checkpoint")
-        else:
-            assert model.model_id not in eligible
-            assert model.status == "candidate"
-            assert all(asset.sha256 is None for asset in model.assets)
+        assert model.model_id in eligible
+        assert model.status == "available"
+        assert all(asset.sha256 and len(asset.sha256) == 64 for asset in model.assets)
+        assert all(asset.size_bytes is not None for asset in model.assets)
 
 
 def test_planner_prefers_synth_specialist_for_synth_pad_output():
