@@ -449,20 +449,19 @@
       "wav"
     ],
     "native_stems": [
-      "synth",
-      "other"
+      "synth"
     ],
     "derived_stems": [],
     "target_stems": [
-      "synth",
-      "other"
+      "synth"
     ],
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative from the MVSep Mega 53 family; MVSep resource metadata declares this exact target plus other.",
       "Asset URLs are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327 (the repository currently exposes one verified upload commit).",
-      "The upstream ZFTurbo Mega 53 checkpoint author has stated that the model weights are MIT-licensed; the third-party single-stem derivative repository itself does not publish per-file SHA-256 values. Do not enable automatic download or inference until checkpoint and config digests are independently computed and recorded, then strict-load and short-forward tests pass in the pinned pymss runtime."
+      "The upstream ZFTurbo Mega 53 checkpoint author has stated that the model weights are MIT-licensed; the third-party single-stem derivative repository itself does not publish per-file SHA-256 values. Do not enable automatic download or inference until checkpoint and config digests are independently computed and recorded, then strict-load and short-forward tests pass in the pinned pymss runtime.",
+      "Only the requested target stem is exposed to mseparate; the companion 'other' output declared in the upstream config is not advertised as an independently useful target."
     ],
     "assets": [
       {
@@ -498,20 +497,19 @@
       "wav"
     ],
     "native_stems": [
-      "keys",
-      "other"
+      "keys"
     ],
     "derived_stems": [],
     "target_stems": [
-      "keys",
-      "other"
+      "keys"
     ],
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
       "Dedicated single-target derivative from the MVSep Mega 53 family; MVSep resource metadata declares this exact target plus other.",
       "Asset URLs are pinned to Hugging Face repository revision 0677941f9cdfd891a6bc3336229244e197035327 (the repository currently exposes one verified upload commit).",
-      "The upstream ZFTurbo Mega 53 checkpoint author has stated that the model weights are MIT-licensed; the third-party single-stem derivative repository itself does not publish per-file SHA-256 values. Do not enable automatic download or inference until checkpoint and config digests are independently computed and recorded, then strict-load and short-forward tests pass in the pinned pymss runtime."
+      "The upstream ZFTurbo Mega 53 checkpoint author has stated that the model weights are MIT-licensed; the third-party single-stem derivative repository itself does not publish per-file SHA-256 values. Do not enable automatic download or inference until checkpoint and config digests are independently computed and recorded, then strict-load and short-forward tests pass in the pinned pymss runtime.",
+      "Only the requested target stem is exposed to mseparate; the companion 'other' output declared in the upstream config is not advertised as an independently useful target."
     ],
     "assets": [
       {
