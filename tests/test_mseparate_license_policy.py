@@ -53,6 +53,28 @@ def test_blocked_candidate_with_unknown_training_data_is_not_approved_but_valid_
     assert _POLICY.validate_review(model) == []
 
 
+def test_maintainer_acceptance_removes_block_without_claiming_dataset_clearance():
+    model = {
+        "model_id": "mega53-synth",
+        "license": "MIT",
+        "license_status": "verified",
+        "status": "available",
+        "assets": [],
+        "license_review": {
+            "status": "accepted_by_maintainer",
+            "weight_license": "MIT",
+            "weight_license_evidence": ["https://example.org/original-author-mit-confirmation"],
+            "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+            "training_data_status": "unknown",
+            "acceptance_basis": "Maintainer explicitly accepts the original author's MIT grant despite unresolved training-data provenance.",
+            "reviewed_by": "repository maintainer",
+            "reviewed_on": "2026-11-16",
+            "rationale": "The MIT grant is accepted as sufficient to remove the license block; training-data provenance remains unknown."
+        }
+    }
+    assert _POLICY.validate_review(model) == []
+
+
 def test_approved_model_requires_both_weight_and_dataset_rights():
     assert _POLICY.validate_review(_approved_model()) == []
 
