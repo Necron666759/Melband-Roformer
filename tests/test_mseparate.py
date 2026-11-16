@@ -363,7 +363,6 @@ def test_planner_prefers_vocal_specialist_over_general_demucs_route():
     by_model = {task.model_id: task for task in plan.tasks}
     assert set(by_model) == {
         "melband-roformer-kim-vocals",
-        "demucs-onnx-htdemucs-6s",
         "mvsep-mega53-bass-specialist-candidate",
         "mvsep-mega53-kick-specialist-candidate",
         "mvsep-mega53-drums-specialist-candidate",
@@ -373,9 +372,7 @@ def test_planner_prefers_vocal_specialist_over_general_demucs_route():
     assert set(by_model["melband-roformer-kim-vocals"].target_stems) == {
         "vocals", "instrumental",
     }
-    assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
-        "other", "guitar", "piano",
-    }
+    assert "demucs-onnx-htdemucs-6s" not in by_model
     assert "manifest-declared specialist" in by_model[
         "melband-roformer-kim-vocals"
     ].rationale
@@ -459,14 +456,12 @@ def test_cli_execute_runs_plan_only_after_assets_are_verified(tmp_path, monkeypa
     assert manager_kwargs["device"] == "cpu"
     assert manager_kwargs["output_root"] == output / "mseparate-stems"
     plan, manifests, inputs = state["execute_args"]
-    assert len(plan.tasks) == 2
+    assert len(plan.tasks) == 1
     by_model = {task.model_id: task for task in plan.tasks}
-    assert set(by_model["demucs-onnx-htdemucs-6s"].target_stems) == {
-        "drums", "bass", "other", "guitar", "piano",
-    }
     assert set(by_model["melband-roformer-kim-vocals"].target_stems) == {
         "instrumental", "vocals",
     }
+    assert "demucs-onnx-htdemucs-6s" not in by_model
     assert "melband-roformer-kim-vocals" in manifests
     assert "demucs-onnx-htdemucs-6s" in manifests
     assert inputs["mix"] == source.resolve()
