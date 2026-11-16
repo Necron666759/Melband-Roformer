@@ -14,18 +14,52 @@ import soundfile as sf
 import soxr
 
 MODEL_ID = "laion/clap-htsat-unfused"
+# Source-family prompts and genre prompts are scored separately. Genre scores
+# describe broad musical context; they must never be treated as proof that a
+# particular source stem exists.
 SOURCES = {
-    "vocals": "human singing voice and vocal harmonies",
-    "drums": "acoustic or electronic drum kit and percussion",
-    "bass": "bass guitar and synthesized bass line",
-    "guitar": "electric or acoustic guitar",
-    "piano": "piano, electric piano and keyboard",
-    "synthesizer": "electronic synthesizer leads, pads and arpeggios",
-    "strings": "orchestral strings, violin and cello",
-    "brass": "brass instruments and horns",
+    "vocals": "human singing voice, lead vocals and vocal harmonies",
+    "drums": "acoustic drum kit, electronic drum kit and percussion",
+    "electronic_drums": "programmed electronic drums, drum machine and synthesized percussion",
+    "breakbeats": "breakbeat drums, chopped breaks and sampled drum loops",
+    "bass": "bass guitar and electric bass line",
+    "synth_bass": "synthesizer bass, sub bass and electronic bass line",
+    "guitar": "electric guitar and acoustic guitar",
+    "piano": "acoustic piano, electric piano and keyboard",
+    "synthesizer": "electronic synthesizer sounds and synthesizer instruments",
+    "synth_lead": "monophonic synthesizer lead melody and electronic lead synth",
+    "synth_pad": "sustained synthesizer pad, atmospheric synth chords and evolving textures",
+    "synth_arp": "sequenced synthesizer arpeggio and repeating electronic synth pattern",
+    "synth_keys": "electronic keyboard, synthesizer keys and digital keyboard",
+    "synth_strings": "synthesized string ensemble and orchestral synthesizer",
+    "synth_brass": "synthesized brass stabs and electronic horn sounds",
+    "synth_vocals": "vocoder, talkbox and synthetic vocal effect",
+    "synth_fx": "electronic risers, sweeps, impacts, noise bursts and sound design effects",
+    "strings": "orchestral strings, violin, viola and cello",
+    "brass": "acoustic brass instruments and horns",
     "woodwinds": "woodwind instruments, flute and saxophone",
-    "sound_effects": "electronic sound effects, noise textures and risers",
+    "sound_effects": "electronic sound effects, noise textures and transitions",
+    "samples": "sampled musical loops, chopped samples and audio chops",
 }
+
+GENRES = {
+    "techno": "techno electronic dance music with a repetitive four on the floor kick",
+    "house": "house music with a four on the floor groove, bass and dance synthesizers",
+    "trance": "trance electronic dance music with melodic arpeggios and long synthesizer builds",
+    "drum_and_bass": "drum and bass electronic music with fast breakbeats and deep bass",
+    "dubstep": "dubstep electronic music with heavy wobble bass and half time drums",
+    "breakbeat": "breakbeat electronic dance music with syncopated chopped drum loops",
+    "ambient_electronic": "ambient electronic music with atmospheric pads and evolving textures",
+    "synthwave": "synthwave music with retro analog synthesizers and electronic drums",
+    "industrial_electronic": "industrial electronic music with distorted synths and mechanical percussion",
+    "electro": "electro electronic music with synthetic bass lines and drum machine rhythms",
+}
+
+CLAP_CANDIDATES = tuple(
+    (kind, name, description)
+    for kind, collection in (("source", SOURCES), ("genre", GENRES))
+    for name, description in collection.items()
+)
 
 def analyze_sources(path: str | Path, *, device: str = "auto",
                     cache_dir: str | Path | None = None,
@@ -58,9 +92,9 @@ def analyze_sources(path: str | Path, *, device: str = "auto",
     # holding a long 96 kHz master in memory.
     window_seconds, hop_seconds, sample_rate = 10.0, 7.5, 48000
     window = int(window_seconds * sample_rate)
-    similarities = np.zeros(len(SOURCES), dtype=np.float64)
+    similarities = np.zeros(len(CLAP_CANDIDATES), dtype=np.float64)
     count = 0
-    labels = [f"The recording contains {description}." for description in SOURCES.values()]
+    labels = [f"The recording contains {description}." for _, _, description in CLAP_CANDIDATES]
     with torch.inference_mode():
         with sf.SoundFile(str(source), "r") as audio:
             # Seeking lets us keep memory bounded for long recordings.
@@ -89,8 +123,8 @@ def analyze_sources(path: str | Path, *, device: str = "auto",
     result = []
     if count:
         mean_scores = similarities / count
-        for name, score in zip(SOURCES, mean_scores):
-            result.append({"source": name, "score": round(float(score), 6),
+        for (kind, name, _), score in zip(CLAP_CANDIDATES, mean_scores):
+            result.append({"kind": kind, "source": name, "score": round(float(score), 6),
                            "windows": count, "model": MODEL_ID})
     # Function-local tensors and arrays are released on return. Avoid an
     # unconditional del of per-window locals: an empty valid stream may not
