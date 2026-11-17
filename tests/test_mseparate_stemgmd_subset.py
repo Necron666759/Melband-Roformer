@@ -21,10 +21,13 @@ def _wav_bytes(value: float, frames: int = 256) -> bytes:
     return buffer.getvalue()
 
 
-def _members(drummer: str, kit: str, groove: str) -> dict[str, bytes]:
+def _members(drummer: str, kit: str, groove: str, *, silent_toms: bool = False) -> dict[str, bytes]:
     return {
         f"StemGMD/audio/{drummer}/eval_session/{kit}/{instrument}/{groove}.wav":
-            _wav_bytes((index + 1) / 1000)
+            _wav_bytes(
+                0.0 if silent_toms and instrument in subset.TOM_INSTRUMENTS
+                else (index + 1) / 1000
+            )
         for index, instrument in enumerate(subset.INSTRUMENTS)
     }
 
@@ -129,3 +132,51 @@ def test_select_tracks_rejects_more_than_eight():
         assert "between 1 and 8" in str(exc)
     else:
         raise AssertionError("Expected max_tracks validation")
+
+
+def test_download_skips_tracks_with_silent_toms_and_avoids_other_stems(tmp_path, monkeypatch):
+    members = {
+        **_members("drummer1", "z_kit", "1_silent-groove.wav", silent_toms=True),
+        **_members("drummer2", "a_kit", "2_active-groove.wav"),
+    }
+
+    class FakeArchive:
+        opened: list[str] = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def infolist(self):
+            return [
+                types.SimpleNamespace(filename=name, file_size=len(data))
+                for name, data in members.items()
+            ]
+
+        def open(self, name, _mode="r"):
+            self.opened.append(name)
+            return io.BytesIO(members[name])
+
+    archive = FakeArchive()
+    monkeypatch.setitem(
+        sys.modules, "remotezip",
+        types.SimpleNamespace(RemoteZip=lambda _url: archive),
+    )
+
+    output = tmp_path / "audio"
+    manifest = tmp_path / "reports" / "stemgmd.csv"
+    report = tmp_path / "reports" / "subset.json"
+    result = subset.download_subset(output, manifest, report, max_tracks=1)
+
+    assert result["selected_tracks"] == 1
+    assert result["candidate_groups_checked"] == 2
+    assert result["selected_track_metadata"][0]["kit"] == "a_kit"
+    assert result["rejected_silent_target_tracks"] == [{
+        "track_id": "drummer1__z_kit__1_silent-groove",
+        "reason": "silent_toms_reference",
+    }]
+    # Four target references for the rejected track; all nine for the accepted one.
+    assert len(archive.opened) == 13
+    assert len(list(output.rglob("*.wav"))) == 10
