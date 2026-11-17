@@ -1,0 +1,72 @@
+name: MSeparate CPU real-audio routing evaluation
+
+on:
+  push:
+    branches:
+      - feature/mseparate-cpu-real-audio-evaluation
+    paths:
+      - "app/mseparate/**"
+      - "scripts/evaluate_mseparate_babyslakh.py"
+      - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mseparate-cpu-real-audio-evaluation-\${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cpu-real-audio-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
+      TOKENIZERS_PARALLELISM: "false"
+      HF_HOME: \${{ runner.temp }}/mseparate-hf-cache
+      XDG_CACHE_HOME: \${{ runner.temp }}/mseparate-cache
+    steps:
+      - name: Check out the evaluation branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install CPU-only PyTorch
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.13.0 torchaudio==2.11.0 \
+            --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install MSeparate CPU inference and analysis dependencies
+        run: |
+          python -m pip install \
+            "pymss==2.3.5" \
+            "numpy" "soundfile>=0.12,<0.13" "tqdm" "soxr>=0.3" \
+            "transformers>=4.45,<5" "librosa>=0.10.2,<1"
+          python -m pip install --no-deps -e app
+
+      - name: Run stages A, B and C on BabySlakh
+        run: |
+          python scripts/evaluate_mseparate_babyslakh.py \
+            --work-dir "\${{ runner.temp }}/mseparate-evaluation" \
+            --max-tracks 20 \
+            --max-cases 4 \
+            --excerpt-seconds 12 \
+            --inference-timeout 600
+
+      - name: Upload evaluation reports only (never audio or model weights)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mseparate-cpu-real-audio-evaluation-\${{ github.run_id }}
+          path: |
+            \${{ runner.temp }}/mseparate-evaluation/reports/*.json
+          if-no-files-found: warn
+          retention-days: 30
