@@ -100,7 +100,14 @@ Without reference stems, quality checks can detect invalid duration/alignment, s
 
 ## 9. Observability
 
-Every stage emits structured events with timestamp, job ID, stage, status, elapsed time, model ID, input/output stem IDs, resource observations and error/fallback reason as applicable. The terminal renderer presents detailed progress; the report writer persists the same event stream in a machine-readable format.
+The CLI supports two complementary outputs:
+
+- `--log-file [PATH]` mirrors terminal stdout and stderr to an append-mode UTF-8 text file while keeping output visible in the terminal. Without a path, the default is `<output-dir>/mseparate.log`.
+- `--report [PATH]` writes an atomic machine-readable JSON report. The report contains analysis, plan, assets, primary and Rescue execution results, candidate analysis, and a run timeline. Without a path, the default is `<output-dir>/mseparate-report.json`.
+
+The run timeline records UTC timestamps, monotonic elapsed time, and high-level stage start/completion events. Current stage coverage includes audio analysis, semantic source analysis, planning, asset preparation, primary execution, and the combined post-inference analysis/Rescue phase. The structured report and terminal log are complementary: the report is queryable and compact; the log preserves the human-readable terminal stream, including progress output routed through Python stdout/stderr.
+
+Per-task backend load/inference/unload timings, granular chunk callbacks, continuous GPU telemetry, and backend-native subprocess output capture are not yet guaranteed by this layer. They must be added through explicit executor/backend event callbacks before being described as complete stage telemetry. Never log credentials, authorization headers, or environment dumps.
 
 ## 10. Non-goals for the first implementation slice
 
