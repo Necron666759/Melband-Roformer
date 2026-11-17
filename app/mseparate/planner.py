@@ -153,6 +153,7 @@ def _has_synth_evidence(
     top_score = float(ranked[0].get("score", 0.0))
     max_rank, max_gap = (12, 1.0) if electronic_style else (8, 0.75)
     conflicts = {
+        "synthesizer": ("synth_keys", "synth_bass", "synth_vocals"),
         "synth_strings": ("strings", "violin", "viola", "cello"),
         "synth_brass": ("brass", "trombone", "trumpet", "tuba", "french_horn"),
         "synth_flute": ("flute",),
