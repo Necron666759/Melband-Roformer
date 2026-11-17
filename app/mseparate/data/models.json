@@ -414,7 +414,7 @@
       "The 10-second chunk profile (chunk_size=441000, overlap_size=220500) has passed a real CUDA smoke test on an NVIDIA GeForce RTX 3060 Ti (7.68 GiB VRAM); measured peak was 2.03 GiB allocated / 2.18 GiB reserved. It remains a manual-only profile and requires at least 7 GiB total VRAM and 6 GiB currently free.",
       "Outputs can overlap and are not guaranteed to sum to the mixture. Do not treat all 53 stems as additive or construct a residual from them.",
       "The model is broadly trained for instrument families; its synth output does not make it an electronic-genre-specific specialist.",
-      "Strict real-checkpoint CPU smoke passed in GitHub Actions run 43900540645. A real CUDA low-VRAM smoke also passed on NVIDIA GeForce RTX 3060 Ti using PyTorch 2.13.0+cu130 and pymss==2.3.5; see low_vram_profile.validation_details. Automatic routing remains disabled pending comparative quality and routing evaluation."
+      "Automatic routing is conditional: the planner may request only detected acoustic-instrument output heads when source evidence is strong. It does not schedule the full 53-output set by default; comparative perceptual quality remains subject to real-track review."
     ],
     "runtime_validation": "verified",
     "runtime_validation_details": {
@@ -573,12 +573,11 @@
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
-      "pymss model catalogue at c78bc27265d1d2bad20e429f615c063239837be2 lists synth as a supported bs_roformer model and reports checkpoint size 77616988 bytes. This catalog entry is evidence of runtime-family support, not a real inference test of this exact asset through mseparate.",
-      "The derivative Hugging Face repository and independent registry both report the weight license as unknown. The upstream ZFTurbo source-code/repository license must not be assumed to grant redistribution or use rights for this derivative checkpoint; license_status therefore remains review_required.",
-      "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete.",
-      "Real-weight validation is implemented by scripts/smoke_mseparate_real_models.py and .github/workflows/mseparate-real-model-smoke.yml; only a passing run of that workflow can clear the runtime gate.",
-      "Repository CI real-model smoke test passed on CPU with pymss==2.3.5: exact checkpoint SHA-256/size verified, strict checkpoint load succeeded, and a 20-second stereo inference produced finite non-silent output at 44100 Hz. CUDA execution has not yet been validated.",
-      "Runtime validation is independent of license review. The model remains candidate with license_status=review_required and is excluded from automatic planning until the derivative-weight license is verified."
+      "Dedicated MVSep Mega 53 single-target derivative; mseparate exposes only the declared target stem and does not emit the complementary Other output.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded in this manifest.",
+      "The original Mega 53 author confirmed MIT licensing and redistribution permission for the original 53-stem weights and conversions. The maintainer accepted this grant for this derivative; training-data provenance remains unknown and is recorded separately.",
+      "Real-checkpoint CPU smoke passed with pymss==2.3.5: assets were SHA-256/size verified, strict checkpoint loading succeeded, and 20-second stereo inference returned finite, non-silent 44100 Hz output. CUDA performance for this individual derivative is not claimed.",
+      "Automatic planning is source-gated: Synth requires synth-family evidence; Keys requires synth-key evidence. The model is not scheduled solely because its manifest is eligible."
     ],
     "assets": [
       {
@@ -648,12 +647,11 @@
     "dummy_stems": [],
     "refinement_targets": [],
     "notes": [
-      "pymss model catalogue at c78bc27265d1d2bad20e429f615c063239837be2 lists keys as a supported bs_roformer model and reports checkpoint size 77616219 bytes. This catalog entry is evidence of runtime-family support, not a real inference test of this exact asset through mseparate.",
-      "The derivative Hugging Face repository and independent registry both report the weight license as unknown. The upstream ZFTurbo source-code/repository license must not be assumed to grant redistribution or use rights for this derivative checkpoint; license_status therefore remains review_required.",
-      "The output config declares the specialist target and other residual. mseparate exposes only the specialist target. The model remains candidate and is not eligible for automatic planning until license review and actual runtime validation are complete.",
-      "Real-weight validation is implemented by scripts/smoke_mseparate_real_models.py and .github/workflows/mseparate-real-model-smoke.yml; only a passing run of that workflow can clear the runtime gate.",
-      "Repository CI real-model smoke test passed on CPU with pymss==2.3.5: exact checkpoint SHA-256/size verified, strict checkpoint load succeeded, and a 20-second stereo inference produced finite non-silent output at 44100 Hz. CUDA execution has not yet been validated.",
-      "Runtime validation is independent of license review. The model remains candidate with license_status=review_required and is excluded from automatic planning until the derivative-weight license is verified."
+      "Dedicated MVSep Mega 53 single-target derivative; mseparate exposes only the declared target stem and does not emit the complementary Other output.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded in this manifest.",
+      "The original Mega 53 author confirmed MIT licensing and redistribution permission for the original 53-stem weights and conversions. The maintainer accepted this grant for this derivative; training-data provenance remains unknown and is recorded separately.",
+      "Real-checkpoint CPU smoke passed with pymss==2.3.5: assets were SHA-256/size verified, strict checkpoint loading succeeded, and 20-second stereo inference returned finite, non-silent 44100 Hz output. CUDA performance for this individual derivative is not claimed.",
+      "Automatic planning is source-gated: Synth requires synth-family evidence; Keys requires synth-key evidence. The model is not scheduled solely because its manifest is eligible."
     ],
     "assets": [
       {
