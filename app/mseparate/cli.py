@@ -39,6 +39,10 @@ def _print_models(registry) -> None:
     for model in sorted(registry.values(), key=lambda item: item.model_id):
         state = (
             "eligible" if model.model_id in eligible and model.auto_route
+            else "eligible (source-triggered routing)" if (
+                model.model_id == "zfturbo-bs-roformer-53stem-candidate"
+                and model.model_id in eligible
+            )
             else "eligible (manual selection only)" if model.model_id in eligible
             else "not eligible"
         )
@@ -48,7 +52,9 @@ def _print_models(registry) -> None:
         print(f"    Architecture/backend: {model.architecture} / {model.backend}")
         print(f"    Category: {model.category or 'unspecified'}; outputs: {outputs}")
         print(f"    Planner priority: {model.planner_priority} (routing preference, not quality)")
-        if not model.auto_route:
+        if model.model_id == "zfturbo-bs-roformer-53stem-candidate" and model.model_id in eligible:
+            print("    Automatic routing: only when acoustic-instrument evidence is detected; selected native heads only")
+        elif not model.auto_route:
             print("    Automatic routing: disabled; explicit model selection only")
         print(f"    License: {model.license or 'unknown'} ({model.license_status}); status: {model.status}")
         if model.sample_rate or model.channels:
