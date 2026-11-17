@@ -350,10 +350,14 @@ def build_plan(
             # own source family is detected; unknown audio is not a reason to
             # run every specialist.
             if not source_predictions or not any(
-                _has_source_evidence(
-                    source_predictions, _SOURCE_ALIASES.get(stem, (stem.replace("-", "_"),)),
-                    max_rank=12 if electronic_style and stem in {"synth", "keys", "bass"} else 8,
-                    max_score_gap=1.0 if electronic_style and stem in {"synth", "keys", "bass"} else 0.75,
+                (
+                    _has_synth_evidence(source_predictions, electronic_style=electronic_style)
+                    if stem == "synth"
+                    else _has_source_evidence(
+                        source_predictions, _SOURCE_ALIASES.get(stem, (stem.replace("-", "_"),)),
+                        max_rank=12 if electronic_style and stem in {"keys", "bass"} else 8,
+                        max_score_gap=1.0 if electronic_style and stem in {"keys", "bass"} else 0.75,
+                    )
                 )
                 for stem in outputs
             ):
@@ -429,6 +433,8 @@ def build_plan(
             and preferred_model_id != model.model_id
             else _model_outputs(model)
         )
+        if model.model_id.startswith("mvsep-mega53-"):
+            model_stems = tuple(stem for stem in model_stems if stem != "other")
         for stem in model_stems:
             score, reason = _stem_score(stem, features, analysis.predictions if analysis else None)
             specialization = _model_specialization(stem, model)
