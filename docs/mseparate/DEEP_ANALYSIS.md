@@ -47,8 +47,9 @@ model-to-model comparison was possible.
 mseparate input.wav --no-deep-analysis
 ```
 
-This disables only post-inference output analysis. The normal input analysis
-used for routing remains unchanged.
+This disables post-inference output analysis and therefore also disables the
+conditional rescue stage. The normal input analysis used for routing remains
+unchanged.
 
 
 ## Explicit primary-vocal model comparison

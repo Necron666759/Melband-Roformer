@@ -335,8 +335,19 @@ def evaluate_conditional_rescue(
             "parent_candidate_id": parent.get("candidate_id"),
         }
 
-    from .registry import model_audio_compatibility
+    from .registry import eligible_models, model_audio_compatibility
     from dataclasses import replace
+
+    eligible_ids = {item.model_id for item in eligible_models(registry)}
+    if model_id not in eligible_ids:
+        return {
+            "status": "skipped",
+            "reason": (
+                "The ZFTurbo 53-stem model did not pass the full registry eligibility policy "
+                "(including license-review and pinned-asset requirements)."
+            ),
+            "parent_candidate_id": parent.get("candidate_id"),
+        }
 
     parent_path = Path(parent.get("path", "")).expanduser()
     if not parent_path.is_file():

@@ -28,9 +28,19 @@ def _rescue_manifest():
         "sample_rate": 44100,
         "channels": "stereo",
         "input_formats": ["wav"],
+        "category": "mega-multi-stem",
         "native_stems": ["synth", "bass", "vocal", "lead-vocal", "back-vocal"],
         "target_stems": ["synth", "bass", "vocal", "lead-vocal", "back-vocal"],
-        "assets": [],
+        "assets": [
+            {
+                "role": "checkpoint", "url": "https://example.invalid/model.ckpt",
+                "relative_path": "model.ckpt", "sha256": "a" * 64,
+            },
+            {
+                "role": "config", "url": "https://example.invalid/model.yaml",
+                "relative_path": "model.yaml", "sha256": "b" * 64,
+            },
+        ],
     })
 
 
