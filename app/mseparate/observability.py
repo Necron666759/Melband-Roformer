@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import threading
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TextIO
@@ -16,6 +17,7 @@ class RunJournal:
     """Collect a compact, JSON-serializable timeline for one CLI invocation."""
 
     def __init__(self) -> None:
+        self.run_id = uuid.uuid4().hex
         self.started_at = utc_now()
         self._started = time.perf_counter()
         self._active: dict[str, float] = {}
@@ -24,6 +26,8 @@ class RunJournal:
 
     def record(self, stage: str, status: str, **details: Any) -> None:
         event: dict[str, Any] = {
+            "sequence": len(self.events) + 1,
+            "run_id": self.run_id,
             "timestamp": utc_now(),
             "elapsed_seconds": round(time.perf_counter() - self._started, 6),
             "stage": stage,
@@ -45,6 +49,7 @@ class RunJournal:
 
     def snapshot(self) -> dict[str, Any]:
         return {
+            "run_id": self.run_id,
             "started_at": self.started_at,
             "elapsed_seconds": round(time.perf_counter() - self._started, 6),
             "events": list(self.events),
