@@ -401,7 +401,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Run every eligible primary vocal model sequentially on the same mix to generate separate comparison candidates")
     parser.add_argument("--verbose", action="store_true", help="Print additional diagnostics")
     parser.add_argument("--log-file", nargs="?", const="mseparate.log", default=None,
-                        help="Mirror the complete terminal output (stdout and stderr) to a UTF-8 log file; optional path, default: <output-dir>/mseparate.log")
+                        help="Mirror Python stdout/stderr text to a UTF-8 log file; optional path, default: <output-dir>/mseparate.log")
     parser.add_argument("--report", nargs="?", const="mseparate-report.json",
                         help="Write a JSON report (optional path; default: mseparate-report.json)")
     parser.add_argument("--version", action="version", version=f"mseparate {__version__}")
