@@ -335,3 +335,39 @@ def test_electronic_genre_context_alone_never_schedules_a_separator():
         assert profile["family"] == "electronic"
         assert score == 0.5
         assert reason == "no stem-specific acoustic heuristic"
+
+
+
+def test_electronic_texture_taxonomy_distinguishes_noise_drone_granular_and_samples():
+    from mseparate.source_analysis import CLAP_CANDIDATES
+
+    expected = {
+        "breakbeat_samples", "industrial_noise", "noise_pulses",
+        "granular_textures", "drone_layers", "glitch_fx",
+        "synth_sequence", "synth_pluck", "synth_texture",
+        "distorted_synth_bass", "mechanical_percussion",
+        "live_drum_kit", "acoustic_percussion",
+    }
+    assert expected <= set(SOURCES)
+    candidate_sources = {
+        name for kind, name, _description in CLAP_CANDIDATES if kind == "source"
+    }
+    assert expected <= candidate_sources
+    descriptions = [SOURCES[name] for name in expected]
+    assert len(descriptions) == len(set(descriptions))
+
+
+def test_texture_only_electronic_evidence_does_not_trigger_instrument_specialists():
+    registry = load_registry(bundled_registry_path())
+    analysis = _analysis_with_predictions([
+        {"kind": "source", "source": "industrial_noise", "score": 7.2},
+        {"kind": "source", "source": "granular_textures", "score": 7.0},
+        {"kind": "source", "source": "drone_layers", "score": 6.9},
+        {"kind": "source", "source": "glitch_fx", "score": 6.8},
+        {"kind": "source", "source": "mechanical_percussion", "score": 6.7},
+        {"kind": "genre", "source": "powernoise", "score": 0.95},
+    ])
+    plan = build_plan(analysis=analysis, registry=registry)
+    scheduled = {task.model_id for task in plan.tasks}
+    assert not any(model_id.startswith("mvsep-mega53-") for model_id in scheduled)
+    assert "zfturbo-bs-roformer-53stem-candidate" not in scheduled
