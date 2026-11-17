@@ -83,7 +83,7 @@ def _model_outputs(model: ModelManifest) -> tuple[str, ...]:
 _SOURCE_ALIASES = {
     "vocals": ("vocals", "synth_vocals"),
     "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp",
-              "synth_strings", "synth_brass", "synth_fx", "synth_flute",
+              "synth_strings", "synth_brass", "synth_fx", "synth_sequence", "synth_pluck", "synth_flute",
               "synth_woodwinds", "synth_guitar"),
     "keys": ("synth_keys",),
     "digital-piano": ("digital_piano",),
