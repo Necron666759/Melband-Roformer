@@ -1,0 +1,1348 @@
+[
+  {
+    "model_id": "melband-roformer-kim-vocals",
+    "name": "MelBand RoFormer Kim | Vocals (Kimberley Jensen)",
+    "architecture": "Mel-Band RoFormer",
+    "backend": "melband-roformer",
+    "source_url": "https://huggingface.co/KimberleyJSN/melbandroformer",
+    "license": "MIT",
+    "license_url": "https://huggingface.co/KimberleyJSN/melbandroformer",
+    "license_status": "verified",
+    "upstream_version": "melband-roformer-infer==0.1.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "vocals"
+    ],
+    "derived_stems": [
+      "instrumental"
+    ],
+    "target_stems": [
+      "vocals",
+      "instrumental"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Checkpoint SHA-256 and byte size are pinned from the upstream v0.1.5 checksum manifest.",
+      "Configuration is pinned to the upstream v0.1.5 source tag.",
+      "The model emits vocals; instrumental is computed as mixture minus vocals and is not a native model prediction.",
+      "Upstream inference does not resample input audio; this manifest therefore requires 44100 Hz input.",
+      "The upstream inference implementation duplicates mono input to stereo for inference and writes the vocal output back as mono."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/KimberleyJSN/melbandroformer/resolve/main/MelBandRoformer.ckpt",
+        "relative_path": "MelBandRoformer.ckpt",
+        "sha256": "87201f4d31afb5bc79993230fc49446918425574db48c01c405e44f365c7559e",
+        "size_bytes": 913106900,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://raw.githubusercontent.com/openmirlab/melband-roformer-infer/v0.1.5/src/mel_band_roformer/configs/config_vocals_mel_band_roformer.yaml",
+        "relative_path": "config_vocals_mel_band_roformer.yaml",
+        "sha256": "5e380dfa5d5757ac4c2b7f6ef607b93d5058ecff805e7b05ed730a47b90d103c",
+        "size_bytes": 728,
+        "required": true
+      }
+    ],
+    "planner_priority": 100
+  },
+  {
+    "model_id": "demucs-onnx-htdemucs-6s",
+    "name": "HT-Demucs 6-stem (ONNX, StemSplit)",
+    "architecture": "Hybrid Transformer Demucs v4 / ONNX",
+    "backend": "demucs-onnx",
+    "source_url": "https://huggingface.co/StemSplitio/htdemucs-6s-onnx",
+    "license": "MIT",
+    "license_url": "https://github.com/StemSplit/demucs-onnx/blob/main/LICENSE",
+    "license_status": "verified",
+    "category": "multi-stem",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": null,
+    "input_formats": [
+      "wav",
+      "flac",
+      "ogg",
+      "mp3"
+    ],
+    "native_stems": [
+      "drums",
+      "bass",
+      "other",
+      "vocals",
+      "guitar",
+      "piano"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "drums",
+      "bass",
+      "other",
+      "vocals",
+      "guitar",
+      "piano"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Model assets are managed and cached by demucs-onnx through Hugging Face Hub; they are not downloaded through mseparate's SHA-pinned asset manager.",
+      "Explicit --device cuda validates a CUDA-only ONNX Runtime session and disables runtime retry fallback; auto mode may include CPU as a fallback.",
+      "The piano stem is experimental and may contain substantial bleed or artifacts; audition before relying on it.",
+      "The model emits six estimates from the full mix: drums, bass, other, vocals, guitar and piano.",
+      "mseparate converts input audio to 44100 Hz before inference and converts every output stem back to the original input sample rate; the original source file is never modified."
+    ],
+    "assets": [],
+    "planner_priority": 0
+  },
+  {
+    "model_id": "bs-roformer-anvuew-vocals",
+    "name": "BS-RoFormer Anvuew | Vocals",
+    "architecture": "Band-Split RoFormer",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/anvuew/BS-RoFormer/tree/7e4e5669cad8a8810983e02fa25294229246d374",
+    "license": "GPL-3.0",
+    "license_url": "https://huggingface.co/anvuew/BS-RoFormer",
+    "license_status": "verified",
+    "upstream_version": "pymss==2.3.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "vocals"
+    ],
+    "derived_stems": [
+      "instrumental"
+    ],
+    "target_stems": [
+      "vocals",
+      "instrumental"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Checkpoint and config are pinned to Hugging Face revision 7e4e5669cad8a8810983e02fa25294229246d374; both SHA-256 digests and byte sizes are recorded.",
+      "The Hugging Face model repository declares GPL-3.0 for this checkpoint and its configuration. Preserve GPL-3.0 notices and terms when redistributing the model assets.",
+      "The model is configured for 44100 Hz stereo processing; mseparate resamples model-facing audio to 44100 Hz and restores output to the original sample rate.",
+      "The native vocals estimate is exposed; the optional instrumental output is derived as mixture-minus-vocals residual, not a native model estimate."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/anvuew/BS-RoFormer/resolve/7e4e5669cad8a8810983e02fa25294229246d374/bs_roformer_anvuew_sdr_12.45.ckpt",
+        "relative_path": "bs_roformer_anvuew_sdr_12.45.ckpt",
+        "sha256": "8d0f72ad0ac4154f5f4c3cdf230880bbb9a5bd01dc610241a2abfe787f0d7784",
+        "size_bytes": 204485563,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/anvuew/BS-RoFormer/resolve/7e4e5669cad8a8810983e02fa25294229246d374/config.yaml",
+        "relative_path": "config.yaml",
+        "sha256": "033e57abee226a480ef410e0631b9fe00e8b7bc9a3bb5fe55659d0b43a238701",
+        "size_bytes": 1969,
+        "required": true
+      }
+    ],
+    "planner_priority": 50
+  },
+  {
+    "model_id": "mdx23c-zfturbo-vocals",
+    "name": "MDX23C ZFTurbo | Vocals",
+    "architecture": "MDX23C / TFC-TDF",
+    "backend": "mdx23c-pymss",
+    "source_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.0",
+    "license": "CC-BY-NC-SA-4.0",
+    "license_url": "https://huggingface.co/Sucial/MSST-WebUI/tree/55155c4e2f99d0ca94d24fce88d6dc25711a9252",
+    "license_status": "verified",
+    "upstream_version": "pymss==2.3.5",
+    "category": "vocals",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "mono_or_stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "vocals"
+    ],
+    "derived_stems": [
+      "instrumental"
+    ],
+    "target_stems": [
+      "vocals",
+      "instrumental"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "The checkpoint is the ZFTurbo MDX23C vocals model from release v1.0.0, mirrored at the pinned Sucial/MSST-WebUI revision 55155c4e2f99d0ca94d24fce88d6dc25711a9252.",
+      "The mirror repository declares CC-BY-NC-SA-4.0 for the model assets: attribution is required, commercial use is not permitted, and adaptations or redistributions are subject to the share-alike terms.",
+      "The matching config is pinned to the ZFTurbo v1.0.0 commit 6190c903f353715b9d2f53bb40b0ff7145a13b72. Both checkpoint and config have recorded SHA-256 digests and byte sizes.",
+      "The native vocals estimate is exposed; the optional instrumental output is derived as mixture-minus-vocals residual, not a native model estimate.",
+      "The pymss runtime code is MIT-licensed; that code license does not replace the separate checkpoint license.",
+      "CC-BY-NC-SA-4.0 is the license declared by the Sucial/MSST-WebUI mirror hosting this exact checkpoint. A separate weight-specific grant from the original ZFTurbo release author was not located; treat the mirror declaration as a restriction, and do not redistribute the checkpoint if provenance/rights need formal confirmation."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/Sucial/MSST-WebUI/resolve/55155c4e2f99d0ca94d24fce88d6dc25711a9252/All_Models/vocal_models/model_vocals_mdx23c_sdr_10.17.ckpt",
+        "relative_path": "model_vocals_mdx23c_sdr_10.17.ckpt",
+        "sha256": "49d51472769e34a2501cd1da782346a3212555c3a5619fc2c53507445528d816",
+        "size_bytes": 448101203,
+        "required": true
+      },
+      {
+        "role": "config",
+        "url": "https://raw.githubusercontent.com/ZFTurbo/Music-Source-Separation-Training/6190c903f353715b9d2f53bb40b0ff7145a13b72/configs/config_vocals_mdx23c.yaml",
+        "relative_path": "config_vocals_mdx23c.yaml",
+        "sha256": "a2b9724a1a15522dc3478a0eff4e052492ab186c03981e38b1197a7b38204687",
+        "size_bytes": 1164,
+        "required": true
+      }
+    ],
+    "planner_priority": 25
+  },
+  {
+    "model_id": "bs-roformer-sw-6stem-candidate",
+    "name": "BS-RoFormer SW Fixed | 6 stems (candidate)",
+    "architecture": "Band-Split RoFormer",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/FractalSurfer/BS-RoFormer-SW-6stem",
+    "license": null,
+    "license_url": "https://huggingface.co/FractalSurfer/BS-RoFormer-SW-6stem",
+    "license_status": "review_required",
+    "status": "candidate",
+    "category": "multi-stem",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "bass",
+      "drums",
+      "other",
+      "vocals",
+      "guitar",
+      "piano"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "bass",
+      "drums",
+      "other",
+      "vocals",
+      "guitar",
+      "piano"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "assets": [],
+    "planner_priority": 0,
+    "notes": [
+      "Candidate checkpoint mirror of the six-stem BS-RoFormer SW model; output order is bass, drums, other, vocals, guitar, piano.",
+      "The public mirror reports an unknown license. This entry is intentionally disabled pending confirmation of upstream weight rights, immutable checkpoint/config revisions, SHA-256 checksums, and runtime compatibility.",
+      "The six-stem model is a general music separator, not a model specifically trained for electronic music."
+    ]
+  },
+  {
+    "model_id": "zfturbo-bs-roformer-53stem-candidate",
+    "name": "ZFTurbo BS-RoFormer | 53 stems",
+    "architecture": "BS-RoFormer",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "status": "available",
+    "category": "mega-multi-stem",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "accordion",
+      "acoustic-guitar",
+      "back-vocal",
+      "banjo",
+      "bass",
+      "bassoon",
+      "bells",
+      "bowed_strings",
+      "brass",
+      "cello",
+      "clarinet",
+      "congas",
+      "digital-piano",
+      "dobro",
+      "double-bass",
+      "drums",
+      "electric-guitar",
+      "flute",
+      "french-horn",
+      "glockenspiel",
+      "guitar",
+      "harmonica",
+      "harp",
+      "harpsichord",
+      "hh",
+      "keys",
+      "kick",
+      "lead-vocal",
+      "mandolin",
+      "marimba",
+      "oboe",
+      "organ",
+      "percussion",
+      "piano",
+      "saxophone",
+      "sitar",
+      "snare",
+      "strings",
+      "synth",
+      "tambourine",
+      "timpani",
+      "toms",
+      "triangle",
+      "trombone",
+      "trumpet",
+      "tuba",
+      "ukulele",
+      "viola",
+      "violin",
+      "vocal",
+      "wind",
+      "wind-chimes",
+      "woodwind"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "accordion",
+      "acoustic-guitar",
+      "back-vocal",
+      "banjo",
+      "bass",
+      "bassoon",
+      "bells",
+      "bowed_strings",
+      "brass",
+      "cello",
+      "clarinet",
+      "congas",
+      "digital-piano",
+      "dobro",
+      "double-bass",
+      "drums",
+      "electric-guitar",
+      "flute",
+      "french-horn",
+      "glockenspiel",
+      "guitar",
+      "harmonica",
+      "harp",
+      "harpsichord",
+      "hh",
+      "keys",
+      "kick",
+      "lead-vocal",
+      "mandolin",
+      "marimba",
+      "oboe",
+      "organ",
+      "percussion",
+      "piano",
+      "saxophone",
+      "sitar",
+      "snare",
+      "strings",
+      "synth",
+      "tambourine",
+      "timpani",
+      "toms",
+      "triangle",
+      "trombone",
+      "trumpet",
+      "tuba",
+      "ukulele",
+      "viola",
+      "violin",
+      "vocal",
+      "wind",
+      "wind-chimes",
+      "woodwind"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "assets": [
+      {
+        "role": "config",
+        "url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/download/v1.0.21/mvsep_mega_model_bs_roformer_53_stems.yaml",
+        "relative_path": "mvsep_mega_model_bs_roformer_53_stems.yaml",
+        "sha256": "7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103",
+        "size_bytes": 4184,
+        "required": true
+      },
+      {
+        "role": "checkpoint",
+        "url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/download/v1.0.21/mvsep_mega_model_bs_roformer_53_stems_v1.ckpt",
+        "relative_path": "mvsep_mega_model_bs_roformer_53_stems_v1.ckpt",
+        "sha256": "c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f",
+        "size_bytes": 1368919887,
+        "required": true
+      }
+    ],
+    "planner_priority": 15,
+    "auto_route": false,
+    "notes": [
+      "Official ZFTurbo v1.0.21 release publishes the 53-stem BS-RoFormer checkpoint and matching YAML; all 53 native output names and their order match the upstream release.",
+      "The original author confirmed MIT licensing and redistribution permission for the original 53-stem weights. Training-data provenance remains unknown; this is recorded separately and is not claimed as cleared.",
+      "Upstream recommends at least 16 GB VRAM and warns that inference is memory-intensive even at batch_size=1. The upstream 16 GB recommendation is approximately 14.9 GiB; the admission gate requires 14.5 GiB physical capacity and 13 GiB currently free. These are conservative policy thresholds, not a measured peak-memory claim.",
+      "The 10-second chunk profile (chunk_size=441000, overlap_size=220500) has passed a real CUDA smoke test on an NVIDIA GeForce RTX 3060 Ti (7.68 GiB VRAM); measured peak was 2.03 GiB allocated / 2.18 GiB reserved. It remains a manual-only profile and requires at least 7 GiB total VRAM and 6 GiB currently free.",
+      "Outputs can overlap and are not guaranteed to sum to the mixture. Do not treat all 53 stems as additive or construct a residual from them.",
+      "The model is broadly trained for instrument families; its synth output does not make it an electronic-genre-specific specialist.",
+      "Automatic routing is conditional: the planner may request only detected acoustic-instrument output heads when source evidence is strong. It does not schedule the full 53-output set by default; comparative perceptual quality remains subject to real-track review."
+    ],
+    "runtime_validation": "verified",
+    "runtime_validation_details": {
+      "workflow": "mseparate-real-model-smoke.yml",
+      "run_id": 43900540645,
+      "runtime": "pymss==2.3.5",
+      "device": "cpu",
+      "inference_duration_seconds": 20,
+      "sample_rate": 44100,
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ],
+      "selected_stems": [
+        "bass",
+        "keys",
+        "synth",
+        "vocal"
+      ]
+    },
+    "upstream_version": "ZFTurbo Music-Source-Separation-Training v1.0.21 / pymss==2.3.5",
+    "min_vram_gb": 14.5,
+    "min_free_vram_gb": 13,
+    "inference_params": {
+      "batch_size": 1,
+      "normalize": false
+    },
+    "low_vram_profile": {
+      "status": "verified",
+      "min_total_vram_gb": 7,
+      "min_free_vram_gb": 6,
+      "inference_params": {
+        "batch_size": 1,
+        "chunk_size": 441000,
+        "overlap_size": 220500,
+        "normalize": false
+      },
+      "warning": "Verified 10-second chunk profile. Tested on RTX 3060 Ti (7.68 GiB VRAM); measured peak 2.03 GiB allocated / 2.18 GiB reserved. Requires at least 6 GiB currently free; reduced chunking may lower throughput. This profile is used only when the standard VRAM gate does not fit.",
+      "validation_details": {
+        "validation": "real_checkpoint_cuda_inference_passed",
+        "hardware": "NVIDIA GeForce RTX 3060 Ti",
+        "total_vram_gib": 7.68,
+        "free_vram_before_load_gib": 6.38,
+        "free_vram_before_inference_gib": 6.19,
+        "runtime": "Python 3.13.15 / PyTorch 2.13.0+cu130 / CUDA 13.0 / pymss==2.3.5",
+        "profile": {
+          "chunk_size": 441000,
+          "overlap_size": 220500,
+          "batch_size": 1,
+          "amp": true
+        },
+        "peak_cuda_allocated_gib": 2.03,
+        "peak_cuda_reserved_gib": 2.18,
+        "sample_rate": 44100,
+        "output_shape": [
+          882000,
+          2
+        ],
+        "selected_stems": [
+          "bass",
+          "keys",
+          "synth",
+          "vocal"
+        ],
+        "all_outputs_finite": true,
+        "inference_rtf": 0.05,
+        "checkpoint_sha256": "c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f",
+        "config_sha256": "7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103",
+        "evidence": "User-provided local smoke_mseparate_real_models.py output, 2026-11-17"
+      }
+    },
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245"
+      ],
+      "compatibility_status": "verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed MIT licensing and redistribution permission for the original 53-stem weights. Training-data provenance remains unknown and is not represented as dataset-rights clearance. Runtime validation remains a separate mandatory gate."
+    }
+  },
+  {
+    "model_id": "mvsep-synth-specialist-candidate",
+    "name": "MVSep Synth | Synth and other (research candidate)",
+    "architecture": "Undisclosed / not publicly confirmed",
+    "backend": "unavailable",
+    "source_url": "https://mvsep.com/en/algorithms",
+    "license": null,
+    "license_url": null,
+    "license_status": "review_required",
+    "status": "candidate",
+    "category": "synth-specialist",
+    "sample_rate": null,
+    "channels": null,
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "synth",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "synth",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "assets": [],
+    "planner_priority": 100,
+    "notes": [
+      "MVSep documents a Synth extraction algorithm whose synth family includes synth pads, synth bass, synth vocals, synth strings, synth percussion, synth FX, synth keys, synth brass, synth guitar and synth flute.",
+      "No public downloadable checkpoint, configuration, local inference backend, or redistribution license was verified during this research. This registry entry is informational and intentionally ineligible for execution.",
+      "The synth-family list describes content grouped into the synth output; it is not evidence that the model emits a separate stem for every listed subtype."
+    ]
+  },
+  {
+    "model_id": "mvsep-mega53-synth-specialist-candidate",
+    "name": "MVSep Mega 53 | Synth specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "synth-specialist",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "synth"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "synth"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated MVSep Mega 53 single-target derivative; mseparate exposes only the declared target stem and does not emit the complementary Other output.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded in this manifest.",
+      "The original Mega 53 author confirmed MIT licensing and redistribution permission for the original 53-stem weights and conversions. The maintainer accepted this grant for this derivative; training-data provenance remains unknown and is recorded separately.",
+      "Real-checkpoint CPU smoke passed with pymss==2.3.5: assets were SHA-256/size verified, strict checkpoint loading succeeded, and 20-second stereo inference returned finite, non-silent 44100 Hz output. CUDA performance for this individual derivative is not claimed.",
+      "Automatic planning is source-gated: Synth requires synth-family evidence; Keys requires synth-key evidence. The model is not scheduled solely because its manifest is eligible."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_synth_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_synth_mvsep.ckpt",
+        "required": true,
+        "sha256": "04749df7e2fab770a0d26bf9aa4850c1a6cd89547fc8bfe9c9d223602c0afb82",
+        "size_bytes": 77616988
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_synth_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_synth_mvsep_config.yaml",
+        "required": true,
+        "sha256": "3a0489996305cedf1e44f086f9b0fe9c387c86104f972092b4c9ba5ac8e15b42"
+      }
+    ],
+    "planner_priority": 100,
+    "runtime_validation": "verified",
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "runtime_verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    }
+  },
+  {
+    "model_id": "mvsep-mega53-keys-specialist-candidate",
+    "name": "MVSep Mega 53 | Keys specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "keyboard-specialist",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "keys"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "keys"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated MVSep Mega 53 single-target derivative; mseparate exposes only the declared target stem and does not emit the complementary Other output.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded in this manifest.",
+      "The original Mega 53 author confirmed MIT licensing and redistribution permission for the original 53-stem weights and conversions. The maintainer accepted this grant for this derivative; training-data provenance remains unknown and is recorded separately.",
+      "Real-checkpoint CPU smoke passed with pymss==2.3.5: assets were SHA-256/size verified, strict checkpoint loading succeeded, and 20-second stereo inference returned finite, non-silent 44100 Hz output. CUDA performance for this individual derivative is not claimed.",
+      "Automatic planning is source-gated: Synth requires synth-family evidence; Keys requires synth-key evidence. The model is not scheduled solely because its manifest is eligible."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_keys_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_keys_mvsep.ckpt",
+        "required": true,
+        "sha256": "4bc2bde8c5b26d5e22720304deace45dfeaffb2d02dc07922a8f2be17d82c844",
+        "size_bytes": 77616219
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_keys_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_keys_mvsep_config.yaml",
+        "required": true,
+        "sha256": "ca9d5cb14ed0af13efd91e2e0e6ed3b81c2391b013c720f09c62ce6f2ebdfd89"
+      }
+    ],
+    "planner_priority": 0,
+    "runtime_validation": "verified",
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "runtime_verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    }
+  },
+  {
+    "model_id": "mvsep-mega53-bass-specialist-candidate",
+    "name": "MVSep Mega 53 | Bass specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "bass",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "bass",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "bass",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for bass; the matching MVSep resource entry declares output stems bass and other.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded from downloaded files.",
+      "Real-weight validation passed in GitHub Actions run 43862091119 using pymss==2.3.5 on CPU: strict checkpoint load and 20-second stereo inference; every declared output stem was finite, non-silent, shaped (882000, 2), and sampled at 44100 Hz. CUDA has not been validated."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_bass_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_bass_mvsep.ckpt",
+        "required": true,
+        "sha256": "b17600dd1c2027a72ab34180ff6191d3bdeb786db9fbb13c58337c33fc10163c",
+        "size_bytes": 77616219
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_bass_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_bass_mvsep_config.yaml",
+        "required": true,
+        "sha256": "f97022b5ed31120970b0ba9ace2ec2606159d4612b877345b1dc109a82434e20",
+        "size_bytes": 1562
+      }
+    ],
+    "planner_priority": 0,
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    },
+    "runtime_validation": "verified",
+    "runtime_validation_details": {
+      "workflow": "mseparate-real-model-smoke.yml",
+      "run_id": 43862091119,
+      "runtime": "pymss==2.3.5",
+      "device": "cpu",
+      "inference_duration_seconds": 20,
+      "sample_rate": 44100,
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ]
+    }
+  },
+  {
+    "model_id": "mvsep-mega53-kick-specialist-candidate",
+    "name": "MVSep Mega 53 | Kick specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "drums",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "kick",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "kick",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for kick; the matching MVSep resource entry declares output stems kick and other.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded from downloaded files.",
+      "Real-weight validation passed in GitHub Actions run 43862091119 using pymss==2.3.5 on CPU: strict checkpoint load and 20-second stereo inference; every declared output stem was finite, non-silent, shaped (882000, 2), and sampled at 44100 Hz. CUDA has not been validated."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_kick_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_kick_mvsep.ckpt",
+        "required": true,
+        "sha256": "ad914b83f9ef13bedf9608771f4f1a86174e27a84f7f235dc2d1dd91bab85fbc",
+        "size_bytes": 77616219
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_kick_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_kick_mvsep_config.yaml",
+        "required": true,
+        "sha256": "e234de6e1fd66a2c359bd5fb5d4bb815125e1d6408ee4df581ca297f6f17ff14",
+        "size_bytes": 1562
+      }
+    ],
+    "planner_priority": 0,
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    },
+    "runtime_validation": "verified",
+    "runtime_validation_details": {
+      "workflow": "mseparate-real-model-smoke.yml",
+      "run_id": 43862091119,
+      "runtime": "pymss==2.3.5",
+      "device": "cpu",
+      "inference_duration_seconds": 20,
+      "sample_rate": 44100,
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ]
+    }
+  },
+  {
+    "model_id": "mvsep-mega53-drums-specialist-candidate",
+    "name": "MVSep Mega 53 | Drums specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "drums",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "drums",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "drums",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for drums; the matching MVSep resource entry declares output stems drums and other.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded from downloaded files.",
+      "Real-weight validation passed in GitHub Actions run 43862091119 using pymss==2.3.5 on CPU: strict checkpoint load and 20-second stereo inference; every declared output stem was finite, non-silent, shaped (882000, 2), and sampled at 44100 Hz. CUDA has not been validated."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_drums_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_drums_mvsep.ckpt",
+        "required": true,
+        "sha256": "abfa64203417f0874aa3936320b1666364ef1badd917f5613a3017d0ea73c7a2",
+        "size_bytes": 77616988
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_drums_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_drums_mvsep_config.yaml",
+        "required": true,
+        "sha256": "f5690be43cb47167ca2993288202ee176cc3486b562ceb4a26d0bdfbab5818c0",
+        "size_bytes": 1564
+      }
+    ],
+    "planner_priority": 0,
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    },
+    "runtime_validation": "verified",
+    "runtime_validation_details": {
+      "workflow": "mseparate-real-model-smoke.yml",
+      "run_id": 43862091119,
+      "runtime": "pymss==2.3.5",
+      "device": "cpu",
+      "inference_duration_seconds": 20,
+      "sample_rate": 44100,
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ]
+    }
+  },
+  {
+    "model_id": "mvsep-mega53-organ-specialist-candidate",
+    "name": "MVSep Mega 53 | Organ specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "keyboard-specialist",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "organ",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "organ",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for organ; the matching MVSep resource entry declares output stems organ and other.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded from downloaded files.",
+      "Real-weight validation passed in GitHub Actions run 43862091119 using pymss==2.3.5 on CPU: strict checkpoint load and 20-second stereo inference; every declared output stem was finite, non-silent, shaped (882000, 2), and sampled at 44100 Hz. CUDA has not been validated."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_organ_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_organ_mvsep.ckpt",
+        "required": true,
+        "sha256": "14c1c2a26fbd5061be85a31a170b6989ba296871895905ea6a1a048d200895ba",
+        "size_bytes": 77616988
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_organ_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_organ_mvsep_config.yaml",
+        "required": true,
+        "sha256": "acb480e37c4590eb47126d79a187aa4e10ab2035ff9840f4d783b118e552090b",
+        "size_bytes": 1564
+      }
+    ],
+    "planner_priority": 0,
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    },
+    "runtime_validation": "verified",
+    "runtime_validation_details": {
+      "workflow": "mseparate-real-model-smoke.yml",
+      "run_id": 43862091119,
+      "runtime": "pymss==2.3.5",
+      "device": "cpu",
+      "inference_duration_seconds": 20,
+      "sample_rate": 44100,
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ]
+    }
+  },
+  {
+    "model_id": "mvsep-mega53-digital-piano-specialist-candidate",
+    "name": "MVSep Mega 53 | Digital piano specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "keyboard-specialist",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "digital-piano",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "digital-piano",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for digital-piano; the matching MVSep resource entry declares output stems digital-piano and other.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded from downloaded files.",
+      "Real-weight validation passed in GitHub Actions run 43862091119 using pymss==2.3.5 on CPU: strict checkpoint load and 20-second stereo inference; every declared output stem was finite, non-silent, shaped (882000, 2), and sampled at 44100 Hz. CUDA has not been validated."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_digital-piano_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_digital-piano_mvsep.ckpt",
+        "required": true,
+        "sha256": "481c741ff36208c9b11860297ff5c9a502873662724d35a437bf64aaade890bd",
+        "size_bytes": 77622628
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_digital-piano_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_digital-piano_mvsep_config.yaml",
+        "required": true,
+        "sha256": "84cce33eda082320c57be9ee5f8b14808a5b381f00d28b00a174dcea421ed9b4",
+        "size_bytes": 1580
+      }
+    ],
+    "planner_priority": 0,
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    },
+    "runtime_validation": "verified",
+    "runtime_validation_details": {
+      "workflow": "mseparate-real-model-smoke.yml",
+      "run_id": 43862091119,
+      "runtime": "pymss==2.3.5",
+      "device": "cpu",
+      "inference_duration_seconds": 20,
+      "sample_rate": 44100,
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ]
+    }
+  },
+  {
+    "model_id": "mvsep-mega53-percussion-specialist-candidate",
+    "name": "MVSep Mega 53 | Percussion specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "drums",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "percussion",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "percussion",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for percussion; the matching MVSep resource entry declares output stems percussion and other.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded from downloaded files.",
+      "Real-weight validation passed in GitHub Actions run 43862091119 using pymss==2.3.5 on CPU: strict checkpoint load and 20-second stereo inference; every declared output stem was finite, non-silent, shaped (882000, 2), and sampled at 44100 Hz. CUDA has not been validated."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_percussion_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_percussion_mvsep.ckpt",
+        "required": true,
+        "sha256": "82187665185d51e6050b4d6afaf45e7acafd85d1eefffd86c47ac0aa601e089f",
+        "size_bytes": 77620513
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_percussion_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_percussion_mvsep_config.yaml",
+        "required": true,
+        "sha256": "583bfe3cfae1db6a8e38205aa61d12f7c96df99c0f8568a69b9a9eb9dc715838",
+        "size_bytes": 1574
+      }
+    ],
+    "planner_priority": 0,
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    },
+    "runtime_validation": "verified",
+    "runtime_validation_details": {
+      "workflow": "mseparate-real-model-smoke.yml",
+      "run_id": 43862091119,
+      "runtime": "pymss==2.3.5",
+      "device": "cpu",
+      "inference_duration_seconds": 20,
+      "sample_rate": 44100,
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ]
+    }
+  },
+  {
+    "model_id": "mvsep-mega53-hh-specialist-candidate",
+    "name": "MVSep Mega 53 | Hi-hat specialist (candidate)",
+    "architecture": "BS-RoFormer (MVSep Mega 53 single-stem derivative)",
+    "backend": "bs-roformer-pymss",
+    "source_url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/tree/0677941f9cdfd891a6bc3336229244e197035327/v1",
+    "license": "MIT",
+    "license_url": "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+    "license_status": "verified",
+    "upstream_version": "MVSep Mega 53 / ZFTurbo release v1.0.21",
+    "category": "drums",
+    "status": "available",
+    "sample_rate": 44100,
+    "channels": "stereo",
+    "input_formats": [
+      "wav"
+    ],
+    "native_stems": [
+      "hh",
+      "other"
+    ],
+    "derived_stems": [],
+    "target_stems": [
+      "hh",
+      "other"
+    ],
+    "dummy_stems": [],
+    "refinement_targets": [],
+    "notes": [
+      "Dedicated single-target derivative for hh; the matching MVSep resource entry declares output stems hh and other.",
+      "Checkpoint and matching YAML are pinned to Hugging Face revision 0677941f9cdfd891a6bc3336229244e197035327; SHA-256 digests and exact byte sizes are recorded from downloaded files.",
+      "Real-weight validation passed in GitHub Actions run 43862091119 using pymss==2.3.5 on CPU: strict checkpoint load and 20-second stereo inference; every declared output stem was finite, non-silent, shaped (882000, 2), and sampled at 44100 Hz. CUDA has not been validated."
+    ],
+    "assets": [
+      {
+        "role": "checkpoint",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_hh_mvsep.ckpt?download=true",
+        "relative_path": "bs_mega_53stem_hh_mvsep.ckpt",
+        "required": true,
+        "sha256": "94901a05d358f16b2de4064eec45f0947bb28bf239040a3fe79e2ae7fadd2984",
+        "size_bytes": 77614809
+      },
+      {
+        "role": "config",
+        "url": "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems/resolve/0677941f9cdfd891a6bc3336229244e197035327/v1/bs_mega_53stem_hh_mvsep_config.yaml?download=true",
+        "relative_path": "bs_mega_53stem_hh_mvsep_config.yaml",
+        "required": true,
+        "sha256": "d6d712604e80060938c23c38da202d768d29d4d37a3ec4f2459706cbf15193ca",
+        "size_bytes": 1558
+      }
+    ],
+    "planner_priority": 0,
+    "license_review": {
+      "status": "accepted_by_maintainer",
+      "weight_license": "MIT",
+      "weight_license_status": "confirmed_by_original_author",
+      "weight_license_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245#issuecomment-5834608838",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
+        "https://huggingface.co/noblebarkrr/BS-Roformer-MVSep-Mega-53-stems"
+      ],
+      "redistribution_permission": "author_confirmed_for_original_53_stem_weights_and_conversions",
+      "training_data_status": "unknown",
+      "training_data_evidence": [
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/245",
+        "https://github.com/ZFTurbo/Music-Source-Separation-Training/issues/255"
+      ],
+      "compatibility_status": "verified",
+      "reviewed_by": "repository maintainer (explicit risk acceptance)",
+      "reviewed_on": "2026-11-16",
+      "rationale": "The original author confirmed that MVSep Mega 53 weights are MIT-licensed and permitted redistribution and conversion. The repository maintainer explicitly accepts this as sufficient basis to remove the license block. Training-data provenance remains unknown and is recorded transparently; this is not represented as separate dataset-rights clearance. Technical eligibility still requires verified checksums and runtime validation.",
+      "acceptance_basis": "Repository maintainer explicitly accepts the author's MIT grant for use of Mega 53 weights despite unresolved training-data provenance."
+    },
+    "runtime_validation": "verified",
+    "runtime_validation_details": {
+      "workflow": "mseparate-real-model-smoke.yml",
+      "run_id": 43862091119,
+      "runtime": "pymss==2.3.5",
+      "device": "cpu",
+      "inference_duration_seconds": 20,
+      "sample_rate": 44100,
+      "output_shape": [
+        882000,
+        2
+      ],
+      "outputs_validated": [
+        "finite",
+        "non_silent",
+        "expected_shape",
+        "expected_sample_rate"
+      ]
+    }
+  }
+]

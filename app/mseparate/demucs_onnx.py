@@ -1,0 +1,292 @@
+"""GPU-backed six-stem separation through the Demucs ONNX runtime.
+
+The ONNX backend is isolated behind the same lifecycle contract as the
+existing MelBand subprocess adapter. It uses the CUDA Execution Provider
+when requested and clears its process-local session pool after each task.
+"""
+from __future__ import annotations
+
+import gc
+import os
+import re
+import shutil
+import sys
+import time
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+
+from tqdm import tqdm as _tqdm
+
+from .execution import BackendInfo, StemArtifact
+from .types import ModelManifest
+
+
+class _ChunkProgressStream:
+    """Render Demucs chunk events on one tqdm-style line.
+
+    demucs-onnx writes its native tqdm bar to stderr, while verbose chunk
+    events are written to stdout. Both streams are routed here so neither
+    can bypass the single-line renderer and leak a second progress display.
+    """
+
+    _CHUNK_LINE = re.compile(r"^\s*chunk\s+(\d+)/(\d+):\s*(.*?)\s*$")
+    _NATIVE_PROGRESS_LINE = re.compile(r"^\s*Processing audio:\s*\d+%[|].*")
+
+    def __init__(self, stream):
+        self._stream = stream
+        self._pending = ""
+        self._started_at = time.monotonic()
+        self._drawn = False
+
+    @staticmethod
+    def _terminal_width(fallback: int = 100) -> int:
+        try:
+            return shutil.get_terminal_size(fallback=(fallback, 24)).columns
+        except Exception:
+            return fallback
+
+    def _render(self, completed: int, total: int, elapsed: float) -> str:
+        return _tqdm.format_meter(
+            n=max(0, min(completed, total)),
+            total=total,
+            elapsed=elapsed,
+            ncols=self._terminal_width(),
+            prefix="Processing audio",
+            unit="chunk",
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
+        )
+
+    def _handle_line(self, line: str) -> None:
+        if not line:
+            return
+        # Defensive filter for the upstream tqdm bar. It normally should be
+        # disabled with progress=False, but it is emitted on stderr and must
+        # never become a second, scrolling progress display in the HUD.
+        if self._NATIVE_PROGRESS_LINE.match(line):
+            return
+        match = self._CHUNK_LINE.match(line)
+        if match:
+            completed, total = int(match.group(1)), int(match.group(2))
+            self._write_chunk_progress(completed, total)
+            return
+        if self._drawn:
+            self.finish()
+        self._stream.write(line + "\n")
+        self._stream.flush()
+
+    def _write_chunk_progress(self, completed: int, total: int) -> None:
+        if total <= 0:
+            return
+        completed = max(0, min(completed, total))
+        elapsed = time.monotonic() - self._started_at
+        self._stream.write("\r" + self._render(completed, total, elapsed))
+        self._stream.flush()
+        self._drawn = True
+
+    def write(self, value: str) -> int:
+        # tqdm uses bare carriage returns; verbose chunk messages use newlines.
+        # Treat either as a record boundary, but never pass native tqdm records
+        # through to the terminal.
+        for char in value:
+            if char in "\r\n":
+                self._handle_line(self._pending)
+                self._pending = ""
+            else:
+                self._pending += char
+        # stderr tqdm writes a complete carriage-return frame without a
+        # trailing delimiter. stdout chunk events may follow through this
+        # same redirected stream, so discard a recognized native frame now
+        # rather than letting it prefix the next stdout record.
+        if self._NATIVE_PROGRESS_LINE.match(self._pending):
+            self._pending = ""
+        return len(value)
+
+    def flush(self) -> None:
+        if self._pending:
+            self._handle_line(self._pending)
+            self._pending = ""
+        self._stream.flush()
+
+    def finish(self) -> None:
+        self.flush()
+        if self._drawn:
+            self._stream.write("\n")
+            self._stream.flush()
+            self._drawn = False
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def _prewarm_strict_cuda(runtime, cache_dir: Path, precision: str) -> dict[str, Path]:
+    """Prewarm HT-Demucs and disable ONNX Runtime's CPU retry fallback."""
+    paths = runtime.prewarm(
+        models=["htdemucs_6s"], precision=precision,
+        providers="CUDAExecutionProvider", cache_dir=str(cache_dir),
+    )
+    model_path = paths.get("htdemucs_6s")
+    if model_path is None:
+        raise RuntimeError("demucs-onnx prewarm did not return the htdemucs_6s model path")
+    pool = runtime.session_pool()
+    session = pool.get(model_path, ["CUDAExecutionProvider"])
+    active = tuple(session.get_providers())
+    # ONNX Runtime commonly registers CPUExecutionProvider after the requested
+    # CUDA provider. Its presence alone does not mean CUDA initialization
+    # failed: CUDA must be first so it has priority for supported graph nodes.
+    # disable_fallback() below prevents ORT from retrying a failed CUDA run on
+    # another provider; requiring CUDA to be the only registered provider is
+    # incompatible with ORT's normal provider registration behavior.
+    if not active or active[0] != "CUDAExecutionProvider":
+        raise RuntimeError(
+            "Strict CUDA session did not register CUDAExecutionProvider first; "
+            f"active providers: {active}"
+        )
+    disable_fallback = getattr(session, "disable_fallback", None)
+    if not callable(disable_fallback):
+        raise RuntimeError(
+            "ONNX Runtime session does not expose disable_fallback(); "
+            "cannot guarantee strict CUDA execution"
+        )
+    disable_fallback()
+    return paths
+
+
+class DemucsOnnxAdapter:
+    """Run the htdemucs_6s ONNX model and materialize six WAV stems."""
+
+    MODEL_NAME = "htdemucs_6s"
+    STEMS = ("drums", "bass", "other", "vocals", "guitar", "piano")
+
+    def __init__(self, *, no_download: bool = False, precision: str = "fp16weights"):
+        self.no_download = no_download
+        self.precision = precision
+        self._provider = "auto"
+        self._strict_cuda = False
+        self._cache_dir: Path | None = None
+        self._runtime = None
+        self._model_id: str | None = None
+
+    def compatibility(self, manifest: ModelManifest) -> tuple[bool, str]:
+        if manifest.backend != "demucs-onnx":
+            return False, "Manifest backend must be 'demucs-onnx'"
+        missing = set(self.STEMS) - set(manifest.native_stems)
+        if missing:
+            return False, "Manifest is missing native stems: " + ", ".join(sorted(missing))
+        if set(manifest.target_stems) - set(self.STEMS):
+            return False, "Manifest declares stems unsupported by htdemucs_6s"
+        return True, ""
+
+    def load(self, manifest: ModelManifest, model_dir: Path, device: str) -> None:
+        compatible, reason = self.compatibility(manifest)
+        if not compatible:
+            raise RuntimeError(reason)
+        if device not in {"auto", "cuda", "cpu"}:
+            raise ValueError(f"Unsupported device: {device!r}")
+        try:
+            import onnxruntime as ort
+            import demucs_onnx
+        except ImportError as exc:
+            raise RuntimeError(
+                "Six-stem backend is not installed. Rebuild the AppImage with "
+                "demucs-onnx and onnxruntime-gpu CUDA dependencies."
+            ) from exc
+
+        # CUDA/cuDNN are installed as NVIDIA Python packages inside the
+        # AppImage. ORT 1.27+ can preload these libraries from site-packages.
+        preload = getattr(ort, "preload_dlls", None)
+        if callable(preload):
+            try:
+                preload(directory="")
+            except Exception as exc:
+                if device == "cuda":
+                    raise RuntimeError(
+                        f"Could not preload CUDA/cuDNN libraries for ONNX Runtime: {exc}"
+                    ) from exc
+
+        available = set(ort.get_available_providers())
+        if device == "cuda" and "CUDAExecutionProvider" not in available:
+            raise RuntimeError(
+                "CUDAExecutionProvider is unavailable in ONNX Runtime. "
+                "Check the NVIDIA driver and bundled CUDA/cuDNN runtime; "
+                f"available providers: {sorted(available)}"
+            )
+        self._strict_cuda = device == "cuda"
+        if device == "cuda":
+            # The upstream "cuda" alias appends CPUExecutionProvider. Strict
+            # mode uses the explicit provider and disables ORT's retry fallback.
+            self._provider = "CUDAExecutionProvider"
+        elif device == "auto" and "CUDAExecutionProvider" in available:
+            self._provider = "cuda"
+        else:
+            self._provider = "cpu"
+        self._cache_dir = model_dir
+        self._runtime = demucs_onnx
+        self._model_id = manifest.model_id
+        model_dir.mkdir(parents=True, exist_ok=True)
+
+    def infer(self, input_audio: Path, output_dir: Path,
+              target_stems: tuple[str, ...]) -> list[StemArtifact]:
+        if self._runtime is None or self._cache_dir is None:
+            raise RuntimeError("Demucs ONNX adapter is not loaded")
+        if not input_audio.is_file():
+            raise FileNotFoundError(input_audio)
+        unsupported = set(target_stems) - set(self.STEMS)
+        if unsupported:
+            raise RuntimeError("Unsupported htdemucs_6s stems: " + ", ".join(sorted(unsupported)))
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        old_offline = os.environ.get("HF_HUB_OFFLINE")
+        if self.no_download:
+            os.environ["HF_HUB_OFFLINE"] = "1"
+        try:
+            if self._strict_cuda:
+                _prewarm_strict_cuda(
+                    self._runtime, self._cache_dir, self.precision,
+                )
+            # Disable demucs-onnx's own tqdm: its stderr progress updates
+            # become separate rows in the GUI log. Keep verbose chunk events
+            # and render them through our single-line tqdm-compatible stream.
+            progress_stream = _ChunkProgressStream(sys.stdout)
+            with redirect_stdout(progress_stream), redirect_stderr(progress_stream):
+                try:
+                    self._runtime.separate(
+                        str(input_audio), str(output_dir),
+                        model=self.MODEL_NAME, stems=target_stems,
+                        providers=self._provider, precision=self.precision,
+                        cache_dir=str(self._cache_dir), verbose=True,
+                        progress=False, output_format="wav",
+                    )
+                finally:
+                    progress_stream.finish()
+        finally:
+            if self.no_download:
+                if old_offline is None:
+                    os.environ.pop("HF_HUB_OFFLINE", None)
+                else:
+                    os.environ["HF_HUB_OFFLINE"] = old_offline
+
+        return [
+            StemArtifact(stem, output_dir / f"{stem}.wav")
+            for stem in target_stems
+            if (output_dir / f"{stem}.wav").is_file()
+        ]
+
+    def unload(self) -> None:
+        runtime = self._runtime
+        self._runtime = None
+        self._cache_dir = None
+        self._model_id = None
+        self._strict_cuda = False
+        if runtime is not None:
+            try:
+                runtime.session_pool().clear()
+            finally:
+                del runtime
+        gc.collect()
+
+    def info(self) -> BackendInfo:
+        return BackendInfo(
+            name="demucs-onnx", device=self._provider,
+            details={"model": self.MODEL_NAME, "precision": self.precision,
+                     "model_id": self._model_id or ""},
+        )

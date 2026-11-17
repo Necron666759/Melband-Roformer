@@ -104,7 +104,7 @@ program any more.
 ## Why a restricted shell, and how it's enforced
 
 `appimage/melband-roformer-shell.py` is a `cmd.Cmd` subclass with an
-explicit whitelist of subcommands (`separate`, `list-models`,
+explicit whitelist of subcommands (`separate`, `mseparate`, `list-models`,
 `download-model`, `info`, `self-test`, `version`, `clear`, `help`,
 `exit`/`quit`), one per melband-roformer CLI flag documented in the main
 `README.md` -- with the single exception of `clear`, which has no CLI
@@ -120,8 +120,9 @@ accepted line is:
 2. Mapped to a fixed, hardcoded argv prefix (e.g. `list-models` always
    becomes exactly `["--list-models", *your extra args]`) and passed
    in-process to `melband_roformer_wrapper.cli.main()` -- the same
-   function the `.deb`'s `melband-roformer` command calls. No shell is
-   spawned to run it.
+   function the `.deb`'s `melband-roformer` command calls. The `mseparate`
+   command is dispatched directly to `mseparate.cli.main()` and does not
+   invoke the legacy separator. No shell is spawned to run either command.
 3. Anything not matching a whitelisted subcommand -- including
    `cmd.Cmd`'s own built-in `!`-prefixed shell-escape, which is explicitly
    overridden to print a refusal instead of running anything -- is
@@ -135,10 +136,10 @@ browsing command: this terminal exists exclusively for melband-roformer,
 per the task's own requirement, not as a general restricted shell that
 happens to default-deny.
 
-This was manually tested against injection attempts during development
-(`; rm -rf /`, `$(reboot)`, `!ls -la /`, `cd /`, bare `ls`) -- all
-rejected without executing anything; legitimate commands (`version`,
-`list-models`, `separate --help`) dispatch correctly. If you change
+The restricted shell is designed to reject injection attempts such as
+(`; rm -rf /`, `$(reboot)`, `!ls -la /`, `cd /`, bare `ls`). Existing
+manual checks covered the legacy commands; the new `mseparate` route must
+also be exercised in an AppImage build before release. If you change
 `melband-roformer-shell.py`, re-run that check by hand; there is
 currently no automated test for it (a good thing to add if this shell
 grows more commands).

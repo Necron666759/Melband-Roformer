@@ -37,6 +37,9 @@ override_dh_auto_build:
 		--index-url $(TORCH_INDEX) \
 		--extra-index-url $(PYPI_INDEX) \
 		-r app/requirements.txt
+	# demucs-onnx declares CPU onnxruntime generically; install without
+	# dependencies because onnxruntime-gpu is its mutually exclusive CUDA replacement.
+	$(VENV_STAGE)/bin/python3 -m pip install --no-deps "demucs-onnx==0.3.4"
 	$(VENV_STAGE)/bin/python3 -m pip install --no-deps ./app
 
 override_dh_auto_test:
@@ -71,6 +74,7 @@ override_dh_auto_install:
 	install -d $(PKGROOT)/usr/bin
 	install -m 0755 debian/melband-roformer.launcher $(PKGROOT)/usr/bin/melband-roformer
 	install -m 0755 debian/melband-roformer-gui.launcher $(PKGROOT)/usr/bin/melband-roformer-gui
+	install -m 0755 debian/mseparate.launcher $(PKGROOT)/usr/bin/mseparate
 
 	install -d $(PKGROOT)/usr/share/applications
 	install -m 0644 data/melband-roformer.desktop $(PKGROOT)/usr/share/applications/
@@ -84,6 +88,8 @@ override_dh_auto_install:
 	install -d $(PKGROOT)/usr/share/man/man1
 	install -m 0644 man/melband-roformer.1 $(PKGROOT)/usr/share/man/man1/
 	gzip -9nf $(PKGROOT)/usr/share/man/man1/melband-roformer.1
+	install -m 0644 man/mseparate.1 $(PKGROOT)/usr/share/man/man1/
+	gzip -9nf $(PKGROOT)/usr/share/man/man1/mseparate.1
 
 override_dh_shlibdeps:
 	# The venv contains vendored .so files (torch's bundled cuBLAS/cuDNN/
