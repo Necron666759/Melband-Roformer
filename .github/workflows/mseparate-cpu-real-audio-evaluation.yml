@@ -7,6 +7,7 @@ on:
     paths:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
+      - "scripts/download_mseparate_urmp_subset.sh"
       - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
   workflow_dispatch: {}
 
@@ -51,6 +52,39 @@ jobs:
             "numpy" "soundfile>=0.12,<0.13" "tqdm" "soxr>=0.3" \
             "transformers>=4.45,<5" "librosa>=0.10.2,<1"
           python -m pip install --no-deps -e app
+
+      - name: Download selected URMP audio to the ephemeral runner
+        run: bash scripts/download_mseparate_urmp_subset.sh "${{ runner.temp }}/mseparate-urmp"
+
+      - name: Inspect URMP audio headers and write a metadata-only manifest
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import soundfile as sf
+          root = Path("${{ runner.temp }}/mseparate-urmp")
+          rows = []
+          for path in sorted(root.rglob("*.wav")):
+              info = sf.info(str(path))
+              rows.append({
+                  "file": str(path.relative_to(root)),
+                  "sample_rate": info.samplerate,
+                  "channels": info.channels,
+                  "frames": info.frames,
+                  "duration_seconds": round(info.duration, 6),
+                  "subtype": info.subtype,
+              })
+          mixes = [row for row in rows if Path(row["file"]).name.startswith("AuMix_")]
+          if len(mixes) != 4 or len(rows) != 17:
+              raise SystemExit(f"Unexpected URMP subset: {len(mixes)} mixes, {len(rows)} WAVs")
+          out = Path("${{ runner.temp }}/mseparate-evaluation/reports")
+          out.mkdir(parents=True, exist_ok=True)
+          (out / "urmp-audio-manifest.json").write_text(
+              json.dumps({"dataset": "URMP", "files": rows, "mixtures": mixes}, indent=2),
+              encoding="utf-8",
+          )
+          print(json.dumps({"wav_files": len(rows), "mixtures": mixes}, indent=2))
+          PY
 
       - name: Run stages A, B and C on BabySlakh
         run: |
