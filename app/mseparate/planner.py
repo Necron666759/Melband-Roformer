@@ -84,15 +84,15 @@ _SOURCE_ALIASES = {
     "vocals": ("vocals", "synth_vocals"),
     "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp", "synth_keys",
               "synth_strings", "synth_brass", "synth_bass", "synth_fx", "synth_flute"),
-    "keys": ("synth_keys", "digital_piano", "acoustic_piano", "piano"),
-    "digital-piano": ("digital_piano", "acoustic_piano", "piano", "synth_keys"),
-    "organ": ("organ", "synth_keys"),
+    "keys": ("synth_keys",),
+    "digital-piano": ("digital_piano",),
+    "organ": ("organ",),
     "bass": ("bass", "synth_bass"),
-    "kick": ("kick", "electronic_drums", "drums"),
+    "kick": ("kick",),
     "drums": ("drums", "electronic_drums", "breakbeats"),
-    "percussion": ("percussion", "electronic_drums", "drums", "breakbeats"),
-    "hh": ("hi_hat", "electronic_drums", "drums"),
-    "snare": ("snare", "electronic_drums", "drums"),
+    "percussion": ("percussion",),
+    "hh": ("hi_hat",),
+    "snare": ("snare",),
     "guitar": ("guitar", "electric_guitar", "acoustic_guitar"),
     "piano": ("acoustic_piano", "digital_piano", "piano", "synth_keys"),
 }
@@ -103,6 +103,8 @@ _ACOUSTIC_TARGETS = {
     "cello": ("cello", "synth_strings"),
     "double_bass": ("double-bass", "synth_bass"),
     "harp": ("harp", None),
+    "guitar": ("guitar", "synth_guitar"),
+    "piano": ("piano", "synth_keys"),
     "flute": ("flute", "synth_flute"),
     "clarinet": ("clarinet", "synth_woodwinds"),
     "oboe": ("oboe", "synth_woodwinds"),
@@ -165,7 +167,6 @@ def _detected_acoustic_targets(
         max_rank, max_gap = 8, 0.75
     score_by_source = {str(item.get("source")): float(item.get("score", 0.0)) for item in ranked}
     targets: list[str] = []
-    selected_families: set[str] = set()
     family_for_source = {
         "violin": "strings", "viola": "strings", "cello": "strings",
         "double_bass": "strings", "strings": "strings",
@@ -173,6 +174,7 @@ def _detected_acoustic_targets(
         "french_horn": "brass", "brass": "brass",
         "flute": "woodwinds", "clarinet": "woodwinds", "oboe": "woodwinds",
         "bassoon": "woodwinds", "saxophone": "woodwinds", "woodwinds": "woodwinds",
+        "guitar": "guitar", "acoustic_guitar": "guitar", "electric_guitar": "guitar",
     }
     accepted = []
     for rank, item in enumerate(ranked, start=1):
@@ -200,7 +202,6 @@ def _detected_acoustic_targets(
             continue
         if target not in targets:
             targets.append(target)
-            selected_families.add(family_name or source)
     return tuple(targets[:12])
 
 
