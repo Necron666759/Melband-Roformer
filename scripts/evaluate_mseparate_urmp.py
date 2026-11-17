@@ -100,10 +100,7 @@ def main() -> int:
             )[:5],
             "plan": to_jsonable(plan),
             "planner_task_count": len(plan.tasks),
-            "planner_tasks": [
-                {"model_id": task.model_id, "requested_stems": list(task.requested_stems)}
-                for task in plan.tasks
-            ],
+            "planner_tasks": [to_jsonable(task) for task in plan.tasks],
         })
 
     args.report.parent.mkdir(parents=True, exist_ok=True)
