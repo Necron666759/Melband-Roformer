@@ -47,6 +47,8 @@ def _read_audio(paths: list[Path], *, label: str, sample_rate: int) -> np.ndarra
         samples, rate = sf.read(str(path), dtype="float32", always_2d=True)
         if rate != sample_rate:
             raise ValueError(f"{label} sample rate mismatch in {path}: {rate} != {sample_rate}")
+        if samples.shape[0] == 0:
+            raise ValueError(f"{label} audio is empty: {path}")
         if samples.shape[1] != 2:
             raise ValueError(f"{label} must be stereo; got {samples.shape[1]} channels in {path}")
         if not np.isfinite(samples).all():
@@ -72,10 +74,14 @@ def _load_rows(manifest_path: Path, limit: int | None) -> list[dict[str, str]]:
         if missing:
             raise ValueError("CSV is missing required columns: " + ", ".join(sorted(missing)))
         rows = []
+        seen_ids = set()
         for row in reader:
             track_id = row.get("track_id", "").strip()
             if not track_id or track_id in {".", ".."} or "/" in track_id or "\\" in track_id:
                 raise ValueError("track_id must be a non-empty filename-safe identifier")
+            if track_id in seen_ids:
+                raise ValueError(f"Duplicate track_id in evaluation manifest: {track_id}")
+            seen_ids.add(track_id)
             if any(not row.get(key, "").strip() for key in ("mixture", "snare", "toms")):
                 raise ValueError(f"Track {row['track_id']} has an empty required path")
             rows.append(row)
@@ -172,7 +178,10 @@ def main() -> int:
         for index, row in enumerate(rows, start=1):
             track_id = row["track_id"].strip()
             base = manifest_path.parent
-            mixture_path = _resolve(base, row["mixture"])[0]
+            mixture_paths = _resolve(base, row["mixture"])
+            if len(mixture_paths) != 1:
+                raise ValueError(f"{track_id} mixture must name exactly one audio file")
+            mixture_path = mixture_paths[0]
             mixture = _read_audio([mixture_path], label=f"{track_id} mixture", sample_rate=model.sample_rate)
             refs = {
                 target: _read_audio(_resolve(base, row[target]), label=f"{track_id} {target}",
