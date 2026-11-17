@@ -783,18 +783,29 @@ def main(argv: list[str] | None = None) -> int:
                                 for item in parent_candidate.get("top_sources", [])
                             ]
                             from .candidate_analysis import analyze_execution_candidates
-                            rescue_analysis = analyze_execution_candidates(
-                                rescue_execution_summary,
-                                mix_path=conditional_rescue_report["input_path"],
-                                mix_predictions=parent_predictions,
-                                device=effective_device,
-                                cache_dir=paths["models"] / "source-analysis",
-                                no_download=args.no_download,
-                                ledger_path=ledger_path,
-                                parent_candidate_id=conditional_rescue_report["parent_candidate_id"],
-                            )
                             conditional_rescue_report["status"] = "completed"
-                            conditional_rescue_report["analysis"] = rescue_analysis
+                            try:
+                                rescue_analysis = analyze_execution_candidates(
+                                    rescue_execution_summary,
+                                    mix_path=conditional_rescue_report["input_path"],
+                                    mix_predictions=parent_predictions,
+                                    device=effective_device,
+                                    cache_dir=paths["models"] / "source-analysis",
+                                    no_download=args.no_download,
+                                    ledger_path=ledger_path,
+                                    parent_candidate_id=conditional_rescue_report["parent_candidate_id"],
+                                )
+                                conditional_rescue_report["analysis"] = rescue_analysis
+                            except Exception as exc:
+                                conditional_rescue_report["analysis_status"] = "unavailable"
+                                conditional_rescue_report["analysis_error"] = (
+                                    f"{type(exc).__name__}: {exc}"
+                                )
+                                print(
+                                    "Warning: rescue inference completed but its CLAP analysis "
+                                    f"was unavailable: {type(exc).__name__}: {exc}",
+                                    file=sys.stderr,
+                                )
                         else:
                             conditional_rescue_report["status"] = "failed"
                             conditional_rescue_report["reason"] = (
@@ -828,13 +839,16 @@ def main(argv: list[str] | None = None) -> int:
             print_candidate_analysis(candidate_analysis_report)
     if conditional_rescue_report is not None:
         print("Conditional ZFTurbo 53-stem rescue: " + conditional_rescue_report.get("status", "unknown"))
-        if conditional_rescue_report.get("status") == "ready":
+        if conditional_rescue_report.get("parent_candidate_id"):
             print("  Parent: " + conditional_rescue_report["parent_candidate_id"])
+        if conditional_rescue_report.get("target_stems"):
             print("  Requested stems: " + ", ".join(conditional_rescue_report["target_stems"]))
         if conditional_rescue_report.get("reason"):
             print("  Reason: " + conditional_rescue_report["reason"])
         if conditional_rescue_report.get("warning"):
             print("  Note: " + conditional_rescue_report["warning"])
+        if conditional_rescue_report.get("analysis_error"):
+            print("  Analysis warning: " + conditional_rescue_report["analysis_error"])
     if rescue_execution_summary is not None:
         print_execution_summary(rescue_execution_summary)
     if execution_summary is not None:
