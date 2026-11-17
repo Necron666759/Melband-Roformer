@@ -73,8 +73,9 @@ def _load_rows(manifest_path: Path, limit: int | None) -> list[dict[str, str]]:
             raise ValueError("CSV is missing required columns: " + ", ".join(sorted(missing)))
         rows = []
         for row in reader:
-            if not row.get("track_id", "").strip():
-                raise ValueError("Every row must have a non-empty track_id")
+            track_id = row.get("track_id", "").strip()
+            if not track_id or track_id in {".", ".."} or "/" in track_id or "\\" in track_id:
+                raise ValueError("track_id must be a non-empty filename-safe identifier")
             if any(not row.get(key, "").strip() for key in ("mixture", "snare", "toms")):
                 raise ValueError(f"Track {row['track_id']} has an empty required path")
             rows.append(row)
@@ -87,10 +88,13 @@ def _load_rows(manifest_path: Path, limit: int | None) -> list[dict[str, str]]:
 
 def _summary(values: list[float]) -> dict:
     finite = [value for value in values if math.isfinite(value)]
+    infinite_count = sum(math.isinf(value) for value in values)
     if not finite:
-        return {"count": 0, "mean_db": None, "median_db": None, "min_db": None, "max_db": None}
+        return {"count": 0, "infinite_count": infinite_count,
+                "mean_db": None, "median_db": None, "min_db": None, "max_db": None}
     return {
         "count": len(finite),
+        "infinite_count": infinite_count,
         "mean_db": round(float(np.mean(finite)), 4),
         "median_db": round(float(np.median(finite)), 4),
         "min_db": round(float(np.min(finite)), 4),
@@ -137,6 +141,16 @@ def main() -> int:
         import torch
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA was requested but is unavailable; no CPU fallback is performed")
+        if not args.low_vram_profile:
+            free_bytes, total_bytes = torch.cuda.mem_get_info(0)
+            total_gib, free_gib = total_bytes / 1024**3, free_bytes / 1024**3
+            if total_gib < (model.min_vram_gb or 0) or free_gib < (model.min_free_vram_gb or 0):
+                raise RuntimeError(
+                    f"Standard 53-stem profile requires >= {model.min_vram_gb:g} GiB total "
+                    f"and >= {model.min_free_vram_gb:g} GiB free; detected "
+                    f"{total_gib:.2f} GiB total / {free_gib:.2f} GiB free. "
+                    "Use --low-vram-profile only if its 7/6 GiB admission check passes."
+                )
 
     model_dir = models_dir / MODEL_ID
     results = ensure_model_assets(model, models_dir, timeout=120.0, retries=3)
@@ -219,8 +233,17 @@ def main() -> int:
         "summary": summaries,
         "tracks": metric_rows,
     }
+    def json_safe(value):
+        if isinstance(value, float) and not math.isfinite(value):
+            return "inf" if value > 0 else "-inf"
+        if isinstance(value, dict):
+            return {key: json_safe(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [json_safe(item) for item in value]
+        return value
+
     report_path = output_dir / "snare_toms_evaluation.json"
-    report_path.write_text(json.dumps(report, indent=2, allow_nan=False), encoding="utf-8")
+    report_path.write_text(json.dumps(json_safe(report), indent=2, allow_nan=False), encoding="utf-8")
     csv_path = output_dir / "snare_toms_evaluation.csv"
     with csv_path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=list(metric_rows[0]))
