@@ -15,7 +15,7 @@ def _stem_score(stem: str, features: dict, predictions: list[dict] | None = None
     aliases = {
         "vocals": ("vocals", "synth_vocals"), "voice": ("vocals", "synth_vocals"),
         "drums": ("drums", "electronic_drums", "breakbeats", "breakbeat_samples", "live_drum_kit"),
-        "percussion": ("drums", "electronic_drums", "breakbeats"),
+        "percussion": ("percussion", "acoustic_percussion"),
         "kick": ("kick", "drums", "electronic_drums"),
         "snare": ("snare", "drums", "electronic_drums"),
         "hh": ("hi_hat", "drums", "electronic_drums"),
