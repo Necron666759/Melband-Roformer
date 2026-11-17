@@ -198,6 +198,7 @@ class ExecutionManager:
                 quality_reports: tuple[StemQualityReport, ...] = ()
                 error: str | None = None
                 load_attempted = False
+                active_stage: str | None = None
                 try:
                     compatible, reason = backend.compatibility(manifest)
                     if not compatible:
@@ -214,16 +215,19 @@ class ExecutionManager:
                     model_dir = self.models_root / manifest.model_id
                     load_attempted = True
                     load_started = time.perf_counter()
+                    active_stage = "model_load"
                     self._emit("model_load", "started", task_id=task.task_id, model_id=task.model_id)
                     backend.load(manifest, model_dir, self.device)
                     self._emit("model_load", "completed", task_id=task.task_id, model_id=task.model_id,
                                duration_seconds=round(time.perf_counter()-load_started, 6))
+                    active_stage = None
                     task_output_dir = self.output_root / task.task_id
                     task_output_dir.mkdir(parents=True, exist_ok=True)
                     source_info = sf.info(str(input_path))
                     target_rate = manifest.sample_rate
                     resampled_input = bool(target_rate and source_info.samplerate != target_rate)
                     inference_started = time.perf_counter()
+                    active_stage = "model_inference"
                     self._emit("model_inference", "started", task_id=task.task_id,
                                model_id=task.model_id, input_path=str(input_path),
                                target_stems=list(task.target_stems), resampled_input=resampled_input)
@@ -242,6 +246,7 @@ class ExecutionManager:
                     self._emit("model_inference", "completed", task_id=task.task_id,
                                model_id=task.model_id, duration_seconds=round(time.perf_counter()-inference_started, 6),
                                output_count=len(produced))
+                    active_stage = None
                     if resampled_input:
                         for artifact in produced:
                             output_rate = sf.info(str(artifact.path)).samplerate
@@ -280,11 +285,13 @@ class ExecutionManager:
                         reports,
                     )
                     quality_reports = reports
+                    active_stage = "output_validation"
                     self._emit("output_validation", "completed", task_id=task.task_id,
                                model_id=task.model_id,
                                output_count=len(reports),
                                invalid_count=sum(item.status == "invalid" for item in reports),
-                               warning_count=sum(bool(item.issues) for item in reports))
+                               warning_count=sum(item.status == "warning" for item in reports))
+                    active_stage = None
                     invalid = [
                         report for report in reports if report.status == "invalid"
                     ]
@@ -297,17 +304,25 @@ class ExecutionManager:
                     outputs = tuple(validated)
                 except Exception as exc:
                     error = f"{type(exc).__name__}: {exc}"
+                    if active_stage is not None:
+                        self._emit(active_stage, "failed", task_id=task.task_id,
+                                   model_id=task.model_id, error=error)
                 finally:
                     if load_attempted:
                         try:
                             unload_started = time.perf_counter()
+                            active_stage = "model_unload"
                             self._emit("model_unload", "started", task_id=task.task_id,
                                        model_id=task.model_id)
                             backend.unload()
                             self._emit("model_unload", "completed", task_id=task.task_id,
                                        model_id=task.model_id,
                                        duration_seconds=round(time.perf_counter()-unload_started, 6))
+                            active_stage = None
                         except Exception as exc:
+                            self._emit("model_unload", "failed", task_id=task.task_id,
+                                       model_id=task.model_id,
+                                       error=f"{type(exc).__name__}: {exc}")
                             suffix = f"Backend unload failed: {type(exc).__name__}: {exc}"
                             error = f"{error}; {suffix}" if error else suffix
                     # The adapter instance and its references go out of scope
