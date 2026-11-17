@@ -82,7 +82,7 @@ def _model_outputs(model: ModelManifest) -> tuple[str, ...]:
 
 _SOURCE_ALIASES = {
     "vocals": ("vocals", "synth_vocals"),
-    "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp", "synth_keys",
+    "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp",
               "synth_strings", "synth_brass", "synth_bass", "synth_fx", "synth_flute"),
     "keys": ("synth_keys",),
     "digital-piano": ("digital_piano",),
@@ -132,6 +132,14 @@ _ACOUSTIC_TARGETS = {
     "sitar": ("sitar", None),
     "ukulele": ("ukulele", None),
 }
+
+
+def _source_score(predictions: list[dict], label: str) -> float | None:
+    values = [
+        float(item.get("score", 0.0)) for item in predictions
+        if item.get("source") == label
+    ]
+    return max(values) if values else None
 
 
 def _has_source_evidence(
@@ -295,6 +303,16 @@ def build_plan(
                     max_score_gap=1.0 if electronic_style and stem in {"synth", "keys", "bass"} else 0.75,
                 )
                 for stem in outputs
+            ):
+                continue
+            synth_keys_score = _source_score(source_predictions, "synth_keys")
+            digital_piano_score = _source_score(source_predictions, "digital_piano")
+            if "keys" in outputs and digital_piano_score is not None and (
+                synth_keys_score is None or digital_piano_score >= synth_keys_score - 0.10
+            ):
+                continue
+            if "digital-piano" in outputs and synth_keys_score is not None and (
+                digital_piano_score is None or synth_keys_score >= digital_piano_score - 0.10
             ):
                 continue
         elif category == "synth-specialist":
