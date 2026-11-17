@@ -207,3 +207,40 @@ per-task timeout; a positive value enforces one. A successful CPU-only CI run
 tests the orchestration with fake adapters, not actual model weights, CUDA or
 GPU inference. End-to-end validation on the target Debian/GPU machine remains
 required before claiming production GPU support.
+
+
+
+## Style-aware model routing
+
+The semantic analyzer compares the mix against both genre prompts and source
+prompts. Genre predictions produce a provisional style profile (for example
+electronic, orchestral, acoustic-band or popular); a small score margin between
+the leading genre labels marks the profile ambiguous. CLAP scores are relative
+similarities, not calibrated genre or source probabilities.
+
+The planner uses the style profile to tune source-evidence gates, but a genre
+label alone never schedules an instrument separator. Electronic styles allow
+the verified MVSep Mega 53 Synth and Keys single-target specialists when their
+corresponding synth-family evidence is present. Electronic drums, kick, bass,
+hi-hat and other specialist heads are gated independently by their own source
+labels, preventing all catalog entries from being run indiscriminately.
+
+Acoustic instrument prompts distinguish violin, viola, cello, double bass,
+harp, flute, clarinet, oboe, bassoon, saxophone, trombone, trumpet, tuba,
+French horn, guitars, harp, piano-family instruments and further orchestral
+and folk instruments. If the mix contains convincing acoustic-instrument
+evidence, the planner may schedule the verified ZFTurbo 53-stem checkpoint
+once, requesting only the detected native output heads (up to twelve). It does
+not request all 53 stems. The full checkpoint remains subject to its existing
+CUDA/VRAM admission policy, including its verified reduced-chunk profile.
+Where a dedicated Mega 53 single-target specialist exists (Synth, Keys, Bass,
+Kick, Drums, Organ, Digital Piano, Percussion or Hi-Hat), the planner routes to
+that specialist rather than requesting a duplicate head from the broad 53-stem
+pass.
+
+Acoustic/synthetic prompt pairs (for example violin versus synth strings,
+flute versus synth flute, and brass versus synth brass) are compared before
+an acoustic head is selected. Close or stronger synthetic matches suppress
+the corresponding acoustic route. This is a conservative routing heuristic,
+not proof of instrument identity. Unknown or ambiguous style does not unlock
+the full 53-stem pass; detected source-family evidence remains mandatory.
