@@ -180,3 +180,53 @@ def test_download_skips_tracks_with_silent_toms_and_avoids_other_stems(tmp_path,
     # Four target references for the rejected track; all nine for the accepted one.
     assert len(archive.opened) == 13
     assert len(list(output.rglob("*.wav"))) == 10
+
+
+def test_download_scans_past_eight_times_requested_tracks(tmp_path, monkeypatch):
+    members = {}
+    for index in range(9):
+        members.update(_members(
+            f"drummer{index + 1}", f"z_kit_{index:02d}",
+            f"{index + 1}_silent-groove", silent_toms=True,
+        ))
+    members.update(_members("drummer10", "a_active_kit", "10_active-groove"))
+
+    class FakeArchive:
+        opened: list[str] = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def infolist(self):
+            return [
+                types.SimpleNamespace(
+                    filename=name, file_size=len(data), compress_size=len(data)
+                )
+                for name, data in members.items()
+            ]
+
+        def open(self, name, _mode="r"):
+            self.opened.append(name)
+            return io.BytesIO(members[name])
+
+    archive = FakeArchive()
+    monkeypatch.setitem(
+        sys.modules, "remotezip",
+        types.SimpleNamespace(RemoteZip=lambda _url: archive),
+    )
+
+    result = subset.download_subset(
+        tmp_path / "audio", tmp_path / "reports" / "manifest.csv",
+        tmp_path / "reports" / "report.json", max_tracks=1,
+    )
+
+    assert result["selected_tracks"] == 1
+    assert result["candidate_groups_checked"] == 10
+    assert result["selected_track_metadata"][0]["kit"] == "a_active_kit"
+    assert len(result["rejected_silent_target_tracks"]) == 9
+    # Nine rejected groups fetch four target stems; the accepted group
+    # additionally fetches five non-target stems for mixture synthesis.
+    assert len(archive.opened) == 9 * 4 + 9
