@@ -692,15 +692,22 @@ def main(argv: list[str] | None = None) -> int:
                         "reason": "Conditional rescue was disabled by --no-rescue.",
                     }
                 else:
+                    # Re-probe immediately before the expensive rescue pass.
+                    # Initial admission may be stale after earlier inference/analysis.
+                    rescue_registry, rescue_vram_notes = filter_registry_for_device(
+                        registry, effective_device,
+                    )
                     conditional_rescue_report = evaluate_conditional_rescue(
                         candidate_analysis_report,
-                        registry=filtered_registry,
+                        registry=rescue_registry,
                         audio=report.audio,
                     )
+                    if rescue_vram_notes:
+                        conditional_rescue_report["vram_preflight_notes"] = list(rescue_vram_notes)
 
                 if conditional_rescue_report.get("status") == "ready":
                     rescue_model_id = conditional_rescue_report["model_id"]
-                    rescue_model = filtered_registry[rescue_model_id]
+                    rescue_model = rescue_registry[rescue_model_id]
                     rescue_assets = ensure_model_assets(
                         rescue_model, paths["models"], no_download=args.no_download,
                         timeout=args.download_timeout, retries=args.download_retries,
@@ -760,7 +767,7 @@ def main(argv: list[str] | None = None) -> int:
                         )
                         rescue_execution_summary = rescue_manager.execute(
                             rescue_plan,
-                            filtered_registry,
+                            rescue_registry,
                             {"residual-parent": Path(conditional_rescue_report["input_path"])},
                         )
                         if rescue_execution_summary.succeeded:
