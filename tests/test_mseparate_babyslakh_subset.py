@@ -89,9 +89,10 @@ def test_download_subset_fetches_only_selected_members(tmp_path, monkeypatch):
         def open(self, member, _mode="r"):
             return io.BytesIO(b"test-audio" if member.endswith(".wav") else b"")
 
+    archive = FakeArchive()
     monkeypatch.setitem(
         sys.modules, "remotezip",
-        types.SimpleNamespace(RemoteZip=lambda _url: FakeArchive()),
+        types.SimpleNamespace(RemoteZip=lambda _url: archive),
     )
     monkeypatch.setitem(
         sys.modules, "yaml",
