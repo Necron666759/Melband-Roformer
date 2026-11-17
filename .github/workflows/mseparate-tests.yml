@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/mseparate-gpu-foundation-sync
 
 jobs:
   cpu-tests:
