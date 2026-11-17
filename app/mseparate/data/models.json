@@ -414,7 +414,8 @@
       "The 10-second chunk profile (chunk_size=441000, overlap_size=220500) has passed a real CUDA smoke test on an NVIDIA GeForce RTX 3060 Ti (7.68 GiB VRAM); measured peak was 2.03 GiB allocated / 2.18 GiB reserved. It remains a manual-only profile and requires at least 7 GiB total VRAM and 6 GiB currently free.",
       "Outputs can overlap and are not guaranteed to sum to the mixture. Do not treat all 53 stems as additive or construct a residual from them.",
       "The model is broadly trained for instrument families; its synth output does not make it an electronic-genre-specific specialist.",
-      "Automatic routing is conditional: the planner may request only detected acoustic-instrument output heads when source evidence is strong. It does not schedule the full 53-output set by default; comparative perceptual quality remains subject to real-track review."
+      "Automatic routing is conditional: the planner may request only detected acoustic-instrument output heads when source evidence is strong. It does not schedule the full 53-output set by default; comparative perceptual quality remains subject to real-track review.",
+      "CPU inference is explicitly enabled after a real-checkpoint CPU smoke test with pymss==2.3.5; CUDA VRAM thresholds apply only when CUDA is selected. CPU throughput may be substantially lower."
     ],
     "runtime_validation": "verified",
     "runtime_validation_details": {
@@ -509,7 +510,8 @@
       "reviewed_by": "repository maintainer (explicit risk acceptance)",
       "reviewed_on": "2026-11-16",
       "rationale": "The original author confirmed MIT licensing and redistribution permission for the original 53-stem weights. Training-data provenance remains unknown and is not represented as dataset-rights clearance. Runtime validation remains a separate mandatory gate."
-    }
+    },
+    "cpu_inference": true
   },
   {
     "model_id": "mvsep-synth-specialist-candidate",
