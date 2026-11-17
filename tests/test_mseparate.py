@@ -169,12 +169,27 @@ def test_incompatible_audio_does_not_schedule_model():
     assert any("melband-roformer-kim-vocals: requires 44100 Hz" in note for note in plan.notes)
 
 
-def test_manual_only_zfturbo_requires_explicit_preference():
+def test_zfturbo_53stem_requires_acoustic_evidence_or_explicit_preference():
+    from mseparate.types import AnalysisReport, AudioMetadata
+
     registry = load_registry(bundled_registry_path())
     model_id = "zfturbo-bs-roformer-53stem-candidate"
 
-    automatic = build_plan(registry=registry)
-    assert model_id not in {task.model_id for task in automatic.tasks}
+    unknown = build_plan(registry=registry)
+    assert model_id not in {task.model_id for task in unknown.tasks}
+
+    orchestral = AnalysisReport(
+        schema_version=2,
+        audio=AudioMetadata("orchestral.wav", 30.0, 44100, 2, 1323000, "PCM_16"),
+        predictions=[
+            {"kind": "source", "source": "violin", "score": 7.1},
+            {"kind": "genre", "source": "orchestral", "score": 0.94},
+            {"kind": "genre", "source": "classical", "score": 0.75},
+        ],
+    )
+    detected = build_plan(registry=registry, analysis=orchestral)
+    routes = {task.model_id: task.target_stems for task in detected.tasks}
+    assert routes[model_id] == ("violin",)
 
     explicit = build_plan(registry=registry, preferred_model_id=model_id)
     assert model_id in {task.model_id for task in explicit.tasks}
