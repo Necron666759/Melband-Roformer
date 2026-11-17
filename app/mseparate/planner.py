@@ -153,18 +153,33 @@ def _has_synth_evidence(
     top_score = float(ranked[0].get("score", 0.0))
     max_rank, max_gap = (12, 1.0) if electronic_style else (8, 0.75)
     conflicts = {
+        "synthesizer": (
+            "strings", "violin", "viola", "cello", "harp",
+            "brass", "trombone", "trumpet", "tuba", "french_horn",
+            "woodwinds", "flute", "clarinet", "oboe", "bassoon", "saxophone",
+            "guitar", "acoustic_guitar", "electric_guitar",
+        ),
         "synth_strings": ("strings", "violin", "viola", "cello"),
         "synth_brass": ("brass", "trombone", "trumpet", "tuba", "french_horn"),
         "synth_flute": ("flute",),
         "synth_woodwinds": ("woodwinds", "flute", "clarinet", "oboe", "bassoon", "saxophone"),
         "synth_guitar": ("guitar", "acoustic_guitar", "electric_guitar"),
     }
+    specific_synth_sources = tuple(
+        label for label in _SOURCE_ALIASES["synth"] if label != "synthesizer"
+    ) + ("synth_keys", "synth_bass")
     for rank, item in enumerate(ranked, start=1):
         source = str(item.get("source", ""))
         if source not in _SOURCE_ALIASES["synth"]:
             continue
         score = float(item.get("score", 0.0))
         if rank > max_rank or top_score - score > max_gap:
+            continue
+        if source == "synthesizer" and any(
+            (specific_score := _source_score(predictions, specific)) is not None
+            and specific_score >= score - 0.10
+            for specific in specific_synth_sources
+        ):
             continue
         if any(
             (counterpart_score := _source_score(predictions, counterpart)) is not None
@@ -323,6 +338,10 @@ def build_plan(
     for model in candidates:
         category = (model.category or "").strip().lower().replace("_", "-")
         outputs = _model_outputs(model)
+        if model.model_id.startswith("mvsep-mega53-"):
+            # The complementary residual is not a specialist target; never
+            # route "other" through a single-family Mega 53 derivative.
+            outputs = tuple(stem for stem in outputs if stem != "other")
         if model.model_id == "zfturbo-bs-roformer-53stem-candidate":
             if preferred_model_id != model.model_id and not acoustic_targets:
                 continue
