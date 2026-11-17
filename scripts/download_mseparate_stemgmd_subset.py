@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import re
 import shutil
 from collections import defaultdict
@@ -172,7 +173,7 @@ def download_subset(
             sf.write(str(mixture_path), mixture.astype(np.float32), SAMPLE_RATE, subtype="FLOAT")
             extracted_bytes += mixture_path.stat().st_size
 
-            relative = lambda path: path.relative_to(manifest_path.parent).as_posix()
+            relative = lambda path: Path(os.path.relpath(path.resolve(), manifest_path.parent.resolve())).as_posix()
             row = {
                 "track_id": track_id,
                 "mixture": relative(mixture_path),
