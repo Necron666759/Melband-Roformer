@@ -37,12 +37,14 @@ MVSep documents DrumSep as a second-stage model that operates on an isolated dru
 - Current mirror: [OpenMIRLab mdxnet-infer](https://github.com/openmirlab/mdxnet-infer), release `weights-drumsep-v1`.
 - The MDX23C TFC-TDF inference architecture is MIT-licensed and can be implemented using the existing `mdx23c-pymss` backend family, but the model weights are a separate matter.
 - The original authors (aufr33/jarredou) did not publish explicit weight-license terms. The mirror records this as unknown and says non-commercial-safe only pending author confirmation. This project therefore does not add the checkpoint as an enabled/downloadable model. No license permission is inferred from the MIT license of the inference code.
-- The original 5-stem checkpoint (kick/snare/toms/hh/cymbals) is reported lost upstream; the available 6-stem checkpoint is not a drop-in replacement for it. Ride and Crash remain separate outputs; they are not silently relabelled as one native Cymbals output.
+- The original 5-stem checkpoint (kick/snare/toms/hh/cymbals) is reported lost upstream; the available 6-stem checkpoint is not a drop-in replacement for it. Ride and Crash remain separate native outputs. The upstream inference package has an explicit `combine-cymbals` option, so a future integration could expose a derived Cymbals stem only after preserving and testing that explicit merge operation; it must not relabel either output as a native Cymbals head.
 - Integration also requires a parent/child execution path: first a verified Drums model must isolate the drum track, then DrumSep may process that track. Running this model directly on a full mix is outside its documented input assumptions.
 
 ### Other MVSep DrumSep families
 
-MVSep lists SCNet XL 4/5/6-stem, MelBand RoFormer 4/6-stem and BS-RoFormer 5/10-stem variants. Public benchmark results show these as relevant candidates, but this repository has not established a pinned checkpoint/config pair, weight-license grant, and compatible runtime validation for those variants. They are research leads, not enabled routes.
+MVSep's Ensemble All-In documents a seven-output DrumSep stage: Kick, Toms, Snare, Cymbals, Hi-Hat, Crash and Ride. Its page explicitly says the extra instrument stems use filtered inputs from the earlier stems and that the overall pipeline is slow. This is a useful reference for the intended staged architecture, not a locally reproducible checkpoint manifest.
+
+MVSep also lists SCNet XL 4/5/6-stem, MelBand RoFormer 4/6-stem and BS-RoFormer 5/10-stem variants. Public benchmark results show these as relevant candidates, but this repository has not established a pinned checkpoint/config pair, weight-license grant, and compatible runtime validation for those variants. They are research leads, not enabled routes.
 
 ### Hybrid Demucs DrumSep
 
