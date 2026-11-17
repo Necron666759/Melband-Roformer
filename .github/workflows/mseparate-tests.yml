@@ -11,6 +11,7 @@ on:
       - feature/mseparate-electronic-genre-coverage
       - feature/mseparate-electronic-source-taxonomy
       - feature/mseparate-drum-source-routing
+      - feature/mseparate-snare-toms-model-routing
   pull_request:
     branches:
       - main
@@ -18,6 +19,7 @@ on:
       - feature/mseparate-electronic-genre-coverage
       - feature/mseparate-electronic-source-taxonomy
       - feature/mseparate-drum-source-routing
+      - feature/mseparate-drum-component-taxonomy
       - feature/mseparate-gpu-foundation-sync
 
 jobs:

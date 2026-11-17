@@ -273,7 +273,7 @@ def run_model(manifest, models_root: Path, fixture: Path, output_root: Path, dev
             )
         adapter.load(manifest, model_dir, device)
         smoke_stems = (
-            ("bass", "keys", "synth", "vocal")
+            ("bass", "keys", "synth", "vocal", "snare", "toms")
             if is_mega53
             else manifest.target_stems
         )

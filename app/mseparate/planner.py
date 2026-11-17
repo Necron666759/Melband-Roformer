@@ -15,7 +15,8 @@ def _stem_score(stem: str, features: dict, predictions: list[dict] | None = None
     aliases = {
         "vocals": ("vocals", "synth_vocals"), "voice": ("vocals", "synth_vocals"),
         "drums": ("drums", "electronic_drums", "breakbeats", "breakbeat_samples", "live_drum_kit",
-                  "acoustic_snare", "electronic_snare", "cymbals", "synth_cymbal", "toms", "electronic_toms"),
+                  "electronic_snare", "cymbals", "synth_cymbal", "electronic_toms"),
+        "toms": ("toms", "acoustic_toms", "electronic_toms"),
         "percussion": ("percussion", "acoustic_percussion"),
         "kick": ("kick", "acoustic_kick", "electronic_kick", "synth_kick", "drums", "electronic_drums"),
         "snare": ("snare", "acoustic_snare", "electronic_snare", "drums", "electronic_drums"),
@@ -92,7 +93,7 @@ _SOURCE_ALIASES = {
     "bass": ("bass", "synth_bass", "distorted_synth_bass"),
     "kick": ("kick", "acoustic_kick", "electronic_kick", "synth_kick"),
     "drums": ("drums", "electronic_drums", "breakbeats", "breakbeat_samples", "live_drum_kit",
-              "acoustic_snare", "electronic_snare", "cymbals", "synth_cymbal", "toms", "electronic_toms"),
+              "electronic_snare", "cymbals", "synth_cymbal", "electronic_toms"),
     "percussion": ("percussion", "acoustic_percussion"),
     "hh": ("hi_hat", "acoustic_hi_hat", "electronic_hi_hat"),
     "snare": ("snare", "acoustic_snare", "electronic_snare"),
@@ -121,6 +122,9 @@ _ACOUSTIC_TARGETS = {
     "brass": ("brass", "synth_brass"),
     "woodwinds": ("woodwind", "synth_woodwinds"),
     "acoustic_guitar": ("acoustic-guitar", "synth_guitar"),
+    "acoustic_snare": ("snare", "electronic_snare"),
+    "toms": ("toms", "electronic_toms"),
+    "acoustic_toms": ("toms", "electronic_toms"),
     "electric_guitar": ("electric-guitar", "synth_guitar"),
     "banjo": ("banjo", None),
     "mandolin": ("mandolin", None),
@@ -348,6 +352,18 @@ def build_plan(
             if preferred_model_id != model.model_id and not acoustic_targets:
                 continue
         elif model.model_id.startswith("mvsep-mega53-"):
+            if model.model_id == "mvsep-mega53-drums-specialist-candidate":
+                # When acoustic Snare/Toms are selected from the verified
+                # 53-stem model, do not also extract broad Drums from the same
+                # live-kit evidence. Explicit electronic/breakbeat evidence
+                # remains independently routable in hybrid mixes.
+                has_distinct_electronic_drums = _has_source_evidence(
+                    source_predictions,
+                    ("electronic_drums", "breakbeats", "breakbeat_samples"),
+                    max_rank=8, max_score_gap=0.75,
+                )
+                if any(stem in acoustic_targets for stem in ("snare", "toms")) and not has_distinct_electronic_drums:
+                    continue
             # Single-target Mega 53 derivatives are scheduled only when their
             # own source family is detected; unknown audio is not a reason to
             # run every specialist.
