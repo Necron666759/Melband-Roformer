@@ -396,3 +396,53 @@ def test_sequenced_synth_and_distorted_synth_bass_use_matching_specialists():
     )
     bass_routes = {task.model_id: task.target_stems for task in bass_plan.tasks}
     assert bass_routes["mvsep-mega53-bass-specialist-candidate"] == ("bass",)
+
+def test_live_drums_breakbeat_samples_and_acoustic_percussion_use_matching_specialists():
+    registry = load_registry(bundled_registry_path())
+
+    cases = (
+        (
+            "live drum kit",
+            "live_drum_kit",
+            "mvsep-mega53-drums-specialist-candidate",
+            ("drums",),
+        ),
+        (
+            "sampled breakbeats",
+            "breakbeat_samples",
+            "mvsep-mega53-drums-specialist-candidate",
+            ("drums",),
+        ),
+        (
+            "acoustic hand percussion",
+            "acoustic_percussion",
+            "mvsep-mega53-percussion-specialist-candidate",
+            ("percussion",),
+        ),
+    )
+    for label, source, expected_model, expected_stems in cases:
+        plan = build_plan(
+            analysis=_analysis_with_predictions([
+                {"kind": "source", "source": source, "score": 7.2},
+            ]),
+            registry=registry,
+        )
+        routes = {task.model_id: task.target_stems for task in plan.tasks}
+        assert routes == {expected_model: expected_stems}, label
+        assert len(plan.tasks) == 1, label
+        assert "zfturbo-bs-roformer-53stem-candidate" not in routes, label
+
+
+def test_mechanical_percussion_alone_does_not_trigger_drum_specialists():
+    registry = load_registry(bundled_registry_path())
+    plan = build_plan(
+        analysis=_analysis_with_predictions([
+            {"kind": "source", "source": "mechanical_percussion", "score": 7.2},
+            {"kind": "source", "source": "industrial_noise", "score": 6.9},
+        ]),
+        registry=registry,
+    )
+    scheduled = {task.model_id for task in plan.tasks}
+    assert not any(model_id.startswith("mvsep-mega53-") for model_id in scheduled)
+    assert "zfturbo-bs-roformer-53stem-candidate" not in scheduled
+

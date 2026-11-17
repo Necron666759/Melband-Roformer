@@ -10,11 +10,14 @@ on:
       - feature/mseparate-style-routing-followup
       - feature/mseparate-electronic-genre-coverage
       - feature/mseparate-electronic-source-taxonomy
+      - feature/mseparate-drum-source-routing
   pull_request:
     branches:
       - main
       - feature/mseparate-cpu-real-audio-evaluation
       - feature/mseparate-electronic-genre-coverage
+      - feature/mseparate-electronic-source-taxonomy
+      - feature/mseparate-drum-source-routing
       - feature/mseparate-gpu-foundation-sync
 
 jobs:
