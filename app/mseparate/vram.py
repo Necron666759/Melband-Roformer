@@ -42,9 +42,9 @@ def filter_registry_for_device(
     notes: list[str] = []
 
     for model in registry.values():
-        if model.min_vram_gb is None or device == "cpu":
-            # min_vram_gb describes CUDA admission only. A verified CPU runtime
-            # remains eligible; throughput is a performance concern, not a gate.
+        if model.min_vram_gb is None or (device == "cpu" and model.cpu_inference):
+            # min_vram_gb describes CUDA admission only. CPU execution is
+            # allowed only when the model manifest explicitly validates it.
             accepted[model.model_id] = model
             continue
         if device != "cuda":
