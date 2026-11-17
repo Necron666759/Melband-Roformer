@@ -795,6 +795,7 @@ def main(argv: list[str] | None = None) -> int:
                                     no_download=args.no_download,
                                     ledger_path=ledger_path,
                                     parent_candidate_id=conditional_rescue_report["parent_candidate_id"],
+                                    allow_analysis_failure=True,
                                 )
                                 conditional_rescue_report["analysis"] = rescue_analysis
                             except Exception as exc:

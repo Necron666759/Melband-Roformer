@@ -122,8 +122,13 @@ def analyze_execution_candidates(
     no_download: bool,
     ledger_path: str | Path,
     parent_candidate_id: str | None = None,
+    allow_analysis_failure: bool = False,
 ) -> dict[str, Any]:
-    """Analyze outputs and attach them to a root mixture or an explicit parent candidate."""
+    """Analyze outputs and attach them to a root mixture or an explicit parent candidate.
+
+    When allow_analysis_failure is true, CLAP failure does not prevent technical
+    candidate registration or preservation of the requested lineage.
+    """
     artifacts = [
         (result, artifact, report)
         for result in summary.results if result.status == "success"
@@ -140,10 +145,17 @@ def analyze_execution_candidates(
             "notes": ["No successful output artifacts were available for deep analysis."],
         }
 
-    prediction_map = analyze_sources_many(
-        [artifact.path for _, artifact, _ in artifacts],
-        device=device, cache_dir=cache_dir, no_download=no_download,
-    )
+    analysis_error = None
+    try:
+        prediction_map = analyze_sources_many(
+            [artifact.path for _, artifact, _ in artifacts],
+            device=device, cache_dir=cache_dir, no_download=no_download,
+        )
+    except Exception as exc:
+        if not allow_analysis_failure:
+            raise
+        prediction_map = {}
+        analysis_error = f"{type(exc).__name__}: {exc}"
     _, mix_ranks = _ranked_sources(mix_predictions)
     ledger = QuarantineLedger(ledger_path)
     if parent_candidate_id is None:
@@ -217,6 +229,8 @@ def analyze_execution_candidates(
     return {
         "schema_version": 1,
         "candidate_count": len(candidates),
+        "analysis_status": "unavailable" if analysis_error else "complete",
+        "analysis_error": analysis_error,
         "parent_candidate_id": root_id,
         "root_candidate_id": root_id if parent_candidate_id is None else None,
         "ledger_path": str(Path(ledger_path).expanduser()),
@@ -228,6 +242,7 @@ def analyze_execution_candidates(
             "A high off-target rank is a review hint, not proof of leakage or an artifact.",
             "Residual hints in an Other stem do not authorize mixture subtraction or automatic rescue execution.",
             "Candidates remain pending; no audio was moved, deleted or overwritten.",
+            *([f"CLAP analysis unavailable; technical candidate records and lineage were still preserved: {analysis_error}"] if analysis_error else []),
         ],
     }
 

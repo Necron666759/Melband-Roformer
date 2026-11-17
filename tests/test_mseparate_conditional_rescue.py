@@ -155,3 +155,44 @@ def test_rescue_outputs_are_registered_as_children_of_exact_other(tmp_path, monk
     child = next(item for item in records if item["model_id"] == "zfturbo-bs-roformer-53stem-candidate")
     assert child["parent_id"] == "mvs-other-1"
     assert child["status"] == "pending"
+
+
+
+def test_rescue_lineage_is_preserved_when_post_rescue_clap_fails(tmp_path, monkeypatch):
+    from mseparate import candidate_analysis
+
+    ledger_path = tmp_path / "quarantine.json"
+    ledger = QuarantineLedger(ledger_path)
+    parent_path = tmp_path / "other.wav"
+    parent_path.write_bytes(b"parent")
+    ledger.add_candidate(
+        "mvs-other-2", stem="other", path=parent_path,
+        model_id="mvsep-mega53-synth-specialist-candidate",
+    )
+
+    output = tmp_path / "synth.wav"
+    output.write_bytes(b"candidate")
+    result = TaskResult(
+        "rescue-2", "zfturbo-bs-roformer-53stem-candidate", "success",
+        outputs=(StemArtifact("synth", output),),
+        quality_reports=(SimpleNamespace(path=str(output), status="valid", issues=()),),
+    )
+
+    def fail_analysis(*args, **kwargs):
+        raise RuntimeError("simulated CLAP failure")
+
+    monkeypatch.setattr(candidate_analysis, "analyze_sources_many", fail_analysis)
+    report = analyze_execution_candidates(
+        ExecutionSummary((result,)),
+        mix_path=parent_path,
+        mix_predictions=[],
+        device="cuda", cache_dir=None, no_download=True,
+        ledger_path=ledger_path, parent_candidate_id="mvs-other-2",
+        allow_analysis_failure=True,
+    )
+    assert report["analysis_status"] == "unavailable"
+    assert "simulated CLAP failure" in report["analysis_error"]
+    records = QuarantineLedger(ledger_path).list_candidates()
+    child = next(item for item in records if item["model_id"] == "zfturbo-bs-roformer-53stem-candidate")
+    assert child["parent_id"] == "mvs-other-2"
+    assert child["status"] == "pending"
