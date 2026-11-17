@@ -351,19 +351,19 @@ def build_plan(
         if model.model_id == "zfturbo-bs-roformer-53stem-candidate":
             if preferred_model_id != model.model_id and not acoustic_targets:
                 continue
-        elif model.model_id == "mvsep-mega53-drums-specialist-candidate":
-            # When the acoustic snare/tom heads are selected from the verified
-            # 53-stem model, do not also extract a broad Drums stem from the
-            # same live-kit evidence. Explicit electronic/breakbeat evidence
-            # remains independently routable in hybrid mixes.
-            has_distinct_electronic_drums = _has_source_evidence(
-                source_predictions,
-                ("electronic_drums", "breakbeats", "breakbeat_samples"),
-                max_rank=8, max_score_gap=0.75,
-            )
-            if any(stem in acoustic_targets for stem in ("snare", "toms")) and not has_distinct_electronic_drums:
-                continue
         elif model.model_id.startswith("mvsep-mega53-"):
+            if model.model_id == "mvsep-mega53-drums-specialist-candidate":
+                # When acoustic Snare/Toms are selected from the verified
+                # 53-stem model, do not also extract broad Drums from the same
+                # live-kit evidence. Explicit electronic/breakbeat evidence
+                # remains independently routable in hybrid mixes.
+                has_distinct_electronic_drums = _has_source_evidence(
+                    source_predictions,
+                    ("electronic_drums", "breakbeats", "breakbeat_samples"),
+                    max_rank=8, max_score_gap=0.75,
+                )
+                if any(stem in acoustic_targets for stem in ("snare", "toms")) and not has_distinct_electronic_drums:
+                    continue
             # Single-target Mega 53 derivatives are scheduled only when their
             # own source family is detected; unknown audio is not a reason to
             # run every specialist.
