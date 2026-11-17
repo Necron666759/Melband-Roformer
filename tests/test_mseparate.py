@@ -162,11 +162,6 @@ def test_incompatible_audio_does_not_schedule_model():
     plan = build_plan(analysis=audio, registry=registry)
     assert {task.model_id for task in plan.tasks} == {
         "bs-roformer-anvuew-vocals",
-        "mvsep-mega53-bass-specialist-candidate",
-        "mvsep-mega53-kick-specialist-candidate",
-        "mvsep-mega53-drums-specialist-candidate",
-        "mvsep-mega53-percussion-specialist-candidate",
-        "mvsep-mega53-hh-specialist-candidate",
     }
     by_model = {task.model_id: task for task in plan.tasks}
     assert by_model["bs-roformer-anvuew-vocals"].target_stems == ("instrumental", "vocals")
