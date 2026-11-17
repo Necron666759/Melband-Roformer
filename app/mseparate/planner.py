@@ -125,7 +125,6 @@ _ACOUSTIC_TARGETS = {
     "harpsichord": ("harpsichord", None),
     "acoustic_piano": ("piano", "synth_keys"),
     "digital_piano": ("digital-piano", "synth_keys"),
-    "organ": ("organ", "synth_keys"),
     "marimba": ("marimba", None),
     "glockenspiel": ("glockenspiel", None),
     "timpani": ("timpani", None),
@@ -194,11 +193,11 @@ def _detected_acoustic_targets(
     # Prefer specific instrument heads over a broad family head when both fire.
     specific_families = {
         family_for_source[item[0]] for item in accepted
-        if item[0] not in {"strings", "brass", "woodwinds"}
+        if item[0] not in {"strings", "brass", "woodwinds", "guitar"}
     }
     for source, target, rank, score in accepted:
         family_name = family_for_source.get(source)
-        if source in {"strings", "brass", "woodwinds"} and family_name in specific_families:
+        if source in {"strings", "brass", "woodwinds", "guitar"} and family_name in specific_families:
             continue
         if target not in targets:
             targets.append(target)
