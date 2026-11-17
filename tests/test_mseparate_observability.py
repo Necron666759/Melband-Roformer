@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import json
 
 import numpy as np
 import soundfile as sf
@@ -68,14 +69,21 @@ def test_cli_mirrors_terminal_output_to_log_file(tmp_path, monkeypatch, capsys):
     samples = np.sin(np.linspace(0, 100, 44100, dtype=np.float32)) * 0.1
     sf.write(source, np.column_stack((samples, samples)), 44100)
     log_path = tmp_path / "logs" / "run.log"
+    report_path = tmp_path / "report.json"
     monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
 
     assert main([
         str(source), "--analysis-only", "--log-file", str(log_path),
+        "--report", str(report_path),
     ]) == 0
 
     terminal = capsys.readouterr().out
     log_text = log_path.read_text(encoding="utf-8")
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
     assert "Audio analysis" in terminal
     assert "Audio analysis" in log_text
     assert "Execution plan" not in log_text
+    assert payload["schema_version"] == 2
+    assert payload["run_options"]["analysis_only"] is True
+    assert payload["observability"]["run_id"]
+    assert any(event["stage"] == "audio_analysis" for event in payload["observability"]["events"])
