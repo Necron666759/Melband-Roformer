@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import io
 
+import numpy as np
+import soundfile as sf
+
 from mseparate.observability import RunJournal, TeeTextIO, resolve_log_path
 
 
@@ -55,3 +58,24 @@ def test_cli_log_file_option_accepts_default_and_explicit_path():
 
     assert default.log_file == "mseparate.log"
     assert explicit.log_file == "logs/custom.log"
+
+
+
+def test_cli_mirrors_terminal_output_to_log_file(tmp_path, monkeypatch, capsys):
+    from mseparate.cli import main
+
+    source = tmp_path / "input.wav"
+    samples = np.sin(np.linspace(0, 100, 44100, dtype=np.float32)) * 0.1
+    sf.write(source, np.column_stack((samples, samples)), 44100)
+    log_path = tmp_path / "logs" / "run.log"
+    monkeypatch.setenv("MSEPARATE_HOME", str(tmp_path / "state"))
+
+    assert main([
+        str(source), "--analysis-only", "--log-file", str(log_path),
+    ]) == 0
+
+    terminal = capsys.readouterr().out
+    log_text = log_path.read_text(encoding="utf-8")
+    assert "Audio analysis" in terminal
+    assert "Audio analysis" in log_text
+    assert "Execution plan" not in log_text
