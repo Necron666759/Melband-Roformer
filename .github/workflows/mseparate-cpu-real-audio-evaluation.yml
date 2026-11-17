@@ -1,0 +1,118 @@
+name: MSeparate CPU real-audio routing evaluation
+
+on:
+  push:
+    branches:
+      - feature/mseparate-cpu-real-audio-evaluation
+    paths:
+      - "app/mseparate/**"
+      - "scripts/evaluate_mseparate_babyslakh.py"
+      - "scripts/download_mseparate_urmp_subset.sh"
+      - "scripts/evaluate_mseparate_urmp.py"
+      - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mseparate-cpu-real-audio-evaluation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cpu-real-audio-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
+      TOKENIZERS_PARALLELISM: "false"
+      HF_HOME: /tmp/mseparate-hf-cache
+      XDG_CACHE_HOME: /tmp/mseparate-cache
+    steps:
+      - name: Check out the evaluation branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install CPU-only PyTorch
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.13.0 torchaudio==2.11.0 \
+            --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install MSeparate CPU inference and analysis dependencies
+        run: |
+          python -m pip install \
+            "pymss==2.3.5" \
+            "numpy" "soundfile>=0.12,<0.13" "tqdm" "soxr>=0.3" \
+            "transformers>=4.45,<5" "librosa>=0.10.2,<1"
+          python -m pip install --no-deps -e app
+
+      - name: Test URMP ground-truth ranking and GPU admission diagnostics
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_mseparate_urmp_evaluation.py
+
+      - name: Download selected URMP audio to the ephemeral runner
+        run: bash scripts/download_mseparate_urmp_subset.sh "${{ runner.temp }}/mseparate-urmp"
+
+      - name: Inspect URMP audio headers and write a metadata-only manifest
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import soundfile as sf
+          root = Path("${{ runner.temp }}/mseparate-urmp")
+          rows = []
+          for path in sorted(root.rglob("*.wav")):
+              info = sf.info(str(path))
+              rows.append({
+                  "file": str(path.relative_to(root)),
+                  "sample_rate": info.samplerate,
+                  "channels": info.channels,
+                  "frames": info.frames,
+                  "duration_seconds": round(info.duration, 6),
+                  "subtype": info.subtype,
+              })
+          mixes = [row for row in rows if Path(row["file"]).name.startswith("AuMix_")]
+          if len(mixes) != 4 or len(rows) != 17:
+              raise SystemExit(f"Unexpected URMP subset: {len(mixes)} mixes, {len(rows)} WAVs")
+          out = Path("${{ runner.temp }}/mseparate-evaluation/reports")
+          out.mkdir(parents=True, exist_ok=True)
+          (out / "urmp-audio-manifest.json").write_text(
+              json.dumps({"dataset": "URMP", "files": rows, "mixtures": mixes}, indent=2),
+              encoding="utf-8",
+          )
+          print(json.dumps({"wav_files": len(rows), "mixtures": mixes}, indent=2))
+          PY
+
+      - name: Evaluate URMP source analysis and CPU routing against known instruments
+        run: |
+          python scripts/evaluate_mseparate_urmp.py \
+            --audio-dir "${{ runner.temp }}/mseparate-urmp" \
+            --report "${{ runner.temp }}/mseparate-evaluation/reports/urmp-routing-report.json"
+
+      - name: Run stages A, B and C on BabySlakh
+        run: |
+          python scripts/evaluate_mseparate_babyslakh.py \
+            --work-dir "${{ runner.temp }}/mseparate-evaluation" \
+            --max-tracks 20 \
+            --max-cases 4 \
+            --excerpt-seconds 12 \
+            --inference-timeout 600
+
+      - name: Upload evaluation reports only (never audio or model weights)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mseparate-cpu-real-audio-evaluation-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/mseparate-evaluation/reports/*.json
+          if-no-files-found: warn
+          retention-days: 30
