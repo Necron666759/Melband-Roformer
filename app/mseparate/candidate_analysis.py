@@ -375,10 +375,15 @@ def evaluate_conditional_rescue(
         mapped = [stem for stem in _RESCUE_TARGETS[hint["source"]] if stem in declared]
         if not mapped:
             continue
-        selected_hints.append(hint)
+        added_for_hint = []
         for stem in mapped:
             if stem not in targets and len(targets) < max_targets:
                 targets.append(stem)
+                added_for_hint.append(stem)
+            elif stem in targets:
+                added_for_hint.append(stem)
+        if added_for_hint:
+            selected_hints.append(hint)
     if not targets:
         return {
             "status": "skipped",
