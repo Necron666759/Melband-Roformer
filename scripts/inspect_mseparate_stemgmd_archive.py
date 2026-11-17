@@ -47,11 +47,10 @@ def classify_wav_path(path: str) -> tuple[str | None, str | None]:
 
 
 def track_group_key(path: str) -> str:
+    # StemGMD stores each instrument in its own sibling directory; the
+    # filename identifies the shared groove/performance across those folders.
     parts = list(PurePosixPath(path).parts)
-    if len(parts) >= 2 and (
-        parts[-2].lower().replace("-", "_").replace(" ", "_")
-        in MIX_DIRS | SNARE_DIRS | TOM_DIRS
-    ):
+    if len(parts) >= 2:
         parts.pop(-2)
     return str(PurePosixPath(*parts).with_suffix(""))
 
@@ -73,12 +72,15 @@ def inspect_archive(report_path: Path) -> dict:
     parent_dirs = Counter(PurePosixPath(info.filename).parent.name for info in wavs)
     samples = {"mixture_like": [], "snare_like": [], "tom_like": [], "wav_paths": []}
     groups: dict[str, dict] = defaultdict(
-        lambda: {"mixture": [], "snare": [], "tom": defaultdict(list)}
+        lambda: {"mixture": [], "snare": [], "tom": defaultdict(list), "components": defaultdict(list)}
     )
 
     for info in wavs:
         path = info.filename
         category, component = classify_wav_path(path)
+        group = groups[track_group_key(path)]
+        parent = PurePosixPath(path).parent.name.lower().replace("-", "_").replace(" ", "_")
+        group["components"][parent].append(path)
         if category:
             bucket = {
                 "mixture": "mixture_like",
@@ -90,7 +92,6 @@ def inspect_archive(report_path: Path) -> dict:
                     "path": path,
                     "uncompressed_bytes": info.file_size,
                 })
-            group = groups[track_group_key(path)]
             if category == "tom":
                 group["tom"][component].append(path)
             else:
@@ -100,7 +101,7 @@ def inspect_archive(report_path: Path) -> dict:
 
     matching_groups = []
     for key, group in sorted(groups.items()):
-        if group["mixture"] and group["snare"] and group["tom"]:
+        if group["snare"] and group["tom"]:
             matching_groups.append({
                 "track_key": key,
                 "mixtures": sorted(group["mixture"]),
@@ -108,7 +109,15 @@ def inspect_archive(report_path: Path) -> dict:
                 "tom_components": {
                     name: sorted(paths) for name, paths in sorted(group["tom"].items())
                 },
+                "all_component_directories": sorted(group["components"]),
+                "can_reconstruct_mixture_by_sum": not bool(group["mixture"]),
             })
+    component_counts = Counter(
+        component for group in groups.values() for component in group["components"]
+    )
+    components_per_track = Counter(
+        len(group["components"]) for group in groups.values()
+    )
 
     payload = {
         "schema_version": 2,
@@ -124,7 +133,14 @@ def inspect_archive(report_path: Path) -> dict:
         "wav_uncompressed_bytes": sum(info.file_size for info in wavs),
         "wav_basename_counts": basenames.most_common(160),
         "wav_parent_directory_counts": parent_dirs.most_common(120),
-        "matching_mixture_snare_tom_groups": len(matching_groups),
+        "matching_mixture_snare_tom_groups": sum(
+            1 for group in matching_groups if group["mixtures"]
+        ),
+        "matching_reference_groups": len(matching_groups),
+        "wav_component_directory_counts": component_counts.most_common(120),
+        "component_directories_per_track_distribution": sorted(
+            components_per_track.items()
+        ),
         "matching_groups": matching_groups[:80],
         "sample_paths": samples,
         "limitations": [
@@ -155,6 +171,10 @@ def main() -> int:
         ),
         "audio_downloaded": result["audio_downloaded"],
         "matching_mixture_snare_tom_groups": result["matching_mixture_snare_tom_groups"],
+        "matching_reference_groups": result["matching_reference_groups"],
+        "wav_component_directory_counts": result["wav_component_directory_counts"],
+        "component_directories_per_track_distribution": result["component_directories_per_track_distribution"],
+        "matching_groups": result["matching_groups"][:12],
         "report": str(args.report),
         "sample_paths": result["sample_paths"],
     }, indent=2, ensure_ascii=False))
