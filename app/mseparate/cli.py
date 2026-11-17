@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import atexit
 import json
 import os
 from dataclasses import replace
@@ -408,7 +407,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def _main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     journal = RunJournal()
@@ -419,12 +418,6 @@ def main(argv: list[str] | None = None) -> int:
         original_stdout, original_stderr = sys.stdout, sys.stderr
         sys.stdout = TeeTextIO(original_stdout, log_stream)
         sys.stderr = TeeTextIO(original_stderr, log_stream)
-        def _restore_log_streams() -> None:
-            sys.stdout = original_stdout
-            sys.stderr = original_stderr
-            log_stream.flush()
-            log_stream.close()
-        atexit.register(_restore_log_streams)
         print(f"mseparate log: {log_path}")
     journal.record("cli", "arguments_parsed", log_file=str(log_path) if log_path else None)
     if args.max_depth < 0:
@@ -971,6 +964,24 @@ def main(argv: list[str] | None = None) -> int:
     if rescue_execution_summary is not None and rescue_execution_summary.failed:
         return 1
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the CLI and always restore terminal streams after optional log capture."""
+    original_stdout, original_stderr = sys.stdout, sys.stderr
+    try:
+        return _main(argv)
+    finally:
+        current_stdout, current_stderr = sys.stdout, sys.stderr
+        log_stream = (
+            current_stdout.log if isinstance(current_stdout, TeeTextIO)
+            else current_stderr.log if isinstance(current_stderr, TeeTextIO)
+            else None
+        )
+        sys.stdout, sys.stderr = original_stdout, original_stderr
+        if log_stream is not None:
+            log_stream.flush()
+            log_stream.close()
 
 
 if __name__ == "__main__":
