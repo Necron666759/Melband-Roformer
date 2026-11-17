@@ -108,8 +108,10 @@ def download_subset(destination: Path, manifest_path: Path, max_tracks: int = 8)
         names = set(names_list)
         metadata_members = _track_metadata_members(names_list)
         candidates: list[dict[str, Any]] = []
+        metadata_files_scanned = 0
         for track_dir, metadata_member in metadata_members.items():
             raw = archive.read(metadata_member)
+            metadata_files_scanned += 1
             metadata = yaml.safe_load(raw.decode("utf-8")) or {}
             drum_ids = _drum_stem_ids(metadata)
             if not drum_ids:
@@ -132,6 +134,10 @@ def download_subset(destination: Path, manifest_path: Path, max_tracks: int = 8)
                 "drum_stem_members": drum_members,
                 "drum_source_ids": drum_ids,
             })
+            # Metadata reads are individual HTTP range requests. Stop as soon
+            # as the requested number of complete drum tracks is available.
+            if len(candidates) >= max_tracks:
+                break
 
         selected = candidates[:max_tracks]
         if len(selected) < min(4, max_tracks):
@@ -172,6 +178,7 @@ def download_subset(destination: Path, manifest_path: Path, max_tracks: int = 8)
         "download_method": "HTTP range requests for selected ZIP members",
         "full_archive_downloaded": False,
         "selected_tracks": len(rows),
+        "metadata_files_scanned": metadata_files_scanned,
         "extracted_files": len(extracted_members),
         "extracted_bytes": sum(item["bytes"] for item in extracted_members),
         "tracks": rows,
