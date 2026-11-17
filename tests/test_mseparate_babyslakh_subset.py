@@ -49,6 +49,10 @@ def test_resolve_mix_and_drum_stem_members():
     assert subset._find_stem_member(
         "Track00001", {"audio_dir": "stems"}, "S01", names
     ) == "Track00001/stems/S01.wav"
+    assert subset._find_stem_member(
+        "root/Track00001", {"audio_dir": "Track00001/stems"}, "S01",
+        {"root/Track00001/stems/S01.wav"},
+    ) == "root/Track00001/stems/S01.wav"
 
 
 def test_safe_destination_rejects_parent_traversal(tmp_path):
