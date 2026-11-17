@@ -27,10 +27,16 @@ def _model():
     })
 
 
-def test_gpu_gated_model_is_excluded_on_cpu():
-    registry, notes = filter_registry_for_device({"mega-53": _model()}, "cpu")
-    assert registry == {}
-    assert "No CPU fallback" in notes[0]
+def test_gpu_memory_requirement_does_not_disable_verified_cpu_runtime():
+    model = _model()
+    registry, notes = filter_registry_for_device(
+        {"mega-53": model}, "cpu",
+        memory_probe=lambda: (_ for _ in ()).throw(
+            AssertionError("CPU admission must not probe CUDA")
+        ),
+    )
+    assert registry["mega-53"] is model
+    assert notes == ()
 
 
 def test_gpu_gated_model_is_excluded_when_total_vram_is_too_small():
