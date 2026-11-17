@@ -121,8 +121,9 @@ def analyze_execution_candidates(
     cache_dir: str | Path | None,
     no_download: bool,
     ledger_path: str | Path,
+    parent_candidate_id: str | None = None,
 ) -> dict[str, Any]:
-    """Analyze every successful output using one CLAP load and register its lineage."""
+    """Analyze outputs and attach them to a root mixture or an explicit parent candidate."""
     artifacts = [
         (result, artifact, report)
         for result in summary.results if result.status == "success"
@@ -145,12 +146,18 @@ def analyze_execution_candidates(
     )
     _, mix_ranks = _ranked_sources(mix_predictions)
     ledger = QuarantineLedger(ledger_path)
-    root_id = "mix-" + uuid.uuid4().hex
-    ledger.add_candidate(
-        root_id, stem="mix", path=mix_path, model_id="input-mixture",
-        reason="Root audio for post-inference candidate lineage",
-        analysis={"role": "parent_audio", "source_prediction_count": len(mix_predictions)},
-    )
+    if parent_candidate_id is None:
+        root_id = "mix-" + uuid.uuid4().hex
+        ledger.add_candidate(
+            root_id, stem="mix", path=mix_path, model_id="input-mixture",
+            reason="Root audio for post-inference candidate lineage",
+            analysis={"role": "parent_audio", "source_prediction_count": len(mix_predictions)},
+        )
+    else:
+        known_ids = {item["candidate_id"] for item in ledger.list_candidates()}
+        if parent_candidate_id not in known_ids:
+            raise ValueError(f"Unknown lineage parent candidate: {parent_candidate_id}")
+        root_id = parent_candidate_id
 
     candidates = []
     grouped: dict[str, list[dict]] = defaultdict(list)
@@ -211,6 +218,7 @@ def analyze_execution_candidates(
         "schema_version": 1,
         "candidate_count": len(candidates),
         "parent_candidate_id": root_id,
+        "root_candidate_id": root_id if parent_candidate_id is None else None,
         "ledger_path": str(Path(ledger_path).expanduser()),
         "candidates": candidates,
         "comparison_groups": comparisons,
@@ -221,6 +229,171 @@ def analyze_execution_candidates(
             "Residual hints in an Other stem do not authorize mixture subtraction or automatic rescue execution.",
             "Candidates remain pending; no audio was moved, deleted or overwritten.",
         ],
+    }
+
+
+
+# CLAP source-family labels are mapped only to exact native labels declared by
+# the ZFTurbo 53-stem manifest. These are retrieval targets, not residual math.
+_RESCUE_TARGETS = {
+    "vocals": ("vocal", "lead-vocal", "back-vocal"),
+    "synth_vocals": ("lead-vocal", "back-vocal"),
+    "drums": ("drums",),
+    "electronic_drums": ("drums",),
+    "kick": ("kick",),
+    "snare": ("snare",),
+    "hi_hat": ("hh",),
+    "breakbeats": ("drums", "percussion"),
+    "bass": ("bass",),
+    "synth_bass": ("bass",),
+    "guitar": ("guitar", "electric-guitar", "acoustic-guitar"),
+    "piano": ("piano", "digital-piano"),
+    "synth_keys": ("keys", "digital-piano"),
+    "synthesizer": ("synth",),
+    "synth_lead": ("synth",),
+    "synth_pad": ("synth",),
+    "synth_arp": ("synth",),
+    "synth_strings": ("synth",),
+    "synth_brass": ("synth",),
+    "strings": ("strings", "violin", "viola", "cello"),
+    "brass": ("brass",),
+    "woodwinds": ("woodwind",),
+}
+
+
+def evaluate_conditional_rescue(
+    report: dict[str, Any],
+    *,
+    registry: dict[str, Any],
+    audio,
+    model_id: str = "zfturbo-bs-roformer-53stem-candidate",
+    max_targets: int = 8,
+) -> dict[str, Any]:
+    """Build one conservative 53-stem rescue request from a verified MVSep Other.
+
+    A hint must rank in the top five on the mix and top three in Other. Only
+    one best parent Other is selected per invocation to bound expensive runs.
+    """
+    candidates = report.get("candidates", [])
+    parents = [
+        item for item in candidates
+        if item.get("stem", "").strip().lower() == "other"
+        and str(item.get("model_id", "")).startswith("mvsep-mega53-")
+        and item.get("technical_status") == "valid"
+    ]
+    if not parents:
+        return {
+            "status": "skipped",
+            "reason": "No technically clean Other output from an MVSep Mega 53 specialist was available.",
+        }
+
+    eligible_parents = []
+    for candidate in parents:
+        strong = [
+            hint for hint in candidate.get("residual_source_hints", [])
+            if int(hint.get("mix_rank", 10**6)) <= 5
+            and int(hint.get("other_rank", 10**6)) <= 3
+            and hint.get("source") in _RESCUE_TARGETS
+        ]
+        if strong:
+            eligible_parents.append((candidate, strong))
+    if not eligible_parents:
+        return {
+            "status": "skipped",
+            "reason": (
+                "No residual hint met the conservative rescue gate "
+                "(source rank <= 5 in the mix and <= 3 in MVSep Other)."
+            ),
+        }
+
+    parent, hints = min(
+        eligible_parents,
+        key=lambda pair: (
+            min(int(h["other_rank"]) for h in pair[1]),
+            min(int(h["mix_rank"]) for h in pair[1]),
+            pair[0].get("candidate_id", ""),
+        ),
+    )
+    manifest = registry.get(model_id)
+    if manifest is None:
+        return {
+            "status": "skipped",
+            "reason": (
+                "The ZFTurbo 53-stem model is not present in the device-eligible registry; "
+                "its license, runtime and VRAM gates were not satisfied."
+            ),
+            "parent_candidate_id": parent.get("candidate_id"),
+        }
+    if (
+        manifest.status != "available"
+        or manifest.license_status != "verified"
+        or manifest.runtime_validation != "verified"
+    ):
+        return {
+            "status": "skipped",
+            "reason": "The ZFTurbo 53-stem model did not pass availability, license and runtime gates.",
+            "parent_candidate_id": parent.get("candidate_id"),
+        }
+
+    from .registry import model_audio_compatibility
+    from dataclasses import replace
+
+    parent_path = Path(parent.get("path", "")).expanduser()
+    if not parent_path.is_file():
+        return {
+            "status": "skipped",
+            "reason": "The selected MVSep Other artifact is no longer available on disk.",
+            "parent_candidate_id": parent.get("candidate_id"),
+        }
+    compatible, reason = model_audio_compatibility(
+        manifest, replace(audio, path=str(parent_path)),
+    )
+    if not compatible:
+        return {
+            "status": "skipped",
+            "reason": f"The parent Other audio is incompatible with ZFTurbo 53-stem: {reason}",
+            "parent_candidate_id": parent.get("candidate_id"),
+        }
+
+    declared = set(manifest.native_stems)
+    targets = []
+    selected_hints = []
+    for hint in sorted(hints, key=lambda item: (
+        int(item["other_rank"]), int(item["mix_rank"]), str(item["source"])
+    )):
+        mapped = [stem for stem in _RESCUE_TARGETS[hint["source"]] if stem in declared]
+        if not mapped:
+            continue
+        selected_hints.append(hint)
+        for stem in mapped:
+            if stem not in targets and len(targets) < max_targets:
+                targets.append(stem)
+    if not targets:
+        return {
+            "status": "skipped",
+            "reason": "Strong residual hints had no matching native ZFTurbo 53-stem targets.",
+            "parent_candidate_id": parent.get("candidate_id"),
+        }
+
+    return {
+        "status": "ready",
+        "model_id": model_id,
+        "parent_candidate_id": parent["candidate_id"],
+        "parent_model_id": parent["model_id"],
+        "input_path": str(parent_path),
+        "target_stems": targets,
+        "source_hints": selected_hints,
+        "gate": {
+            "mix_rank_max": 5,
+            "other_rank_max": 3,
+            "requires_valid_parent_output": True,
+            "max_parent_outputs_per_invocation": 1,
+            "max_target_stems": max_targets,
+        },
+        "warning": (
+            "MVSep Other is not assumed to be a mathematically exact mixture residual. "
+            "ZFTurbo outputs are independent, may overlap, and are never added to or subtracted from other stems."
+        ),
     }
 
 

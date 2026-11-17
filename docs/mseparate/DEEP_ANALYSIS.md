@@ -72,3 +72,35 @@ expected-source CLAP rank. This is only a semantic source-alignment
 comparison, not an objective separation-quality score. No winner is
 automatically selected. This mode exists to collect side-by-side candidates
 for listening and future benchmark-based routing decisions.
+
+
+## Conditional ZFTurbo 53-stem rescue
+
+After deep analysis, mseparate may run one bounded rescue pass when all of
+these conditions hold:
+
+1. A successful MVSep Mega 53 specialist produced an `Other` artifact.
+2. Its technical validation status is `valid` (warnings do not trigger rescue).
+3. At least one mapped source family ranked in the top five on the original
+   mix and in the top three on that exact `Other` artifact.
+4. The ZFTurbo 53-stem model passed license, runtime, input-compatibility and
+   device/VRAM admission gates, and its pinned assets pass SHA-256 verification.
+
+Only the strongest eligible `Other` parent is selected per invocation. The
+rescue requests only the native ZFTurbo labels mapped from the strong hints,
+up to eight target stems; it does not request all 53 outputs by default.
+The rescue is skipped if any gate fails. Use `--no-rescue` to disable it.
+
+The rescue is an exploratory second analysis, not a mathematical residual
+decomposition: MVSep `Other` is not assumed to be exactly mixture-minus-target.
+Every ZFTurbo output is recorded as a child candidate of the exact MVSep
+`Other` candidate in `quarantine.json`. Candidate files remain independent,
+pending and reversible. No output is added to, subtracted from, or used to
+overwrite another stem. The original mix, MVSep outputs and rescue outputs
+remain intact.
+
+The stricter CLAP ranks are conservative routing gates, not calibrated
+probabilities or proof that a source was missed. A rescue result is not
+automatically promoted and must be auditioned. The 53-stem model remains
+excluded from normal planner routing; this conditional path is a separate,
+explicitly auditable rescue stage.

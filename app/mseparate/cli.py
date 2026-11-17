@@ -17,7 +17,7 @@ from .planner import add_vocal_comparison_tasks, build_plan, validate_plan
 from .registry import RegistryError, bundled_registry_path, eligible_models, load_registry, preparable_models
 from .reporting import print_analysis, print_execution_summary, print_plan
 from .storage import data_root, ensure_layout, write_json_atomic
-from .types import to_jsonable
+from .types import ExecutionPlan, ExecutionTask, to_jsonable
 from .vram import filter_registry_for_device
 
 
@@ -392,6 +392,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Allow temporary WAV sample-rate conversion to satisfy model input rates; outputs keep the model sample rate")
     parser.add_argument("--no-deep-analysis", action="store_true",
                         help="Skip post-inference CLAP analysis of separated stems and residual-source hints")
+    parser.add_argument("--no-rescue", action="store_true",
+                        help="Disable the conditional ZFTurbo 53-stem rescue pass after strong MVSep Other residual hints")
     parser.add_argument("--compare-vocal-models", action="store_true",
                         help="Run every eligible primary vocal model sequentially on the same mix to generate separate comparison candidates")
     parser.add_argument("--verbose", action="store_true", help="Print additional diagnostics")
@@ -420,6 +422,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--diagnose cannot be combined with --execute, --analysis-only, --plan-only, --prepare-models or --report")
 
     candidate_analysis_report = None
+    conditional_rescue_report = None
+    rescue_execution_summary = None
     try:
         paths = ensure_layout()
         if args.models_dir:
@@ -680,6 +684,118 @@ def main(argv: list[str] | None = None) -> int:
                     file=sys.stderr,
                 )
 
+            if candidate_analysis_report.get("status") != "unavailable":
+                from .candidate_analysis import evaluate_conditional_rescue
+                if args.no_rescue:
+                    conditional_rescue_report = {
+                        "status": "skipped",
+                        "reason": "Conditional rescue was disabled by --no-rescue.",
+                    }
+                else:
+                    conditional_rescue_report = evaluate_conditional_rescue(
+                        candidate_analysis_report,
+                        registry=filtered_registry,
+                        audio=report.audio,
+                    )
+
+                if conditional_rescue_report.get("status") == "ready":
+                    rescue_model_id = conditional_rescue_report["model_id"]
+                    rescue_model = filtered_registry[rescue_model_id]
+                    rescue_assets = ensure_model_assets(
+                        rescue_model, paths["models"], no_download=args.no_download,
+                        timeout=args.download_timeout, retries=args.download_retries,
+                    )
+                    rescue_asset_ok = bool(rescue_assets) and all(
+                        item.status in {"cached", "recovered", "downloaded"}
+                        for item in rescue_assets
+                    )
+                    asset_results.extend({
+                        "model_id": rescue_model_id, "role": item.role,
+                        "status": item.status, "path": item.path,
+                        "message": item.message, "bytes_downloaded": item.bytes_downloaded,
+                    } for item in rescue_assets)
+
+                    if not rescue_asset_ok:
+                        conditional_rescue_report["status"] = "blocked"
+                        conditional_rescue_report["reason"] = (
+                            "ZFTurbo 53-stem assets are missing or failed SHA-256/size verification."
+                        )
+                    else:
+                        rescue_task = ExecutionTask(
+                            task_id="conditional-zfturbo-53stem-rescue",
+                            model_id=rescue_model_id,
+                            input_stem_id="residual-parent",
+                            target_stems=tuple(conditional_rescue_report["target_stems"]),
+                            depth=1,
+                            score=0.0,
+                            confidence=0.0,
+                            rationale=(
+                                "Conditional rescue from a verified MVSep Mega 53 Other artifact "
+                                "after strong CLAP residual-source hints; independent candidate outputs only."
+                            ),
+                        )
+                        rescue_plan = ExecutionPlan(
+                            schema_version=1,
+                            tasks=(rescue_task,),
+                            notes=(conditional_rescue_report["warning"],),
+                            max_depth=max(1, args.max_depth),
+                        )
+                        from .demucs_onnx import DemucsOnnxAdapter
+                        from .bs_roformer import BSRoformerAdapter
+                        from .mdx23c import MDX23CAdapter
+                        rescue_manager = ExecutionManager(
+                            {
+                                "melband-roformer": lambda: MelBandCLIAdapter(
+                                    timeout=args.inference_timeout or None
+                                ),
+                                "demucs-onnx": lambda: DemucsOnnxAdapter(
+                                    no_download=args.no_download,
+                                ),
+                                "bs-roformer-pymss": BSRoformerAdapter,
+                                "mdx23c-pymss": MDX23CAdapter,
+                            },
+                            models_root=paths["models"],
+                            output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
+                            device=effective_device,
+                        )
+                        rescue_execution_summary = rescue_manager.execute(
+                            rescue_plan,
+                            filtered_registry,
+                            {"residual-parent": Path(conditional_rescue_report["input_path"])},
+                        )
+                        if rescue_execution_summary.succeeded:
+                            parent_candidate = next(
+                                item for item in candidate_analysis_report["candidates"]
+                                if item["candidate_id"] == conditional_rescue_report["parent_candidate_id"]
+                            )
+                            parent_predictions = [
+                                {
+                                    "kind": "source", "source": item["source"],
+                                    "score": item["score"],
+                                }
+                                for item in parent_candidate.get("top_sources", [])
+                            ]
+                            from .candidate_analysis import analyze_execution_candidates
+                            rescue_analysis = analyze_execution_candidates(
+                                rescue_execution_summary,
+                                mix_path=conditional_rescue_report["input_path"],
+                                mix_predictions=parent_predictions,
+                                device=effective_device,
+                                cache_dir=paths["models"] / "source-analysis",
+                                no_download=args.no_download,
+                                ledger_path=ledger_path,
+                                parent_candidate_id=conditional_rescue_report["parent_candidate_id"],
+                            )
+                            conditional_rescue_report["status"] = "completed"
+                            conditional_rescue_report["analysis"] = rescue_analysis
+                        else:
+                            conditional_rescue_report["status"] = "failed"
+                            conditional_rescue_report["reason"] = (
+                                rescue_execution_summary.results[0].message
+                                if rescue_execution_summary.results else
+                                "Conditional rescue did not produce an execution result."
+                            )
+
     except (OSError, ValueError, RuntimeError, RegistryError) as exc:
         print(f"mseparate: {exc}", file=sys.stderr)
         return 2
@@ -703,6 +819,17 @@ def main(argv: list[str] | None = None) -> int:
         else:
             from .candidate_analysis import print_candidate_analysis
             print_candidate_analysis(candidate_analysis_report)
+    if conditional_rescue_report is not None:
+        print("Conditional ZFTurbo 53-stem rescue: " + conditional_rescue_report.get("status", "unknown"))
+        if conditional_rescue_report.get("status") == "ready":
+            print("  Parent: " + conditional_rescue_report["parent_candidate_id"])
+            print("  Requested stems: " + ", ".join(conditional_rescue_report["target_stems"]))
+        if conditional_rescue_report.get("reason"):
+            print("  Reason: " + conditional_rescue_report["reason"])
+        if conditional_rescue_report.get("warning"):
+            print("  Note: " + conditional_rescue_report["warning"])
+    if rescue_execution_summary is not None:
+        print_execution_summary(rescue_execution_summary)
     if execution_summary is not None:
         print_execution_summary(execution_summary)
         if execution_summary.succeeded:
@@ -726,6 +853,8 @@ def main(argv: list[str] | None = None) -> int:
             "inference_performed": inference_performed,
             "execution": to_jsonable(execution_summary) if execution_summary is not None else None,
             "deep_output_analysis": to_jsonable(candidate_analysis_report),
+            "conditional_rescue": to_jsonable(conditional_rescue_report),
+            "rescue_execution": to_jsonable(rescue_execution_summary),
             "execution_blocked": execution_blocked,
             "requested_device": args.device,
             "allow_resample": args.allow_resample,
@@ -755,6 +884,8 @@ def main(argv: list[str] | None = None) -> int:
     if execution_blocked:
         return 1
     if execution_summary is not None and execution_summary.failed:
+        return 1
+    if rescue_execution_summary is not None and rescue_execution_summary.failed:
         return 1
     return 0
 
