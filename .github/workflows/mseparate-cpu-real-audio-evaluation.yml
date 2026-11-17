@@ -8,6 +8,7 @@ on:
     paths:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
+      - "scripts/inspect_mseparate_stemgmd_archive.py"
       - "scripts/download_mseparate_babyslakh_subset.py"
       - "tests/test_mseparate_babyslakh_subset.py"
       - "scripts/download_mseparate_urmp_subset.sh"
@@ -23,6 +24,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  stemgmd-archive-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the evaluation branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install range-only ZIP reader
+        run: python -m pip install "remotezip>=0.12,<1"
+
+      - name: Inspect StemGMD archive central directory without downloading audio
+        timeout-minutes: 10
+        run: |
+          python scripts/inspect_mseparate_stemgmd_archive.py \\
+            --report "${{ runner.temp }}/stemgmd-archive-inventory.json"
+
+      - name: Upload metadata-only archive inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stemgmd-archive-inventory-${{ github.run_id }}
+          path: ${{ runner.temp }}/stemgmd-archive-inventory.json
+          if-no-files-found: warn
+          retention-days: 7
+
   cpu-real-audio-evaluation:
     runs-on: ubuntu-latest
     timeout-minutes: 300
