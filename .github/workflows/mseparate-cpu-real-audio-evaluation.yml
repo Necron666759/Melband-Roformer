@@ -107,6 +107,16 @@ jobs:
             --report "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-subset-report.json" \
             --max-tracks 4
 
+      - name: Run real-checkpoint Snare/Toms inference and SI-SDR evaluation on CPU
+        timeout-minutes: 240
+        run: |
+          python scripts/evaluate_mseparate_drum_heads.py \
+            --manifest "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-eval-manifest.csv" \
+            --output-dir "${{ runner.temp }}/mseparate-evaluation/reports/snare-toms-evaluation" \
+            --models-dir "${{ runner.temp }}/mseparate-evaluation/models" \
+            --device cpu \
+            --max-tracks 4
+
       - name: Selectively download BabySlakh mixtures and drum references
         timeout-minutes: 30
         run: |
@@ -173,5 +183,7 @@ jobs:
           name: mseparate-cpu-real-audio-evaluation-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/mseparate-evaluation/reports/*.json
+            ${{ runner.temp }}/mseparate-evaluation/reports/snare-toms-evaluation/snare_toms_evaluation.json
+            ${{ runner.temp }}/mseparate-evaluation/reports/snare-toms-evaluation/snare_toms_evaluation.csv
           if-no-files-found: warn
           retention-days: 30
