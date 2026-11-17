@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mseparate-cpu-real-audio-evaluation-\${{ github.ref }}
+  group: mseparate-cpu-real-audio-evaluation-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -26,8 +26,8 @@ jobs:
       MKL_NUM_THREADS: "2"
       OPENBLAS_NUM_THREADS: "2"
       TOKENIZERS_PARALLELISM: "false"
-      HF_HOME: \${{ runner.temp }}/mseparate-hf-cache
-      XDG_CACHE_HOME: \${{ runner.temp }}/mseparate-cache
+      HF_HOME: ${{ runner.temp }}/mseparate-hf-cache
+      XDG_CACHE_HOME: ${{ runner.temp }}/mseparate-cache
     steps:
       - name: Check out the evaluation branch
         uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
       - name: Run stages A, B and C on BabySlakh
         run: |
           python scripts/evaluate_mseparate_babyslakh.py \
-            --work-dir "\${{ runner.temp }}/mseparate-evaluation" \
+            --work-dir "${{ runner.temp }}/mseparate-evaluation" \
             --max-tracks 20 \
             --max-cases 4 \
             --excerpt-seconds 12 \
@@ -65,8 +65,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mseparate-cpu-real-audio-evaluation-\${{ github.run_id }}
+          name: mseparate-cpu-real-audio-evaluation-${{ github.run_id }}
           path: |
-            \${{ runner.temp }}/mseparate-evaluation/reports/*.json
+            ${{ runner.temp }}/mseparate-evaluation/reports/*.json
           if-no-files-found: warn
           retention-days: 30
