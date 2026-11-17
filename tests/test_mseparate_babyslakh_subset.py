@@ -62,12 +62,13 @@ def test_safe_destination_rejects_parent_traversal(tmp_path):
 
 def test_download_subset_fetches_only_selected_members(tmp_path, monkeypatch):
     class FakeArchive:
+        read_members = []
         names = [
-            f"Track{i:05d}/metadata.yaml" for i in range(1, 5)
+            f"Track{i:05d}/metadata.yaml" for i in range(1, 7)
         ] + [
-            f"Track{i:05d}/mix.wav" for i in range(1, 5)
+            f"Track{i:05d}/mix.wav" for i in range(1, 7)
         ] + [
-            f"Track{i:05d}/stems/S01.wav" for i in range(1, 5)
+            f"Track{i:05d}/stems/S01.wav" for i in range(1, 7)
         ]
 
         def __enter__(self):
@@ -80,6 +81,7 @@ def test_download_subset_fetches_only_selected_members(tmp_path, monkeypatch):
             return list(self.names)
 
         def read(self, member):
+            self.read_members.append(member)
             return (
                 "audio_dir: stems\nstems:\n  S01:\n    is_drum: true\n"
             ).encode("utf-8")
@@ -104,6 +106,8 @@ def test_download_subset_fetches_only_selected_members(tmp_path, monkeypatch):
     result = subset.download_subset(output, manifest, max_tracks=4)
 
     assert result["selected_tracks"] == 4
+    assert result["metadata_files_scanned"] == 4
+    assert len(archive.read_members) == 4
     assert result["full_archive_downloaded"] is False
     assert result["download_method"].startswith("HTTP range")
     assert len(result["tracks"]) == 4
