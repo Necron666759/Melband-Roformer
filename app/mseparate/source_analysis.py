@@ -138,9 +138,19 @@ def classify_style(predictions: list[dict] | None) -> dict:
     )
     ambiguous = margin is not None and margin < 0.12
     label = str(best.get("source", "unknown"))
+    best_family = GENRE_FAMILIES.get(label, "unknown")
+    runner_family = (
+        GENRE_FAMILIES.get(str(runner_up.get("source", "")), "unknown")
+        if runner_up else best_family
+    )
+    family = (
+        "mixed_or_uncertain"
+        if ambiguous and runner_family != best_family
+        else best_family
+    )
     return {
         "label": label,
-        "family": "mixed_or_uncertain" if ambiguous else GENRE_FAMILIES.get(label, "unknown"),
+        "family": family,
         "status": "ambiguous" if ambiguous else "provisional",
         "score": round(float(best.get("score", 0.0)), 6),
         "margin": round(margin, 6) if margin is not None else None,
