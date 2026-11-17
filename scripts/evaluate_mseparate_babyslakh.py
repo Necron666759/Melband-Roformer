@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CPU evaluation of MSeparate routing on the public BabySlakh music dataset.
 
-Stage A: analyze real musical arrangements with LAION-CLAP.
+Stage A: analyze rendered MIDI arrangements and isolated drum stems with LAION-CLAP.
 Stage B: build and record the source-aware CPU execution plan for every mix.
 Stage C: execute bounded excerpts from representative mixes and collect
 technical output checks, post-inference source hints and rescue decisions.
@@ -28,7 +28,6 @@ APP = ROOT / "app"
 if str(APP) not in sys.path:
     sys.path.insert(0, str(APP))
 
-MIX_NAMES = {"mix.wav", "mix.flac", "mixture.wav", "mixture.flac"}
 SYNTH = {
     "synthesizer", "synth_lead", "synth_pad", "synth_arp", "synth_keys",
     "synth_strings", "synth_brass", "synth_bass", "synth_fx",
@@ -209,11 +208,19 @@ def main() -> int:
     for index, mix in enumerate(mixes, 1):
         audio_reports[str(mix)] = analyze_audio(mix)
         emit(f"Stage A signal analysis {index}/{len(mixes)}: {mix.parent.name}")
+    drum_stem_paths = sorted({
+        dataset_root / stem_path
+        for row in subset_rows for stem_path in row["drum_stems"]
+    })
+    analysis_paths = mixes + drum_stem_paths
     predictions = analyze_sources_many(
-        mixes, device="cpu", cache_dir=models_dir / "source-analysis",
+        analysis_paths, device="cpu", cache_dir=models_dir / "source-analysis",
         no_download=False,
     )
-    emit("Stage A CLAP source/style analysis completed")
+    emit(
+        f"Stage A CLAP analysis completed for {len(mixes)} mixtures and "
+        f"{len(drum_stem_paths)} isolated drum stems"
+    )
 
     # Stage B: use the production planner and CPU eligibility policy unchanged.
     registry = load_registry(bundled_registry_path())
@@ -241,6 +248,22 @@ def main() -> int:
             "input": str(mix.relative_to(dataset_root)),
             "ground_truth": subset_row["ground_truth"],
             "drum_stem_paths": subset_row["drum_stems"],
+            "isolated_drum_stem_analysis": [
+                {
+                    "stem": stem_path,
+                    "top_source_predictions": sorted(
+                        [
+                            item for item in predictions.get(
+                                str(dataset_root / stem_path), []
+                            )
+                            if item.get("kind", "source") == "source"
+                        ],
+                        key=lambda item: float(item.get("score", 0.0)),
+                        reverse=True,
+                    )[:12],
+                }
+                for stem_path in subset_row["drum_stems"]
+            ],
             "duration_seconds": report.audio.duration_seconds,
             "sample_rate": report.audio.sample_rate,
             "category": category,
@@ -384,6 +407,7 @@ def main() -> int:
         "drum_ground_truth_tracks": sum(
             1 for row in rows if row.get("ground_truth", {}).get("drums_present")
         ),
+        "isolated_drum_stems_analyzed": len(drum_stem_paths),
         "inference_successes": sum(int(item.get("execution_succeeded", 0)) for item in stage_c),
         "inference_failures": sum(int(item.get("execution_failed", 0)) for item in stage_c),
         "report": str(report_path),
