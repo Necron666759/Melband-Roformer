@@ -26,8 +26,8 @@ jobs:
       MKL_NUM_THREADS: "2"
       OPENBLAS_NUM_THREADS: "2"
       TOKENIZERS_PARALLELISM: "false"
-      HF_HOME: ${{ runner.temp }}/mseparate-hf-cache
-      XDG_CACHE_HOME: ${{ runner.temp }}/mseparate-cache
+      HF_HOME: ${{ github.workspace }}/.cache/mseparate-hf-cache
+      XDG_CACHE_HOME: ${{ github.workspace }}/.cache/mseparate-cache
     steps:
       - name: Check out the evaluation branch
         uses: actions/checkout@v4
