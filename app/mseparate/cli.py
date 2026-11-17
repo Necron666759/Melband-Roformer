@@ -487,7 +487,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("Warning: " + device_fallback_reason, file=sys.stderr)
         journal.begin("audio_analysis", input=str(input_path))
         report = analyze_audio(input_path)
-        journal.end("audio_analysis", duration_seconds=report.audio.duration_seconds,
+        journal.end("audio_analysis", audio_duration_seconds=report.audio.duration_seconds,
                     sample_rate=report.audio.sample_rate, channels=report.audio.channels)
         if execute_requested:
             # Semantic source recognition is an execution-time routing aid only.
@@ -695,7 +695,7 @@ def main(argv: list[str] | None = None) -> int:
                     succeeded=execution_summary.succeeded if execution_summary is not None else 0,
                     failed=execution_summary.failed if execution_summary is not None else 0,
                     blocked=execution_blocked)
-        journal.begin("deep_output_analysis", enabled=not args.no_deep_analysis)
+        journal.begin("post_inference_analysis_and_rescue", enabled=not args.no_deep_analysis)
         if execution_summary is not None and execution_summary.succeeded and not args.no_deep_analysis:
             from .candidate_analysis import analyze_execution_candidates
             ledger_path = Path(args.output_dir).expanduser() / "mseparate-stems" / "quarantine.json"
@@ -853,9 +853,10 @@ def main(argv: list[str] | None = None) -> int:
                                 "Conditional rescue did not produce an execution result."
                             )
 
-        journal.end("deep_output_analysis",
+        journal.end("post_inference_analysis_and_rescue",
                     status="completed" if candidate_analysis_report is not None else "skipped",
-                    candidate_count=(candidate_analysis_report or {}).get("candidate_count", 0))
+                    candidate_count=(candidate_analysis_report or {}).get("candidate_count", 0),
+                    rescue_status=(conditional_rescue_report or {}).get("status", "not_run"))
     except (OSError, ValueError, RuntimeError, RegistryError) as exc:
         journal.record("run", "failed", error=f"{type(exc).__name__}: {exc}")
         print(f"mseparate: {exc}", file=sys.stderr)
