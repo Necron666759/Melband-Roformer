@@ -8,6 +8,7 @@ from __future__ import annotations
 import fcntl
 import threading
 import tempfile
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping, Protocol
@@ -61,6 +62,7 @@ class TaskResult:
     outputs: tuple[StemArtifact, ...] = ()
     quality_reports: tuple[StemQualityReport, ...] = ()
     message: str | None = None
+    elapsed_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -113,12 +115,18 @@ class ExecutionManager:
         output_root: str | Path,
         device: str = "auto",
         resource_check: Callable[[], None] | None = None,
+        event_callback: Callable[[str, str, Mapping[str, object]], None] | None = None,
     ) -> None:
         self.backend_factories = dict(backend_factories)
         self.models_root = Path(models_root).expanduser()
         self.output_root = Path(output_root).expanduser()
         self.device = device
         self.resource_check = resource_check
+        self.event_callback = event_callback
+
+    def _emit(self, stage: str, status: str, **details: object) -> None:
+        if self.event_callback is not None:
+            self.event_callback(stage, status, details)
 
     def execute(
         self,
@@ -138,6 +146,10 @@ class ExecutionManager:
         lock_path = Path.home() / ".local" / "share" / "mseparate" / ".execution.lock"
         with _EXECUTION_LOCK, _SystemExecutionLock(lock_path):
             for task in plan.tasks:
+                task_started = time.perf_counter()
+                self._emit("model_task", "started", task_id=task.task_id,
+                           model_id=task.model_id, input_stem_id=task.input_stem_id,
+                           target_stems=list(task.target_stems), device=self.device)
                 failed_dependencies = [
                     dependency for dependency in task.depends_on
                     if states.get(dependency) != "success"
@@ -149,6 +161,9 @@ class ExecutionManager:
                     )
                     results.append(result)
                     states[task.task_id] = result.status
+                    self._emit("model_task", result.status, task_id=task.task_id,
+                               model_id=task.model_id, elapsed_seconds=round(time.perf_counter()-task_started, 6),
+                               reason=result.message)
                     continue
 
                 manifest = manifests.get(task.model_id)
@@ -160,6 +175,9 @@ class ExecutionManager:
                     )
                     results.append(result)
                     states[task.task_id] = result.status
+                    self._emit("model_task", result.status, task_id=task.task_id,
+                               model_id=task.model_id, elapsed_seconds=round(time.perf_counter()-task_started, 6),
+                               reason=result.message)
                     continue
 
                 factory = self.backend_factories.get(manifest.backend)
@@ -170,6 +188,9 @@ class ExecutionManager:
                     )
                     results.append(result)
                     states[task.task_id] = result.status
+                    self._emit("model_task", result.status, task_id=task.task_id,
+                               model_id=task.model_id, elapsed_seconds=round(time.perf_counter()-task_started, 6),
+                               reason=result.message)
                     continue
 
                 backend = factory()
@@ -192,12 +213,20 @@ class ExecutionManager:
                         )
                     model_dir = self.models_root / manifest.model_id
                     load_attempted = True
+                    load_started = time.perf_counter()
+                    self._emit("model_load", "started", task_id=task.task_id, model_id=task.model_id)
                     backend.load(manifest, model_dir, self.device)
+                    self._emit("model_load", "completed", task_id=task.task_id, model_id=task.model_id,
+                               duration_seconds=round(time.perf_counter()-load_started, 6))
                     task_output_dir = self.output_root / task.task_id
                     task_output_dir.mkdir(parents=True, exist_ok=True)
                     source_info = sf.info(str(input_path))
                     target_rate = manifest.sample_rate
                     resampled_input = bool(target_rate and source_info.samplerate != target_rate)
+                    inference_started = time.perf_counter()
+                    self._emit("model_inference", "started", task_id=task.task_id,
+                               model_id=task.model_id, input_path=str(input_path),
+                               target_stems=list(task.target_stems), resampled_input=resampled_input)
                     if resampled_input:
                         # Convert only the model-facing working copy. The
                         # source stays untouched and output stems keep the
@@ -210,6 +239,9 @@ class ExecutionManager:
                             produced = backend.infer(model_input, task_output_dir, task.target_stems)
                     else:
                         produced = backend.infer(input_path, task_output_dir, task.target_stems)
+                    self._emit("model_inference", "completed", task_id=task.task_id,
+                               model_id=task.model_id, duration_seconds=round(time.perf_counter()-inference_started, 6),
+                               output_count=len(produced))
                     if resampled_input:
                         for artifact in produced:
                             output_rate = sf.info(str(artifact.path)).samplerate
@@ -248,6 +280,11 @@ class ExecutionManager:
                         reports,
                     )
                     quality_reports = reports
+                    self._emit("output_validation", "completed", task_id=task.task_id,
+                               model_id=task.model_id,
+                               output_count=len(reports),
+                               invalid_count=sum(item.status == "invalid" for item in reports),
+                               warning_count=sum(bool(item.issues) for item in reports))
                     invalid = [
                         report for report in reports if report.status == "invalid"
                     ]
@@ -263,7 +300,13 @@ class ExecutionManager:
                 finally:
                     if load_attempted:
                         try:
+                            unload_started = time.perf_counter()
+                            self._emit("model_unload", "started", task_id=task.task_id,
+                                       model_id=task.model_id)
                             backend.unload()
+                            self._emit("model_unload", "completed", task_id=task.task_id,
+                                       model_id=task.model_id,
+                                       duration_seconds=round(time.perf_counter()-unload_started, 6))
                         except Exception as exc:
                             suffix = f"Backend unload failed: {type(exc).__name__}: {exc}"
                             error = f"{error}; {suffix}" if error else suffix
@@ -283,8 +326,12 @@ class ExecutionManager:
                     outputs=() if error else outputs,
                     quality_reports=quality_reports,
                     message=error,
+                    elapsed_seconds=round(time.perf_counter() - task_started, 6),
                 )
                 results.append(result)
                 states[task.task_id] = result.status
+                self._emit("model_task", result.status, task_id=task.task_id,
+                           model_id=task.model_id, elapsed_seconds=result.elapsed_seconds,
+                           output_stems=[item.stem for item in result.outputs], reason=result.message)
 
         return ExecutionSummary(tuple(results))
