@@ -90,6 +90,7 @@ class ExecutionPlan:
     tasks: tuple[ExecutionTask, ...]
     notes: tuple[str, ...] = ()
     max_depth: int = 0
+    style_profile: dict[str, Any] = field(default_factory=dict, compare=False, hash=False)
 
 
 def to_jsonable(value: Any) -> Any:
