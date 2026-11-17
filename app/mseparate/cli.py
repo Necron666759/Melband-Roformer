@@ -630,6 +630,7 @@ def main(argv: list[str] | None = None) -> int:
                     models_root=paths["models"],
                     output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
                     device=effective_device,
+                    event_callback=lambda stage, status, details: journal.record(stage, status, **details),
                 )
                 execution_attempted = True
                 execution_summary = manager.execute(
@@ -680,6 +681,7 @@ def main(argv: list[str] | None = None) -> int:
                             models_root=paths["models"],
                             output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
                             device="cpu",
+                            event_callback=lambda stage, status, details: journal.record(stage, status, **details),
                         )
                         execution_summary = cpu_manager.execute(
                             cpu_plan, registry, {"mix": input_path},
@@ -802,6 +804,7 @@ def main(argv: list[str] | None = None) -> int:
                             models_root=paths["models"],
                             output_root=Path(args.output_dir).expanduser() / "mseparate-stems",
                             device=effective_device,
+                            event_callback=lambda stage, status, details: journal.record(stage, status, **details),
                         )
                         rescue_execution_summary = rescue_manager.execute(
                             rescue_plan,
