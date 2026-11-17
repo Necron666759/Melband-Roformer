@@ -23,7 +23,7 @@ def _stem_score(stem: str, features: dict, predictions: list[dict] | None = None
         "piano": ("piano", "synth_keys"), "keyboard": ("piano", "synth_keys"),
         "keys": ("synth_keys", "piano"), "organ": ("synth_keys", "piano"),
         "digital-piano": ("piano", "synth_keys"),
-        "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp",
+        "synth": ("synth_lead", "synth_pad", "synth_arp",
                   "synth_keys", "synth_strings", "synth_brass", "synth_bass", "synth_fx"),
         "pad": ("synth_pad",), "lead": ("synth_lead",),
         "arp": ("synth_arp",), "arpeggio": ("synth_arp",),
@@ -153,7 +153,6 @@ def _has_synth_evidence(
     top_score = float(ranked[0].get("score", 0.0))
     max_rank, max_gap = (12, 1.0) if electronic_style else (8, 0.75)
     conflicts = {
-        "synthesizer": ("synth_keys", "synth_bass", "synth_vocals"),
         "synth_strings": ("strings", "violin", "viola", "cello"),
         "synth_brass": ("brass", "trombone", "trumpet", "tuba", "french_horn"),
         "synth_flute": ("flute",),
