@@ -11,6 +11,8 @@ analyzes audio, builds a plan from the enabled model registry and executes compa
 .B --execute
 flag remains available as a compatibility alias. The current registry includes HT-Demucs six-stem ONNX, MelBand RoFormer, BS-RoFormer and MDX23C vocal separation. The input file is not modified.
 .PP
+The report timeline includes high-level stage events and per-task model load, inference, output-validation and unload timings. The text log preserves the terminal stream; it is complementary to, not embedded in, the JSON report.
+.PP
 The existing
 .B melband-roformer
 and
@@ -28,7 +30,10 @@ Analyze the input and display the currently available execution plan without inf
 Directory used for separated stems and a requested report file.
 .TP
 .B --report [PATH]
-Write a JSON report. If PATH is omitted, use mseparate-report.json in the output directory.
+Write an atomic JSON report containing analysis, routing plan, asset verification, task results, candidate/Rescue analysis and run timeline. If PATH is omitted, use mseparate-report.json in the output directory.
+.TP
+.B --log-file [PATH]
+Mirror terminal stdout and stderr text to an append-mode UTF-8 log file while keeping it visible in the terminal. If PATH is omitted, use mseparate.log in the output directory. This option works independently of --report.
 .TP
 .B --models-dir DIR
 Override the local model storage directory.
