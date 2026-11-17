@@ -930,6 +930,18 @@ def main(argv: list[str] | None = None) -> int:
             "asset_results": asset_results,
             "observability": journal.snapshot(),
             "log_file": str(log_path) if log_path else None,
+            "run_options": {
+                "analysis_only": args.analysis_only,
+                "plan_only": args.plan_only,
+                "execute": execute_requested,
+                "requested_device": args.device,
+                "allow_resample": args.allow_resample,
+                "no_deep_analysis": args.no_deep_analysis,
+                "no_rescue": args.no_rescue,
+                "compare_vocal_models": args.compare_vocal_models,
+                "prefer_model": args.prefer_model,
+                "max_depth": args.max_depth,
+            },
         }
         try:
             write_json_atomic(report_path, payload)
