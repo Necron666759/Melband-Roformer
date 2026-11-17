@@ -331,3 +331,33 @@ def test_execution_resamples_input_but_keeps_model_output_rate(tmp_path):
     assert sf.info(str(result.outputs[0].path)).samplerate == 44100
     assert result.quality_reports[0].sample_rate == 44100
     assert result.quality_reports[0].status == "valid"
+
+
+
+def test_executor_emits_structured_stage_events_and_task_duration(tmp_path):
+    source = tmp_path / "input.wav"
+    sf.write(source, np.full((48000, 2), 0.1, dtype=np.float32), 48000)
+    events = []
+    state = {"active": 0, "max_active": 0, "events": []}
+    manager = ExecutionManager(
+        {"fake": lambda: FakeBackend(state)},
+        models_root=tmp_path / "models", output_root=tmp_path / "outputs",
+        event_callback=lambda stage, status, details: events.append((stage, status, dict(details))),
+    )
+    plan = ExecutionPlan(1, (
+        ExecutionTask("task", "model-a", "mix", ("vocals",)),
+    ))
+
+    result = manager.execute(
+        plan, {"model-a": _manifest("model-a")}, {"mix": source}
+    ).results[0]
+
+    assert result.status == "success"
+    assert result.elapsed_seconds is not None and result.elapsed_seconds >= 0
+    stages = {(stage, status) for stage, status, _ in events}
+    assert ("model_task", "started") in stages
+    assert ("model_load", "completed") in stages
+    assert ("model_inference", "completed") in stages
+    assert ("output_validation", "completed") in stages
+    assert ("model_unload", "completed") in stages
+    assert ("model_task", "success") in stages
