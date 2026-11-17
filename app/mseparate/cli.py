@@ -419,6 +419,7 @@ def _main(argv: list[str] | None = None) -> int:
         sys.stdout = TeeTextIO(original_stdout, log_stream)
         sys.stderr = TeeTextIO(original_stderr, log_stream)
         print(f"mseparate log: {log_path}")
+        print(f"mseparate run_id: {journal.run_id}; started_at: {journal.started_at}")
     journal.record("cli", "arguments_parsed", log_file=str(log_path) if log_path else None)
     if args.max_depth < 0:
         parser.error("--max-depth must be zero or greater")
