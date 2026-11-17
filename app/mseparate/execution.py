@@ -158,6 +158,7 @@ class ExecutionManager:
                     result = TaskResult(
                         task.task_id, task.model_id, "skipped",
                         message="Dependencies did not succeed: " + ", ".join(failed_dependencies),
+                        elapsed_seconds=round(time.perf_counter() - task_started, 6),
                     )
                     results.append(result)
                     states[task.task_id] = result.status
@@ -172,6 +173,7 @@ class ExecutionManager:
                     result = TaskResult(
                         task.task_id, task.model_id, "failed",
                         message="Task references an unknown model manifest or input stem",
+                        elapsed_seconds=round(time.perf_counter() - task_started, 6),
                     )
                     results.append(result)
                     states[task.task_id] = result.status
@@ -185,6 +187,7 @@ class ExecutionManager:
                     result = TaskResult(
                         task.task_id, task.model_id, "failed",
                         message=f"No adapter registered for backend {manifest.backend!r}",
+                        elapsed_seconds=round(time.perf_counter() - task_started, 6),
                     )
                     results.append(result)
                     states[task.task_id] = result.status
