@@ -9,10 +9,12 @@ on:
       - feature/mseparate-cpu-real-audio-evaluation
       - feature/mseparate-style-routing-followup
       - feature/mseparate-electronic-genre-coverage
+      - feature/mseparate-electronic-source-taxonomy
   pull_request:
     branches:
       - main
       - feature/mseparate-cpu-real-audio-evaluation
+      - feature/mseparate-electronic-genre-coverage
       - feature/mseparate-gpu-foundation-sync
 
 jobs:
