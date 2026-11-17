@@ -4,7 +4,7 @@
 
 This stage enables acoustic Snare and Toms through the already integrated ZFTurbo 53-stem BS-RoFormer, because its manifest explicitly declares both native outputs and the pinned checkpoint/config have already passed strict-load and real inference validation in the project. The dedicated smoke test added in this branch additionally requests `snare` and `toms` from that exact checkpoint.
 
-Cymbals remain on the combined Drums route. No currently reviewed candidate has both a sufficiently clear weight-license grant and a verified integration path in this repository.
+Cymbals remain on the combined Drums route. No currently reviewed Cymbals candidate has both a sufficiently clear weight-license grant and a verified integration path in this repository.
 
 ## Existing project model: ZFTurbo BS-RoFormer 53-stem
 
@@ -46,7 +46,7 @@ MVSep lists SCNet XL 4/5/6-stem, MelBand RoFormer 4/6-stem and BS-RoFormer 5/10-
 
 ### Hybrid Demucs DrumSep
 
-The `inagoy/drumsep` project is MIT-licensed code for a Hybrid Demucs model with Kick, Snare, Cymbals and Toms outputs. It expects a drum recording as input. This repository deliberately excludes its existing HT-Demucs ONNX model from normal routing because of measured inference cost; the inagoy project is a distinct implementation and would require its own backend, checkpoint provenance review, performance evaluation and VRAM admission tests before consideration. It is not enabled by this change.
+The `inagoy/drumsep` project contains MIT-licensed Hybrid Demucs inference code with Kick, Snare, Cymbals and Toms outputs. The repository's code license is not treated as a separate model-weight license grant; weight provenance/redistribution terms need independent review. It expects a drum recording as input. This repository deliberately excludes its existing HT-Demucs ONNX model from normal routing because of measured inference cost; the inagoy project is a distinct implementation and would require its own backend, checkpoint provenance review, performance evaluation and VRAM admission tests before consideration. It is not enabled by this change.
 
 ## Validation boundaries
 
