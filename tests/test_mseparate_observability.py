@@ -43,3 +43,15 @@ def test_resolve_log_path_uses_output_directory(tmp_path):
 def test_resolve_log_path_preserves_absolute_path(tmp_path):
     target = tmp_path / "absolute.log"
     assert resolve_log_path(str(target), "/ignored") == target
+
+
+
+def test_cli_log_file_option_accepts_default_and_explicit_path():
+    from mseparate.cli import build_parser
+
+    parser = build_parser()
+    default = parser.parse_args(["track.wav", "--log-file"])
+    explicit = parser.parse_args(["track.wav", "--log-file", "logs/custom.log"])
+
+    assert default.log_file == "mseparate.log"
+    assert explicit.log_file == "logs/custom.log"
