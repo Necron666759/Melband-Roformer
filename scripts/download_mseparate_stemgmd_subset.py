@@ -55,10 +55,14 @@ def index_archive_members(infos: list[Any]) -> list[dict[str, Any]]:
             "kit": kit,
             "groove": groove,
             "members": {},
+            "member_compressed_sizes": {},
         })
         if instrument in row["members"]:
             raise ValueError(f"Duplicate {instrument} member in StemGMD group {key}")
         row["members"][instrument] = info.filename
+        row["member_compressed_sizes"][instrument] = int(
+            getattr(info, "compress_size", info.file_size)
+        )
 
     complete = [
         row for row in grouped.values()
@@ -82,6 +86,10 @@ def rank_track_candidates(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 int(row["kit"] not in kits),
                 int(row["drummer"] not in drummers),
                 int(row["groove"] not in grooves),
+                -sum(
+                    row.get("member_compressed_sizes", {}).get(name, 0)
+                    for name in ("snare", *TOM_INSTRUMENTS)
+                ),
                 row["kit"], row["drummer"], row["groove"],
             ),
         )
@@ -146,14 +154,15 @@ def download_subset(
         ranked = rank_track_candidates(groups)
         # Some grooves contain no Snare or no Tom hits. The strict SI-SDR
         # runner rejects silent references, so preflight only the four target
-        # stems and continue until enough valid tracks are found.
-        candidate_limit = min(len(ranked), max_tracks * 8)
-        rows: list[dict[str, Any]] = []
+        # stems and continue through the complete ranked inventory until the
+        # requested valid subset is found. There is deliberately no arbitrary
+        # scan cutoff: sparse active grooves can occur late in the ZIP.
+        rows: list[dict[str, Any]] =
         rejected_tracks: list[dict[str, str]] = []
         extracted_bytes = 0
         candidates_checked = 0
 
-        for group in ranked[:candidate_limit]:
+        for group in ranked:
             if len(rows) >= max_tracks:
                 break
             candidates_checked += 1
