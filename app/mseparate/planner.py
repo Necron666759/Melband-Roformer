@@ -83,7 +83,8 @@ def _model_outputs(model: ModelManifest) -> tuple[str, ...]:
 _SOURCE_ALIASES = {
     "vocals": ("vocals", "synth_vocals"),
     "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp",
-              "synth_strings", "synth_brass", "synth_bass", "synth_fx", "synth_flute"),
+              "synth_strings", "synth_brass", "synth_fx", "synth_flute",
+              "synth_woodwinds", "synth_guitar"),
     "keys": ("synth_keys",),
     "digital-piano": ("digital_piano",),
     "organ": ("organ",),
@@ -140,6 +141,39 @@ def _source_score(predictions: list[dict], label: str) -> float | None:
         if item.get("source") == label
     ]
     return max(values) if values else None
+
+
+def _has_synth_evidence(
+    predictions: list[dict], *, electronic_style: bool,
+) -> bool:
+    """Require synth evidence that is not better explained by a live instrument."""
+    ranked = sorted(predictions, key=lambda item: float(item.get("score", 0.0)), reverse=True)
+    if not ranked:
+        return False
+    top_score = float(ranked[0].get("score", 0.0))
+    max_rank, max_gap = (12, 1.0) if electronic_style else (8, 0.75)
+    conflicts = {
+        "synth_strings": ("strings", "violin", "viola", "cello"),
+        "synth_brass": ("brass", "trombone", "trumpet", "tuba", "french_horn"),
+        "synth_flute": ("flute",),
+        "synth_woodwinds": ("woodwinds", "flute", "clarinet", "oboe", "bassoon", "saxophone"),
+        "synth_guitar": ("guitar", "acoustic_guitar", "electric_guitar"),
+    }
+    for rank, item in enumerate(ranked, start=1):
+        source = str(item.get("source", ""))
+        if source not in _SOURCE_ALIASES["synth"]:
+            continue
+        score = float(item.get("score", 0.0))
+        if rank > max_rank or top_score - score > max_gap:
+            continue
+        if any(
+            (counterpart_score := _source_score(predictions, counterpart)) is not None
+            and counterpart_score >= score - 0.10
+            for counterpart in conflicts.get(source, ())
+        ):
+            continue
+        return True
+    return False
 
 
 def _has_source_evidence(
@@ -307,8 +341,15 @@ def build_plan(
                 continue
             synth_keys_score = _source_score(source_predictions, "synth_keys")
             digital_piano_score = _source_score(source_predictions, "digital_piano")
-            if "keys" in outputs and digital_piano_score is not None and (
-                synth_keys_score is None or digital_piano_score >= synth_keys_score - 0.10
+            acoustic_piano_score = _source_score(source_predictions, "acoustic_piano")
+            broad_piano_score = _source_score(source_predictions, "piano")
+            non_synth_keyboard_score = max(
+                (value for value in (digital_piano_score, acoustic_piano_score, broad_piano_score)
+                 if value is not None),
+                default=None,
+            )
+            if "keys" in outputs and non_synth_keyboard_score is not None and (
+                synth_keys_score is None or non_synth_keyboard_score >= synth_keys_score - 0.10
             ):
                 continue
             if "digital-piano" in outputs and synth_keys_score is not None and (
@@ -316,11 +357,7 @@ def build_plan(
             ):
                 continue
         elif category == "synth-specialist":
-            if not _has_source_evidence(
-                source_predictions, _SOURCE_ALIASES["synth"],
-                max_rank=12 if electronic_style else 8,
-                max_score_gap=1.0 if electronic_style else 0.75,
-            ):
+            if not _has_synth_evidence(source_predictions, electronic_style=electronic_style):
                 continue
         elif category == "keyboard-specialist":
             if not _has_source_evidence(
