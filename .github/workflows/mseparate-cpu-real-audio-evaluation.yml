@@ -8,6 +8,7 @@ on:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
       - "scripts/download_mseparate_urmp_subset.sh"
+      - "scripts/evaluate_mseparate_urmp.py"
       - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
   workflow_dispatch: {}
 
@@ -85,6 +86,12 @@ jobs:
           )
           print(json.dumps({"wav_files": len(rows), "mixtures": mixes}, indent=2))
           PY
+
+      - name: Evaluate URMP source analysis and CPU routing against known instruments
+        run: |
+          python scripts/evaluate_mseparate_urmp.py \
+            --audio-dir "${{ runner.temp }}/mseparate-urmp" \
+            --report "${{ runner.temp }}/mseparate-evaluation/reports/urmp-routing-report.json"
 
       - name: Run stages A, B and C on BabySlakh
         run: |
