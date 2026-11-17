@@ -6,6 +6,7 @@ import json
 import os
 from dataclasses import replace
 import sys
+import uuid
 from pathlib import Path
 
 from . import __version__
@@ -729,7 +730,7 @@ def main(argv: list[str] | None = None) -> int:
                         )
                     else:
                         rescue_task = ExecutionTask(
-                            task_id="conditional-zfturbo-53stem-rescue",
+                            task_id=f"conditional-zfturbo-53stem-rescue-{uuid.uuid4().hex[:8]}",
                             model_id=rescue_model_id,
                             input_stem_id="residual-parent",
                             target_stems=tuple(conditional_rescue_report["target_stems"]),
