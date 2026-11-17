@@ -5,6 +5,7 @@ from collections import defaultdict
 from dataclasses import replace
 
 from .registry import eligible_models, model_audio_compatibility
+from .source_analysis import classify_style
 from .types import AnalysisReport, ExecutionPlan, ExecutionTask, ModelManifest
 
 
@@ -79,6 +80,130 @@ def _model_outputs(model: ModelManifest) -> tuple[str, ...]:
     return tuple(stem for stem in declared if stem not in model.dummy_stems)
 
 
+_SOURCE_ALIASES = {
+    "vocals": ("vocals", "synth_vocals"),
+    "synth": ("synthesizer", "synth_lead", "synth_pad", "synth_arp", "synth_keys",
+              "synth_strings", "synth_brass", "synth_bass", "synth_fx", "synth_flute"),
+    "keys": ("synth_keys", "digital_piano", "acoustic_piano", "piano"),
+    "digital-piano": ("digital_piano", "acoustic_piano", "piano", "synth_keys"),
+    "organ": ("organ", "synth_keys"),
+    "bass": ("bass", "synth_bass"),
+    "kick": ("kick", "electronic_drums", "drums"),
+    "drums": ("drums", "electronic_drums", "breakbeats"),
+    "percussion": ("percussion", "electronic_drums", "drums", "breakbeats"),
+    "hh": ("hi_hat", "electronic_drums", "drums"),
+    "snare": ("snare", "electronic_drums", "drums"),
+    "guitar": ("guitar", "electric_guitar", "acoustic_guitar"),
+    "piano": ("acoustic_piano", "digital_piano", "piano", "synth_keys"),
+}
+
+_ACOUSTIC_TARGETS = {
+    "violin": ("violin", "synth_strings"),
+    "viola": ("viola", "synth_strings"),
+    "cello": ("cello", "synth_strings"),
+    "double_bass": ("double-bass", "synth_bass"),
+    "harp": ("harp", None),
+    "flute": ("flute", "synth_flute"),
+    "clarinet": ("clarinet", "synth_woodwinds"),
+    "oboe": ("oboe", "synth_woodwinds"),
+    "bassoon": ("bassoon", "synth_woodwinds"),
+    "saxophone": ("saxophone", "synth_woodwinds"),
+    "trombone": ("trombone", "synth_brass"),
+    "trumpet": ("trumpet", "synth_brass"),
+    "tuba": ("tuba", "synth_brass"),
+    "french_horn": ("french-horn", "synth_brass"),
+    "strings": ("strings", "synth_strings"),
+    "brass": ("brass", "synth_brass"),
+    "woodwinds": ("woodwind", "synth_woodwinds"),
+    "acoustic_guitar": ("acoustic-guitar", "synth_guitar"),
+    "electric_guitar": ("electric-guitar", "synth_guitar"),
+    "banjo": ("banjo", None),
+    "mandolin": ("mandolin", None),
+    "accordion": ("accordion", None),
+    "harpsichord": ("harpsichord", None),
+    "acoustic_piano": ("piano", "synth_keys"),
+    "digital_piano": ("digital-piano", "synth_keys"),
+    "organ": ("organ", "synth_keys"),
+    "marimba": ("marimba", None),
+    "glockenspiel": ("glockenspiel", None),
+    "timpani": ("timpani", None),
+    "congas": ("congas", None),
+    "tambourine": ("tambourine", None),
+    "sitar": ("sitar", None),
+    "ukulele": ("ukulele", None),
+}
+
+
+def _has_source_evidence(
+    predictions: list[dict], labels: tuple[str, ...], *,
+    max_rank: int = 8, max_score_gap: float = 0.75,
+) -> bool:
+    ranked = sorted(predictions, key=lambda item: float(item.get("score", 0.0)), reverse=True)
+    if not ranked:
+        return False
+    top_score = float(ranked[0].get("score", 0.0))
+    for rank, item in enumerate(ranked, start=1):
+        if item.get("source") in labels:
+            return rank <= max_rank and top_score - float(item.get("score", 0.0)) <= max_score_gap
+    return False
+
+
+def _detected_acoustic_targets(
+    predictions: list[dict], style_profile: dict,
+) -> tuple[str, ...]:
+    """Select only clearly supported acoustic-instrument heads from Mega 53."""
+    ranked = sorted(predictions, key=lambda item: float(item.get("score", 0.0)), reverse=True)
+    if not ranked:
+        return ()
+    top_score = float(ranked[0].get("score", 0.0))
+    family = style_profile.get("family")
+    if family == "orchestral":
+        max_rank, max_gap = 10, 0.95
+    elif family == "electronic":
+        max_rank, max_gap = 6, 0.50
+    else:
+        max_rank, max_gap = 8, 0.75
+    score_by_source = {str(item.get("source")): float(item.get("score", 0.0)) for item in ranked}
+    targets: list[str] = []
+    selected_families: set[str] = set()
+    family_for_source = {
+        "violin": "strings", "viola": "strings", "cello": "strings",
+        "double_bass": "strings", "strings": "strings",
+        "trombone": "brass", "trumpet": "brass", "tuba": "brass",
+        "french_horn": "brass", "brass": "brass",
+        "flute": "woodwinds", "clarinet": "woodwinds", "oboe": "woodwinds",
+        "bassoon": "woodwinds", "saxophone": "woodwinds", "woodwinds": "woodwinds",
+    }
+    accepted = []
+    for rank, item in enumerate(ranked, start=1):
+        source = str(item.get("source", ""))
+        mapping = _ACOUSTIC_TARGETS.get(source)
+        if mapping is None:
+            continue
+        score = float(item.get("score", 0.0))
+        if rank > max_rank or top_score - score > max_gap:
+            continue
+        target, synthetic_counterpart = mapping
+        if synthetic_counterpart:
+            synthetic_score = score_by_source.get(synthetic_counterpart)
+            if synthetic_score is not None and score < synthetic_score + 0.10:
+                continue
+        accepted.append((source, target, rank, score))
+    # Prefer specific instrument heads over a broad family head when both fire.
+    specific_families = {
+        family_for_source[item[0]] for item in accepted
+        if item[0] not in {"strings", "brass", "woodwinds"}
+    }
+    for source, target, rank, score in accepted:
+        family_name = family_for_source.get(source)
+        if source in {"strings", "brass", "woodwinds"} and family_name in specific_families:
+            continue
+        if target not in targets:
+            targets.append(target)
+            selected_families.add(family_name or source)
+    return tuple(targets[:12])
+
+
 def _model_specialization(stem: str, model: ModelManifest) -> int:
     """Prefer a declared specialist over a general-purpose model for that stem.
 
@@ -138,39 +263,65 @@ def build_plan(
                 "HT-Demucs 6-stem is intentionally excluded from normal routing; "
                 "use the dedicated 'mseparate-demucs' terminal command"
             )
-    candidates = [
-        model for model in eligible_models(available_registry)
-        if model.backend != "demucs-onnx"
-        and (model.auto_route or model.model_id == preferred_model_id)
-    ]
     source_predictions = [
         item for item in (analysis.predictions if analysis else [])
         if item.get("kind", "source") == "source"
     ]
-    # Newly enabled electronic specialists must not become default tasks on
-    # unrelated/unknown audio. Require an explicit source-family prediction.
-    specialist_evidence = {
-        "synth-specialist": any(
-            str(item.get("source", "")).startswith("synth_")
-            or item.get("source") == "synthesizer"
-            for item in source_predictions
-        ),
-        "keyboard-specialist": any(
-            item.get("source") in {"synth_keys", "piano"}
-            for item in source_predictions
-        ),
-    }
+    style_profile = classify_style(analysis.predictions if analysis else [])
+    electronic_style = style_profile.get("family") == "electronic"
+    acoustic_targets = _detected_acoustic_targets(source_predictions, style_profile)
+    eligible = eligible_models(available_registry)
     candidates = [
-        model for model in candidates
-        if (model.category or "").strip().lower().replace("_", "-")
-        not in specialist_evidence
-        or specialist_evidence[(model.category or "").strip().lower().replace("_", "-")]
+        model for model in eligible
+        if model.backend != "demucs-onnx"
+        and (model.auto_route or model.model_id == preferred_model_id
+             or (model.model_id == "zfturbo-bs-roformer-53stem-candidate" and bool(acoustic_targets)))
     ]
+
+    filtered_candidates = []
+    for model in candidates:
+        category = (model.category or "").strip().lower().replace("_", "-")
+        outputs = _model_outputs(model)
+        if model.model_id == "zfturbo-bs-roformer-53stem-candidate":
+            if preferred_model_id != model.model_id and not acoustic_targets:
+                continue
+        elif model.model_id.startswith("mvsep-mega53-"):
+            # Single-target Mega 53 derivatives are scheduled only when their
+            # own source family is detected; unknown audio is not a reason to
+            # run every specialist.
+            if not source_predictions or not any(
+                _has_source_evidence(
+                    source_predictions, _SOURCE_ALIASES.get(stem, (stem.replace("-", "_"),)),
+                    max_rank=12 if electronic_style and stem in {"synth", "keys", "bass"} else 8,
+                    max_score_gap=1.0 if electronic_style and stem in {"synth", "keys", "bass"} else 0.75,
+                )
+                for stem in outputs
+            ):
+                continue
+        elif category == "synth-specialist":
+            if not _has_source_evidence(
+                source_predictions, _SOURCE_ALIASES["synth"],
+                max_rank=12 if electronic_style else 8,
+                max_score_gap=1.0 if electronic_style else 0.75,
+            ):
+                continue
+        elif category == "keyboard-specialist":
+            if not _has_source_evidence(
+                source_predictions, _SOURCE_ALIASES["keys"],
+                max_rank=12 if electronic_style else 8,
+                max_score_gap=1.0 if electronic_style else 0.75,
+            ):
+                continue
+        elif category in {"vocal", "vocals"} and source_predictions:
+            if not _has_source_evidence(source_predictions, _SOURCE_ALIASES["vocals"], max_rank=10):
+                continue
+        filtered_candidates.append(model)
+    candidates = filtered_candidates
     if not candidates:
         return ExecutionPlan(1, (), (
             "No verified, enabled models are available for normal routing; neural inference was not scheduled.",
             "HT-Demucs 6-stem (ONNX) is excluded from normal automatic and preferred-model routing because measured inference is exceptionally slow; use the dedicated mseparate-demucs command for explicit runs.",
-        ), max_depth)
+        ), max_depth, style_profile)
     features = analysis.measurements if analysis else {}
     audio = analysis.audio if analysis else None
     compatible: list[ModelManifest] = []
@@ -190,7 +341,7 @@ def build_plan(
     if not compatible:
         notes = ["No eligible model accepts the input audio format; no inference was scheduled."]
         notes.extend(rejected)
-        return ExecutionPlan(1, (), tuple(notes), max_depth)
+        return ExecutionPlan(1, (), tuple(notes), max_depth, style_profile)
 
     if preferred_model_id is not None and preferred_model_id not in {model.model_id for model in compatible}:
         raise ValueError(
@@ -199,7 +350,13 @@ def build_plan(
 
     ranked: dict[str, list[tuple[int, int, int, float, ModelManifest, str]]] = defaultdict(list)
     for model in compatible:
-        for stem in _model_outputs(model):
+        model_stems = (
+            acoustic_targets
+            if model.model_id == "zfturbo-bs-roformer-53stem-candidate"
+            and preferred_model_id != model.model_id
+            else _model_outputs(model)
+        )
+        for stem in model_stems:
             score, reason = _stem_score(stem, features, analysis.predictions if analysis else None)
             specialization = _model_specialization(stem, model)
             preferred = int(model.model_id == preferred_model_id)
@@ -237,11 +394,29 @@ def build_plan(
         "Hard input-format and channel constraints are checked before model ranking; models without backend-declared sample-rate conversion support require explicit --allow-resample.",
         "Tasks are ordered deterministically and must execute one at a time; parallel model inference is forbidden.",
         "Overlapping routes prefer a manifest-declared specialist, then an explicitly preferred model, then manifest planner_priority and source salience. Priority is an operator routing preference, not a measured quality score; CLAP/acoustic scores do not estimate model quality or calibrated source presence.",
-        "CLAP source-family matches are relative similarities, not calibrated source-presence probabilities. Electronic genre matches are contextual hints only and never trigger a stem route by themselves.",
-        "Synth leads, pads, arpeggios, synth bass, vocoder-like vocals and electronic FX are analyzed separately where CLAP can distinguish them; overlapping descriptions remain approximate."
+        "CLAP source-family matches are relative similarities, not calibrated source-presence probabilities. Genre classification is provisional and source predictions, not genre labels alone, gate individual stems.",
+        "Synth leads, pads, arpeggios, synth bass, vocoder-like vocals and electronic FX are analyzed separately where CLAP can distinguish them; overlapping descriptions remain approximate.",
         "HT-Demucs 6-stem (ONNX) is excluded from normal automatic and preferred-model routing because measured inference is exceptionally slow; use the dedicated mseparate-demucs command for explicit runs.",
         "No refinement tasks are added until parent/child output quality can be compared safely.",
     ]
+    if style_profile.get("label") != "unknown":
+        notes.append(
+            f"Detected music style: {style_profile['label']} "
+            f"(family={style_profile['family']}, status={style_profile['status']}); "
+            "CLAP ranking is a provisional semantic classification, not ground truth."
+        )
+    else:
+        notes.append("Music style is unclassified; specialist routing remains conservative.")
+    if acoustic_targets and preferred_model_id != "zfturbo-bs-roformer-53stem-candidate":
+        notes.append(
+            "Detected acoustic instrument targets routed through one verified Mega 53 inference "
+            "with only these output heads requested: " + ", ".join(acoustic_targets) + "."
+        )
+    if electronic_style:
+        notes.append(
+            "Electronic-style profile: verified Synth/Keys specialists are considered when their "
+            "source-family evidence is present; unrelated acoustic instrument heads are not scheduled."
+        )
     if allow_resample:
         notes.append(
             "Sample-rate conversion is enabled: the execution manager uses a temporary model-rate WAV "
@@ -250,7 +425,7 @@ def build_plan(
     notes.extend(rejected)
     if not tasks:
         notes.append("Eligible manifests declared no usable output stems.")
-    return ExecutionPlan(1, tuple(tasks), tuple(notes), max_depth)
+    return ExecutionPlan(1, tuple(tasks), tuple(notes), max_depth, style_profile)
 
 
 
