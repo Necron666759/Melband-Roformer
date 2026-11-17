@@ -136,8 +136,8 @@ def test_select_tracks_rejects_more_than_eight():
 
 def test_download_skips_tracks_with_silent_toms_and_avoids_other_stems(tmp_path, monkeypatch):
     members = {
-        **_members("drummer1", "z_kit", "1_silent-groove.wav", silent_toms=True),
-        **_members("drummer2", "a_kit", "2_active-groove.wav"),
+        **_members("drummer1", "z_kit", "1_silent-groove", silent_toms=True),
+        **_members("drummer2", "a_kit", "2_active-groove"),
     }
 
     class FakeArchive:
