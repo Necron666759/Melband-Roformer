@@ -1,8 +1,8 @@
 # CPU real-audio routing evaluation
 
-This experiment exercises the production MSeparate analysis and planner on the
-20-track BabySlakh debug subset, then runs bounded CPU inference on up to four
-representative excerpts.
+This experiment exercises the production MSeparate analysis and planner on a
+small acoustic URMP reference subset and the 20-track BabySlakh debug subset,
+then runs bounded CPU inference on up to four BabySlakh excerpts.
 
 ## Dataset and scope
 
@@ -15,6 +15,35 @@ representative excerpts.
   committed to this repository or uploaded as workflow artifacts.
 - Slakh attribution: Ethan Manilow, Gordon Wichern, Prem Seetharaman and
   Jonathan Le Roux, “Cutting Music Source Separation Some Slakh,” WASPAA 2019.
+
+## Acoustic reference subset: URMP
+
+The workflow also downloads a fixed four-piece subset of URMP directly to the
+ephemeral GitHub Actions runner:
+
+- `11_Maria_ob_vc`: oboe + cello
+- `12_Spring_vn_vn_vc`: two violins + cello
+- `28_Fugue_fl_ob_cl_bn`: flute + oboe + clarinet + bassoon
+- `37_Rondeau_fl_vn_va_cl`: flute + violin + viola + clarinet
+
+Only four mixtures and their 13 isolated instrument recordings are fetched.
+The download script verifies the SHA-256 of all four mixtures. It does not
+download videos or the full URMP archive. The runner inspects WAV sample rate,
+channel count, frame count, duration and subtype, then runs the production
+analysis and CPU planner against the four mixtures using the known instrument
+lists as reference labels.
+
+The URMP files remain in the runner's temporary directory. They are not
+committed to Git, Git LFS, or workflow artifacts. Only metadata and routing
+reports are uploaded. The workflow uses the dataset for evaluation; users
+must continue to observe the dataset provider's terms and attribution
+requirements.
+
+This stage does not yet run specialist separation inference or calculate
+SDR/SI-SDR. The isolated AuSep recordings provide a path toward reference-based
+evaluation, but temporal alignment, sample-rate consistency, mixture/source
+level relationships and stem-to-output mapping must be validated before
+publishing those metrics.
 
 ## Stages
 
