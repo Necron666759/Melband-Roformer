@@ -308,7 +308,7 @@ def download_subset(
         "limitations": [
             "StemGMD uses sample-library-rendered acoustic kits, not live microphone recordings.",
             "The compact subset is a controlled technical benchmark, not a statistically representative evaluation.",
-            "A CUDA-capable run is required for the GPU-only ZFTurbo 53-stem model; CPU fallback is not permitted.",
+            "The ZFTurbo 53-stem checkpoint has a verified CPU runtime; CPU inference is the required baseline and CUDA is optional acceleration.",
         ],
     }
     report_path.write_text(
