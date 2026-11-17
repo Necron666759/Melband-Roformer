@@ -8,7 +8,7 @@ on:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
       - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -20,14 +20,14 @@ concurrency:
 jobs:
   cpu-real-audio-evaluation:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 300
     env:
       OMP_NUM_THREADS: "2"
       MKL_NUM_THREADS: "2"
       OPENBLAS_NUM_THREADS: "2"
       TOKENIZERS_PARALLELISM: "false"
-      HF_HOME: ${{ github.workspace }}/.cache/mseparate-hf-cache
-      XDG_CACHE_HOME: ${{ github.workspace }}/.cache/mseparate-cache
+      HF_HOME: /tmp/mseparate-hf-cache
+      XDG_CACHE_HOME: /tmp/mseparate-cache
     steps:
       - name: Check out the evaluation branch
         uses: actions/checkout@v4
