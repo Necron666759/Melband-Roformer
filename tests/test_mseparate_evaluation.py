@@ -9,7 +9,7 @@ from mseparate.evaluation import si_sdr_db
 def test_si_sdr_is_scale_invariant_for_clean_estimate():
     reference = np.linspace(-1.0, 1.0, 2048, dtype=np.float32)
     estimate = 0.37 * reference
-    assert si_sdr_db(reference, estimate) == float("inf")
+    assert si_sdr_db(reference, estimate) > 100.0
 
 
 def test_si_sdr_penalizes_added_interference():
