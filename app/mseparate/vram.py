@@ -29,9 +29,9 @@ def filter_registry_for_device(
     *,
     memory_probe: Callable[[], tuple[int, int] | None] | None = None,
 ) -> tuple[dict[str, ModelManifest], tuple[str, ...]]:
-    """Remove GPU-gated models before planning or asset preparation.
+    """Apply CUDA memory admission while keeping verified CPU runtimes eligible.
 
-    A verified low-VRAM profile may replace the normal profile only when both
+    A verified low-VRAM profile may replace the normal CUDA profile only when both
     its total-capacity and currently-free-memory thresholds are satisfied.
     Unverified profiles are deliberately ignored.
     """
@@ -42,7 +42,9 @@ def filter_registry_for_device(
     notes: list[str] = []
 
     for model in registry.values():
-        if model.min_vram_gb is None:
+        if model.min_vram_gb is None or device == "cpu":
+            # min_vram_gb describes CUDA admission only. A verified CPU runtime
+            # remains eligible; throughput is a performance concern, not a gate.
             accepted[model.model_id] = model
             continue
         if device != "cuda":
