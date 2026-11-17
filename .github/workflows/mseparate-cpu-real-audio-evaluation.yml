@@ -11,6 +11,7 @@ on:
       - "scripts/inspect_mseparate_stemgmd_archive.py"
       - "scripts/download_mseparate_stemgmd_subset.py"
       - "tests/test_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_vram.py"
       - "scripts/download_mseparate_babyslakh_subset.py"
       - "tests/test_mseparate_babyslakh_subset.py"
       - "scripts/download_mseparate_urmp_subset.sh"
@@ -90,13 +91,14 @@ jobs:
             "remotezip>=0.12,<1" "PyYAML>=6,<7"
           python -m pip install --no-deps -e app
 
-      - name: Test URMP ground-truth ranking and GPU admission diagnostics
+      - name: Test URMP ground-truth ranking and CPU/GPU admission policies
         run: |
           python -m pip install pytest
           python -m pytest -q \
             tests/test_mseparate_urmp_evaluation.py \
             tests/test_mseparate_babyslakh_subset.py \
-            tests/test_mseparate_stemgmd_subset.py
+            tests/test_mseparate_stemgmd_subset.py \
+            tests/test_mseparate_vram.py
 
       - name: Download four aligned StemGMD Snare/Toms reference tracks
         timeout-minutes: 30
