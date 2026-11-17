@@ -49,8 +49,13 @@ def _find_mix_member(track_dir: str, names: set[str]) -> str | None:
 def _find_stem_member(track_dir: str, metadata: dict[str, Any], stem_id: str,
                       names: set[str]) -> str | None:
     audio_dir = str(metadata.get("audio_dir") or "stems").strip("/")
+    track_name = PurePosixPath(track_dir).name
     if audio_dir == track_dir or audio_dir.startswith(track_dir + "/"):
         stem_dir = audio_dir
+    elif audio_dir == track_name:
+        stem_dir = track_dir
+    elif audio_dir.startswith(track_name + "/"):
+        stem_dir = f"{track_dir}/{audio_dir[len(track_name) + 1:]}"
     else:
         stem_dir = f"{track_dir}/{audio_dir}"
     prefix = stem_dir.rstrip("/") + "/"
