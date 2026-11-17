@@ -157,7 +157,7 @@ def download_subset(
         # stems and continue through the complete ranked inventory until the
         # requested valid subset is found. There is deliberately no arbitrary
         # scan cutoff: sparse active grooves can occur late in the ZIP.
-        rows: list[dict[str, Any]] =
+        rows: list[dict[str, Any]] = []
         rejected_tracks: list[dict[str, str]] = []
         extracted_bytes = 0
         candidates_checked = 0
