@@ -209,7 +209,7 @@ def _detected_acoustic_targets(
     targets: list[str] = []
     family_for_source = {
         "violin": "strings", "viola": "strings", "cello": "strings",
-        "double_bass": "strings", "strings": "strings",
+        "double_bass": "strings", "harp": "strings", "strings": "strings",
         "trombone": "brass", "trumpet": "brass", "tuba": "brass",
         "french_horn": "brass", "brass": "brass",
         "flute": "woodwinds", "clarinet": "woodwinds", "oboe": "woodwinds",
@@ -233,7 +233,7 @@ def _detected_acoustic_targets(
         accepted.append((source, target, rank, score))
     # Prefer specific instrument heads over a broad family head when both fire.
     specific_families = {
-        family_for_source[item[0]] for item in accepted
+        family_for_source.get(item[0], item[0]) for item in accepted
         if item[0] not in {"strings", "brass", "woodwinds", "guitar"}
     }
     for source, target, rank, score in accepted:
