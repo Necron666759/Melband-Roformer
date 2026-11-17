@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import os
 from dataclasses import replace
@@ -14,6 +15,7 @@ from .assets import ensure_model_assets
 from .audio import analyze_audio
 from .execution import ExecutionManager
 from .melband import MelBandCLIAdapter
+from .observability import RunJournal, TeeTextIO, resolve_log_path
 from .planner import add_vocal_comparison_tasks, build_plan, validate_plan
 from .registry import RegistryError, bundled_registry_path, eligible_models, load_registry, preparable_models
 from .reporting import print_analysis, print_execution_summary, print_plan
@@ -398,6 +400,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--compare-vocal-models", action="store_true",
                         help="Run every eligible primary vocal model sequentially on the same mix to generate separate comparison candidates")
     parser.add_argument("--verbose", action="store_true", help="Print additional diagnostics")
+    parser.add_argument("--log-file", nargs="?", const="mseparate.log", default=None,
+                        help="Mirror the complete terminal output (stdout and stderr) to a UTF-8 log file; optional path, default: <output-dir>/mseparate.log")
     parser.add_argument("--report", nargs="?", const="mseparate-report.json",
                         help="Write a JSON report (optional path; default: mseparate-report.json)")
     parser.add_argument("--version", action="version", version=f"mseparate {__version__}")
@@ -407,6 +411,22 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    journal = RunJournal()
+    log_path = None
+    if args.log_file:
+        log_path = resolve_log_path(args.log_file, args.output_dir)
+        log_stream = log_path.open("a", encoding="utf-8", buffering=1)
+        original_stdout, original_stderr = sys.stdout, sys.stderr
+        sys.stdout = TeeTextIO(original_stdout, log_stream)
+        sys.stderr = TeeTextIO(original_stderr, log_stream)
+        def _restore_log_streams() -> None:
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+            log_stream.flush()
+            log_stream.close()
+        atexit.register(_restore_log_streams)
+        print(f"mseparate log: {log_path}")
+    journal.record("cli", "arguments_parsed", log_file=str(log_path) if log_path else None)
     if args.max_depth < 0:
         parser.error("--max-depth must be zero or greater")
     if args.download_timeout <= 0:
@@ -465,11 +485,15 @@ def main(argv: list[str] | None = None) -> int:
             effective_device, device_fallback_reason = _resolve_auto_device()
             if device_fallback_reason:
                 print("Warning: " + device_fallback_reason, file=sys.stderr)
+        journal.begin("audio_analysis", input=str(input_path))
         report = analyze_audio(input_path)
+        journal.end("audio_analysis", duration_seconds=report.audio.duration_seconds,
+                    sample_rate=report.audio.sample_rate, channels=report.audio.channels)
         if execute_requested:
             # Semantic source recognition is an execution-time routing aid only.
             # Asset preparation must remain independent of the optional CLAP stack.
             from .source_analysis import analyze_sources
+            journal.begin("semantic_source_analysis", device=effective_device)
             try:
                 predictions = analyze_sources(
                     input_path, device=effective_device,
@@ -490,9 +514,11 @@ def main(argv: list[str] | None = None) -> int:
                     no_download=args.no_download,
                 )
             report = replace(report, predictions=predictions)
+            journal.end("semantic_source_analysis", predictions=len(predictions), device=effective_device)
         filtered_registry, vram_notes = filter_registry_for_device(registry, effective_device)
         for note in vram_notes:
             print("VRAM preflight: " + note, file=sys.stderr)
+        journal.begin("planning", registry_entries=len(filtered_registry))
         plan = build_plan(max_depth=args.max_depth, analysis=report, registry=filtered_registry,
                           preferred_model_id=args.prefer_model,
                           allow_resample=args.allow_resample)
@@ -504,6 +530,7 @@ def main(argv: list[str] | None = None) -> int:
         if vram_notes:
             plan = replace(plan, notes=(*plan.notes, *vram_notes))
         validate_plan(plan)
+        journal.end("planning", task_count=len(plan.tasks), max_depth=plan.max_depth)
 
         asset_results: list[dict] = []
         prepared_models: set[str] = set()
@@ -520,6 +547,7 @@ def main(argv: list[str] | None = None) -> int:
         # and --execute are used together.
         unique_models = {model.model_id: model for model in models_to_prepare}
         model_asset_status: dict[str, bool] = {}
+        journal.begin("model_asset_preparation", model_count=len(unique_models))
         for model in unique_models.values():
             if model.backend == "demucs-onnx":
                 model_dir = paths["models"] / model.model_id
@@ -569,9 +597,12 @@ def main(argv: list[str] | None = None) -> int:
                 "message": result.message, "bytes_downloaded": result.bytes_downloaded,
             } for result in results)
 
+        journal.end("model_asset_preparation", asset_count=len(asset_results),
+                    failed_assets=sum(item.get("status") == "failed" for item in asset_results))
         execution_summary = None
         execution_attempted = False
         execution_blocked = False
+        journal.begin("primary_execution", requested=bool(execute_requested and plan.tasks))
         if execute_requested and plan.tasks:
             selected_ids = {task.model_id for task in plan.tasks}
             failed_assets = sorted(model_id for model_id in selected_ids
@@ -659,6 +690,12 @@ def main(argv: list[str] | None = None) -> int:
                             file=sys.stderr,
                         )
 
+        journal.end("primary_execution",
+                    status="completed" if execution_summary is not None else "not_started",
+                    succeeded=execution_summary.succeeded if execution_summary is not None else 0,
+                    failed=execution_summary.failed if execution_summary is not None else 0,
+                    blocked=execution_blocked)
+        journal.begin("deep_output_analysis", enabled=not args.no_deep_analysis)
         if execution_summary is not None and execution_summary.succeeded and not args.no_deep_analysis:
             from .candidate_analysis import analyze_execution_candidates
             ledger_path = Path(args.output_dir).expanduser() / "mseparate-stems" / "quarantine.json"
@@ -816,7 +853,11 @@ def main(argv: list[str] | None = None) -> int:
                                 "Conditional rescue did not produce an execution result."
                             )
 
+        journal.end("deep_output_analysis",
+                    status="completed" if candidate_analysis_report is not None else "skipped",
+                    candidate_count=(candidate_analysis_report or {}).get("candidate_count", 0))
     except (OSError, ValueError, RuntimeError, RegistryError) as exc:
+        journal.record("run", "failed", error=f"{type(exc).__name__}: {exc}")
         print(f"mseparate: {exc}", file=sys.stderr)
         return 2
 
@@ -868,8 +909,9 @@ def main(argv: list[str] | None = None) -> int:
         report_path = Path(args.report).expanduser()
         if not report_path.is_absolute():
             report_path = Path(args.output_dir).expanduser() / report_path
+        journal.record("run", "finalizing", exit_context="report_written")
         payload = {
-            "schema_version": 1, "analysis": to_jsonable(report),
+            "schema_version": 2, "analysis": to_jsonable(report),
             "plan": None if args.analysis_only else to_jsonable(plan),
             "registry_path": str(registry_path), "models_root": str(paths["models"]),
             "inference_attempted": inference_attempted,
@@ -885,6 +927,8 @@ def main(argv: list[str] | None = None) -> int:
             "device_fallback_reason": device_fallback_reason,
             "vram_preflight_notes": list(vram_notes),
             "asset_results": asset_results,
+            "observability": journal.snapshot(),
+            "log_file": str(log_path) if log_path else None,
         }
         try:
             write_json_atomic(report_path, payload)
