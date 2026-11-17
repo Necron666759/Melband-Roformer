@@ -95,6 +95,8 @@ The terminal log is append-mode UTF-8 and includes progress output emitted throu
 
 The run timeline uses UTC ISO-8601 timestamps and monotonic elapsed seconds. Every event contains `stage`, `status`, and optional structured details. Stage duration is measured with a monotonic clock. Wall-clock timestamps are for correlation only.
 
+The top-level report schema is version 2. Version 2 retains the existing analysis/plan/execution fields and adds `observability`, `log_file`, and `run_options`; consumers should ignore unknown fields and branch on `schema_version` when strict validation is required.
+
 No secrets, credentials, authorization headers, or environment dumps may be logged. Paths and command options may contain private filenames; users control where logs are stored and shared.
 
 ## 7. CLI contract
