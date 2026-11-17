@@ -302,3 +302,36 @@ def test_live_violin_evidence_suppresses_ambiguous_synth_strings_model():
     ).tasks}
     assert "mvsep-mega53-synth-specialist-candidate" not in routes
     assert "zfturbo-bs-roformer-53stem-candidate" not in routes
+
+
+
+def test_requested_extreme_electronic_genres_are_independently_classified():
+    from mseparate.source_analysis import classify_style
+
+    expected = {
+        "breakcore", "cybercore", "hardcore", "industrial_hardcore",
+        "powernoise", "dark_ambient",
+    }
+    assert expected <= set(GENRES)
+    for genre in sorted(expected):
+        profile = classify_style([
+            {"kind": "genre", "source": genre, "score": 0.91},
+        ])
+        assert profile["label"] == genre
+        assert profile["family"] == "electronic"
+        assert profile["status"] == "provisional"
+
+
+def test_electronic_genre_context_alone_never_schedules_a_separator():
+    from mseparate.source_analysis import classify_style
+
+    for genre in (
+        "breakcore", "cybercore", "hardcore",
+        "industrial_hardcore", "powernoise", "dark_ambient",
+    ):
+        predictions = [{"kind": "genre", "source": genre, "score": 0.99}]
+        profile = classify_style(predictions)
+        score, reason = _stem_score("synth_pad", {}, predictions)
+        assert profile["family"] == "electronic"
+        assert score == 0.5
+        assert reason == "no stem-specific acoustic heuristic"
