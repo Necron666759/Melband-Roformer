@@ -14,7 +14,6 @@ import json
 import os
 import re
 import shutil
-from collections import defaultdict
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -69,16 +68,14 @@ def index_archive_members(infos: list[Any]) -> list[dict[str, Any]]:
     return complete
 
 
-def select_tracks(groups: list[dict[str, Any]], maximum: int) -> list[dict[str, Any]]:
-    """Greedily prefer distinct kits, drummers and grooves, with stable ties."""
-    if maximum < 1 or maximum > 8:
-        raise ValueError("max_tracks must be between 1 and 8")
+def rank_track_candidates(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Order all candidates to prefer distinct kits, drummers and grooves."""
     remaining = list(groups)
-    selected: list[dict[str, Any]] = []
+    ranked: list[dict[str, Any]] = []
     kits: set[str] = set()
     drummers: set[str] = set()
     grooves: set[str] = set()
-    while remaining and len(selected) < maximum:
+    while remaining:
         best = max(
             remaining,
             key=lambda row: (
@@ -88,12 +85,19 @@ def select_tracks(groups: list[dict[str, Any]], maximum: int) -> list[dict[str, 
                 row["kit"], row["drummer"], row["groove"],
             ),
         )
-        selected.append(best)
+        ranked.append(best)
         remaining.remove(best)
         kits.add(best["kit"])
         drummers.add(best["drummer"])
         grooves.add(best["groove"])
-    return selected
+    return ranked
+
+
+def select_tracks(groups: list[dict[str, Any]], maximum: int) -> list[dict[str, Any]]:
+    """Return a compact, diverse prefix of the deterministic candidate order."""
+    if maximum < 1 or maximum > 8:
+        raise ValueError("max_tracks must be between 1 and 8")
+    return rank_track_candidates(groups)[:maximum]
 
 
 def _read_reference(path: Path) -> Any:
@@ -139,27 +143,80 @@ def download_subset(
                 "No complete StemGMD groups found; archive layout differs from "
                 "the verified Eval Session structure"
             )
-        selected = select_tracks(groups, max_tracks)
+        ranked = rank_track_candidates(groups)
+        # Some grooves contain no Snare or no Tom hits. The strict SI-SDR
+        # runner rejects silent references, so preflight only the four target
+        # stems and continue until enough valid tracks are found.
+        candidate_limit = min(len(ranked), max_tracks * 8)
         rows: list[dict[str, Any]] = []
+        rejected_tracks: list[dict[str, str]] = []
         extracted_bytes = 0
+        candidates_checked = 0
 
-        for group in selected:
+        for group in ranked[:candidate_limit]:
+            if len(rows) >= max_tracks:
+                break
+            candidates_checked += 1
             track_id = _track_id(group["drummer"], group["kit"], group["groove"])
             track_dir = output_dir / track_id
             reference_dir = track_dir / "references"
             reference_dir.mkdir(parents=True, exist_ok=True)
             local_paths: dict[str, Path] = {}
 
-            for instrument in INSTRUMENTS:
+            # Fetch Snare and all three Tom references first. This avoids
+            # downloading the other five stems for a groove with silent targets.
+            for instrument in ("snare", *TOM_INSTRUMENTS):
                 destination = reference_dir / f"{instrument}.wav"
                 member = group["members"][instrument]
                 with archive.open(member, "r") as source, destination.open("wb") as target:
                     shutil.copyfileobj(source, target, length=1024 * 1024)
                 local_paths[instrument] = destination
-                extracted_bytes += destination.stat().st_size
 
-            references = {name: _read_reference(path) for name, path in local_paths.items()}
-            frame_counts = {name: samples.shape[0] for name, samples in references.items()}
+            target_refs = {
+                name: _read_reference(local_paths[name])
+                for name in ("snare", *TOM_INSTRUMENTS)
+            }
+            target_frames = {samples.shape[0] for samples in target_refs.values()}
+            if len(target_frames) != 1:
+                raise ValueError(
+                    f"StemGMD Snare/Toms references are not aligned for {track_id}"
+                )
+            snare_peak = float(np.max(np.abs(target_refs["snare"])))
+            tom_reference = np.zeros_like(
+                target_refs[TOM_INSTRUMENTS[0]], dtype=np.float64
+            )
+            for name in TOM_INSTRUMENTS:
+                tom_reference += target_refs[name].astype(np.float64)
+            toms_peak = float(np.max(np.abs(tom_reference)))
+            if snare_peak <= 1e-8 or toms_peak <= 1e-8:
+                reason = (
+                    "silent_snare_reference" if snare_peak <= 1e-8
+                    else "silent_toms_reference"
+                )
+                rejected_tracks.append({
+                    "track_id": track_id,
+                    "reason": reason,
+                })
+                shutil.rmtree(track_dir, ignore_errors=True)
+                continue
+
+            # Only accepted target-bearing tracks need the remaining five
+            # components to construct a full-kit mixture.
+            for instrument in INSTRUMENTS:
+                if instrument in local_paths:
+                    continue
+                destination = reference_dir / f"{instrument}.wav"
+                member = group["members"][instrument]
+                with archive.open(member, "r") as source, destination.open("wb") as target:
+                    shutil.copyfileobj(source, target, length=1024 * 1024)
+                local_paths[instrument] = destination
+
+            references = {
+                name: _read_reference(path) for name, path in local_paths.items()
+            }
+            frame_counts = {
+                name: samples.shape[0] for name, samples in references.items()
+            }
             if len(set(frame_counts.values())) != 1:
                 raise ValueError(
                     f"StemGMD reference lengths are not aligned for {track_id}: {frame_counts}"
@@ -171,7 +228,6 @@ def download_subset(
             mixture_path = track_dir / "mixture.wav"
             # FLOAT WAV preserves the unnormalized sum without PCM clipping.
             sf.write(str(mixture_path), mixture.astype(np.float32), SAMPLE_RATE, subtype="FLOAT")
-            extracted_bytes += mixture_path.stat().st_size
 
             relative = lambda path: Path(os.path.relpath(path.resolve(), manifest_path.parent.resolve())).as_posix()
             row = {
@@ -192,8 +248,19 @@ def download_subset(
                 "channels": CHANNELS,
                 "frames": int(next(iter(frame_counts.values()))),
                 "duration_seconds": round(next(iter(frame_counts.values())) / SAMPLE_RATE, 6),
+                "snare_peak": round(snare_peak, 8),
+                "toms_peak": round(toms_peak, 8),
                 "mixture_peak": round(float(np.max(np.abs(mixture))), 8),
             })
+            extracted_bytes += sum(path.stat().st_size for path in local_paths.values())
+            extracted_bytes += mixture_path.stat().st_size
+
+        if len(rows) < min(4, max_tracks):
+            raise RuntimeError(
+                f"Found only {len(rows)} tracks with non-silent Snare and Tom references "
+                f"after checking {candidates_checked} of {len(ranked)} complete groups; "
+                "at least four are required when max_tracks is four or greater."
+            )
 
     with manifest_path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=("track_id", "mixture", "snare", "toms"))
@@ -211,6 +278,8 @@ def download_subset(
         "full_archive_downloaded": False,
         "audio_downloaded": True,
         "selected_tracks": len(rows),
+        "candidate_groups_checked": candidates_checked,
+        "rejected_silent_target_tracks": rejected_tracks,
         "selected_track_metadata": rows,
         "instrument_stems_per_track": len(INSTRUMENTS),
         "extracted_audio_files": len(rows) * (len(INSTRUMENTS) + 1),
