@@ -42,8 +42,7 @@ jobs:
       - name: Inspect StemGMD archive central directory without downloading audio
         timeout-minutes: 10
         run: |
-          python scripts/inspect_mseparate_stemgmd_archive.py \\
-            --report "${{ runner.temp }}/stemgmd-archive-inventory.json"
+          python scripts/inspect_mseparate_stemgmd_archive.py --report "${{ runner.temp }}/stemgmd-archive-inventory.json"
 
       - name: Upload metadata-only archive inventory
         if: always()
