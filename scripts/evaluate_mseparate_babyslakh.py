@@ -178,16 +178,19 @@ def main() -> int:
 
     started = time.monotonic()
     subset_manifest = report_root / "babyslakh-subset-manifest.json"
-    downloader = ROOT / "scripts" / "download_mseparate_babyslakh_subset.py"
-    subprocess.run(
-        [
-            sys.executable, str(downloader),
-            "--output-dir", str(dataset_root),
-            "--manifest", str(subset_manifest),
-            "--max-tracks", str(args.max_tracks),
-        ],
-        cwd=ROOT, check=True, env=os.environ.copy(),
-    )
+    if not subset_manifest.is_file():
+        downloader = ROOT / "scripts" / "download_mseparate_babyslakh_subset.py"
+        subprocess.run(
+            [
+                sys.executable, str(downloader),
+                "--output-dir", str(dataset_root),
+                "--manifest", str(subset_manifest),
+                "--max-tracks", str(args.max_tracks),
+            ],
+            cwd=ROOT, check=True, env=os.environ.copy(),
+        )
+    else:
+        emit("Reusing the pre-fetched selective BabySlakh subset")
     subset = json.loads(subset_manifest.read_text(encoding="utf-8"))
     subset_rows = subset.get("tracks", [])
     if not subset_rows:
