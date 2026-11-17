@@ -255,11 +255,12 @@ def download_subset(
             extracted_bytes += sum(path.stat().st_size for path in local_paths.values())
             extracted_bytes += mixture_path.stat().st_size
 
-        if len(rows) < min(4, max_tracks):
+        minimum_required = min(4, max_tracks)
+        if len(rows) < minimum_required:
             raise RuntimeError(
                 f"Found only {len(rows)} tracks with non-silent Snare and Tom references "
                 f"after checking {candidates_checked} of {len(ranked)} complete groups; "
-                "at least four are required when max_tracks is four or greater."
+                f"at least {minimum_required} are required for this subset."
             )
 
     with manifest_path.open("w", encoding="utf-8", newline="") as stream:
