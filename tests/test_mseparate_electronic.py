@@ -446,3 +446,72 @@ def test_mechanical_percussion_alone_does_not_trigger_drum_specialists():
     assert not any(model_id.startswith("mvsep-mega53-") for model_id in scheduled)
     assert "zfturbo-bs-roformer-53stem-candidate" not in scheduled
 
+
+
+def test_drum_component_taxonomy_covers_acoustic_and_synthetic_sources():
+    assert {
+        "acoustic_kick", "electronic_kick", "synth_kick",
+        "acoustic_snare", "electronic_snare",
+        "acoustic_hi_hat", "electronic_hi_hat",
+        "cymbals", "synth_cymbal", "toms", "electronic_toms",
+    } <= set(SOURCES)
+
+
+def test_acoustic_and_synthetic_kicks_route_only_to_declared_kick_output():
+    registry = load_registry(bundled_registry_path())
+    for source in ("acoustic_kick", "electronic_kick", "synth_kick"):
+        plan = build_plan(
+            analysis=_analysis_with_predictions([
+                {"kind": "source", "source": source, "score": 7.4},
+            ]),
+            registry=registry,
+        )
+        routes = {task.model_id: task.target_stems for task in plan.tasks}
+        assert routes == {"mvsep-mega53-kick-specialist-candidate": ("kick",)}, source
+
+
+def test_acoustic_and_synthetic_hats_route_only_to_declared_hh_output():
+    registry = load_registry(bundled_registry_path())
+    for source in ("acoustic_hi_hat", "electronic_hi_hat"):
+        plan = build_plan(
+            analysis=_analysis_with_predictions([
+                {"kind": "source", "source": source, "score": 7.4},
+            ]),
+            registry=registry,
+        )
+        routes = {task.model_id: task.target_stems for task in plan.tasks}
+        assert routes == {"mvsep-mega53-hh-specialist-candidate": ("hh",)}, source
+
+
+def test_snare_cymbal_and_tom_components_use_combined_drums_only():
+    registry = load_registry(bundled_registry_path())
+    cases = ("acoustic_snare", "electronic_snare", "cymbals", "synth_cymbal", "toms", "electronic_toms")
+    for source in cases:
+        plan = build_plan(
+            analysis=_analysis_with_predictions([
+                {"kind": "source", "source": source, "score": 7.4},
+            ]),
+            registry=registry,
+        )
+        routes = {task.model_id: task.target_stems for task in plan.tasks}
+        assert routes == {"mvsep-mega53-drums-specialist-candidate": ("drums",)}, source
+        assert all(stem not in {"snare", "cymbals", "toms"} for stems in routes.values() for stem in stems)
+
+
+def test_distinct_drum_components_can_select_distinct_verified_outputs():
+    registry = load_registry(bundled_registry_path())
+    plan = build_plan(
+        analysis=_analysis_with_predictions([
+            {"kind": "source", "source": "synth_kick", "score": 7.5},
+            {"kind": "source", "source": "electronic_hi_hat", "score": 7.2},
+            {"kind": "source", "source": "electronic_snare", "score": 7.0},
+        ]),
+        registry=registry,
+    )
+    routes = {task.model_id: task.target_stems for task in plan.tasks}
+    assert routes == {
+        "mvsep-mega53-drums-specialist-candidate": ("drums",),
+        "mvsep-mega53-hh-specialist-candidate": ("hh",),
+        "mvsep-mega53-kick-specialist-candidate": ("kick",),
+    }
+    assert "zfturbo-bs-roformer-53stem-candidate" not in routes
