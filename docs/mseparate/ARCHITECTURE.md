@@ -107,7 +107,7 @@ The CLI supports two complementary outputs:
 
 The run timeline records UTC timestamps, monotonic elapsed time, and high-level stage start/completion events. Current stage coverage includes audio analysis, semantic source analysis, planning, asset preparation, primary execution, and the combined post-inference analysis/Rescue phase. The structured report and terminal log are complementary: the report is queryable and compact; the log preserves the human-readable terminal stream, including progress output routed through Python stdout/stderr.
 
-Per-task backend load/inference/unload timings, granular chunk callbacks, continuous GPU telemetry, and backend-native subprocess output capture are not yet guaranteed by this layer. They must be added through explicit executor/backend event callbacks before being described as complete stage telemetry. Never log credentials, authorization headers, or environment dumps.
+Per-task backend load/inference/unload and output-validation events, plus total task elapsed time, are emitted by the sequential executor into the run timeline. Granular chunk callbacks, continuous GPU telemetry, and backend-native subprocess output capture are not yet guaranteed by this layer. Never log credentials, authorization headers, or environment dumps.
 
 ## 10. Non-goals for the first implementation slice
 
