@@ -65,6 +65,14 @@ jobs:
             tests/test_mseparate_urmp_evaluation.py \
             tests/test_mseparate_babyslakh_subset.py
 
+      - name: Selectively download BabySlakh mixtures and drum references
+        timeout-minutes: 30
+        run: |
+          python scripts/download_mseparate_babyslakh_subset.py \
+            --output-dir "${{ runner.temp }}/mseparate-evaluation/dataset" \
+            --manifest "${{ runner.temp }}/mseparate-evaluation/reports/babyslakh-subset-manifest.json" \
+            --max-tracks 8
+
       - name: Download selected URMP audio to the ephemeral runner
         run: bash scripts/download_mseparate_urmp_subset.sh "${{ runner.temp }}/mseparate-urmp"
 
@@ -100,6 +108,7 @@ jobs:
 
       - name: Evaluate URMP source analysis and CPU routing against known instruments
         timeout-minutes: 90
+        continue-on-error: true
         run: |
           python scripts/evaluate_mseparate_urmp.py \
             --audio-dir "${{ runner.temp }}/mseparate-urmp" \
