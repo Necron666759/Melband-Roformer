@@ -371,3 +371,28 @@ def test_texture_only_electronic_evidence_does_not_trigger_instrument_specialist
     scheduled = {task.model_id for task in plan.tasks}
     assert not any(model_id.startswith("mvsep-mega53-") for model_id in scheduled)
     assert "zfturbo-bs-roformer-53stem-candidate" not in scheduled
+
+
+def test_sequenced_synth_and_distorted_synth_bass_use_matching_specialists():
+    registry = load_registry(bundled_registry_path())
+    synth_plan = build_plan(
+        analysis=_analysis_with_predictions([
+            {"kind": "source", "source": "synth_sequence", "score": 7.2},
+            {"kind": "source", "source": "synth_texture", "score": 6.8},
+            {"kind": "genre", "source": "cybercore", "score": 0.94},
+        ]),
+        registry=registry,
+    )
+    synth_routes = {task.model_id: task.target_stems for task in synth_plan.tasks}
+    assert synth_routes["mvsep-mega53-synth-specialist-candidate"] == ("synth",)
+
+    bass_plan = build_plan(
+        analysis=_analysis_with_predictions([
+            {"kind": "source", "source": "distorted_synth_bass", "score": 7.3},
+            {"kind": "source", "source": "synth_bass", "score": 6.9},
+            {"kind": "genre", "source": "industrial_hardcore", "score": 0.95},
+        ]),
+        registry=registry,
+    )
+    bass_routes = {task.model_id: task.target_stems for task in bass_plan.tasks}
+    assert bass_routes["mvsep-mega53-bass-specialist-candidate"] == ("bass",)
