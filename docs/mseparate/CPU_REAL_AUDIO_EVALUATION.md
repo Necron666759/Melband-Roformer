@@ -110,3 +110,29 @@ python scripts/evaluate_mseparate_babyslakh.py \
 
 The machine needs enough disk space for the dataset, Hugging Face CLAP cache,
 selected checkpoints and temporary outputs. A CPU-only run can take hours.
+
+
+## URMP diagnostic interpretation
+
+The URMP report now records the rank of each known instrument label in the
+mixture-level CLAP source ranking, including top-5/top-12 recall. Repeated
+performers of the same instrument share one mixture-level rank; these scores
+cannot count performers and are not calibrated probabilities.
+
+Planning is recorded in three separate scenarios:
+
+- CPU eligibility against the actual mono file metadata.
+- A deterministic CUDA low-VRAM admission-boundary scenario (7.68 GiB total,
+  6.0 GiB free) representing the previously verified RTX 3060 Ti profile
+  threshold. This is a synthetic registry preflight, not a live GPU reading.
+- A metadata-only stereo-adapter preview that changes the channel count seen
+  by the planner to two. It does not alter the WAV, duplicate samples, execute
+  inference, or establish that mono-to-stereo adaptation preserves separation
+  quality.
+
+The distinction is intentional: the current ZFTurbo 53-stem manifest requires
+stereo input, while all four selected URMP mixtures are mono. The preview
+identifies whether that channel constraint is the remaining planning blocker
+without silently relaxing the production model contract. Any real mono adapter
+must be implemented separately and validated with actual inference and
+reference-based metrics before automatic routing is enabled.
