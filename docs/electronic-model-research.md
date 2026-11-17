@@ -42,10 +42,12 @@ SHA-256 hashes, a confirmed weight license, and output-stem mapping.
   config SHA-256 values. The Synth and Keys checkpoint hashes are also
   corroborated by a separate `SHA256SUMS` manifest. The bundled registry now
   records these published digests and the PyMSS catalog's checkpoint byte sizes.
-- The external registry labels the exact derivative weights' license as
-  unknown. The upstream project's code/repository license is not treated as
-  an automatic license grant for these extracted weights. Both records remain
-  disabled pending a weight-specific rights review and a real pymss inference test.
+- The derivative repository's original license metadata was incomplete. The
+  upstream Mega 53 author later confirmed MIT licensing and redistribution
+  permission for the original 53-stem weights and conversions. The maintainer
+  accepted that evidence for the bundled Synth/Keys derivatives, while
+  separately recording that training-data provenance remains unknown. Their
+  current license and runtime gates are represented in the bundled registry.
 
 ### ZFTurbo BS-RoFormer 53-stem parent model
 
@@ -59,8 +61,10 @@ SHA-256 hashes, a confirmed weight license, and output-stem mapping.
 - This is a broad multi-instrument model, not a model trained exclusively on
   electronic genres. Its single `synth` stem does not separate pads, leads,
   arpeggios and synth bass individually.
-- The parent model remains a disabled candidate pending asset and runtime
-  verification.
+- The parent model's assets, license review and runtime validation are now
+  recorded in the bundled registry. It remains outside indiscriminate routing:
+  the planner schedules it only for detected acoustic instruments and requests
+  only selected native output heads, subject to CUDA/VRAM admission.
 
 ### BS-RoFormer SW Fixed (6 stems)
 
@@ -85,9 +89,12 @@ and cannot independently schedule a separation model. Planner routing uses
 source-family predictions only, and model categories can explicitly identify
 synth specialists.
 
-All three external model entries remain candidates and are excluded from
-automatic execution until the missing provenance, licensing, checksums and
-runtime requirements are resolved.
+The hosted MVSep Synth service remains a non-executable candidate because no
+local checkpoint/backend/license package has been verified. BS-RoFormer SW
+Fixed remains disabled pending rights and asset verification. The ZFTurbo
+53-stem parent and the reviewed Mega 53 single-target derivatives have separate
+eligibility states in the bundled registry; they are not enabled as a blanket
+53-output batch.
 
 
 ## Synth and Keys single-stem candidates
@@ -96,7 +103,7 @@ The MVSep Mega 53 resource catalog declares dedicated BS-RoFormer single-target 
 
 The initial registry snapshot kept Synth and Keys disabled while weight provenance, hashes and runtime compatibility were unresolved. This status was superseded by the later checksum and real-checkpoint validation work recorded in the bundled registry: the Mega 53 Synth and Keys single-target derivatives are now license-reviewed, hash-pinned, runtime-validated and eligible for automatic source-aware routing. The separate hosted MVSep Synth service remains a different artifact and is still not treated as a locally executable checkpoint.
 
-The shared `PymssAdapter` now accepts arbitrary manifest-declared native stems, rather than requiring every BS-RoFormer model to output vocals. Vocal models retain their existing mixture-minus-vocals instrumental residual behavior; a non-vocal model cannot declare that residual without a native vocals estimate. CPU contract tests cover direct single-stem inference. These tests validate the adapter contract with a fake separator, not the real Synth/Keys weights or CUDA performance.
+The shared `PymssAdapter` accepts arbitrary manifest-declared native stems, rather than requiring every BS-RoFormer model to output vocals. Vocal models retain their existing mixture-minus-vocals instrumental residual behavior; a non-vocal model cannot declare that residual without a native vocals estimate. CPU contract tests cover the adapter contract with a fake separator. Separate real-checkpoint smoke validation is recorded in the Synth/Keys manifest entries; those entries have CPU runtime validation, while CUDA performance for each derivative is not claimed by that evidence.
 
 
 ## Synth and Keys asset verification status
@@ -118,11 +125,11 @@ Digest provenance:
 - [YacobiHime/stem-splitter SHA256SUMS](https://github.com/YacobiHime/stem-splitter/blob/c474faf52eef3e9be1b5ceb2f2b31669ceff0acd/models/SHA256SUMS.txt) independently corroborates both checkpoint hashes.
 - [PyMSS model catalog](https://github.com/pymss-project/pymss/blob/c78bc27265d1d2bad20e429f615c063239837be2/pymss/resources/model_catalog.json) lists both checkpoints as supported `bs_roformer` assets with the byte sizes above.
 
-These are independently published reference digests; the current development environment could not download the binary artifacts to recompute them locally. A new integration smoke script and GitHub Actions workflow now download each asset through mseparate's SHA-256-verifying asset manager, load it through the project's pinned `pymss==2.3.5` adapter, and run a 20-second stereo forward pass. PyMSS' current BS-RoFormer loader calls `model.load_state_dict(state_dict, assign=True)` without overriding PyTorch's default `strict=True`; a successful constructor therefore checks the checkpoint key set strictly. The real model smoke workflow result must be inspected before calling the runtime test passed.
+These are independently published reference digests; the local runtime smoke validates the downloaded bytes against the pinned SHA-256 and size before loading. The real-model smoke workflow loads each asset through the project's pinned `pymss==2.3.5` adapter and runs a 20-second stereo forward pass. PyMSS' current BS-RoFormer loader calls `model.load_state_dict(state_dict, assign=True)` without overriding PyTorch's default `strict=True`; a successful constructor therefore checks the checkpoint key set strictly. The bundled registry marks the Synth and Keys CPU runtime smoke as passed.
 
-The independent external smoke evidence is for `python-audio-separator`, not pymss. The PyMSS catalog's `supported: true` is a compatibility declaration, not proof that this exact checkpoint has already passed the new mseparate test.
+The independent external smoke evidence is for `python-audio-separator`, not pymss. The PyMSS catalog's `supported: true` is only a compatibility declaration; the exact-checkpoint mseparate smoke result is recorded separately in each manifest's runtime-validation details.
 
-The derivative model registry reports the weight license as unknown. For that reason both candidates remain `status: candidate`, `license_status: review_required`, and excluded from `eligible_models()`, even after digests are pinned. No automatic routing or redistribution is enabled.
+The initial third-party registry reported the derivative weight license as unknown. The later author confirmation and maintainer review are recorded in the bundled Synth/Keys manifests as accepted MIT weight licensing, with training-data provenance still unknown. Both entries are now eligible after checksum and CPU runtime validation, but automatic routing remains source-gated and does not run on unrelated audio.
 
 
 
