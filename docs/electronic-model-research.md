@@ -94,7 +94,7 @@ runtime requirements are resolved.
 
 The MVSep Mega 53 resource catalog declares dedicated BS-RoFormer single-target checkpoints for both `synth` and `keys`, each with a matching YAML config and a complementary `other` output. The corresponding third-party Hugging Face repository describes each file as a single-stem derivative of ZFTurbo's Mega 53 release. The repository's upload revision is pinned in the registry to `0677941f9cdfd891a6bc3336229244e197035327`.
 
-The upstream Mega 53 model author has explicitly stated that the 53-stem weights are MIT-licensed. This supports the upstream weight license, but does not replace integrity verification for the extracted single-stem checkpoint/config pair. The derivative repository does not publish per-file SHA-256 values. Consequently, both records remain `candidate` and are excluded from `eligible_models()` until independent digests are recorded and strict-load plus short forward tests are completed.
+The initial registry snapshot kept Synth and Keys disabled while weight provenance, hashes and runtime compatibility were unresolved. This status was superseded by the later checksum and real-checkpoint validation work recorded in the bundled registry: the Mega 53 Synth and Keys single-target derivatives are now license-reviewed, hash-pinned, runtime-validated and eligible for automatic source-aware routing. The separate hosted MVSep Synth service remains a different artifact and is still not treated as a locally executable checkpoint.
 
 The shared `PymssAdapter` now accepts arbitrary manifest-declared native stems, rather than requiring every BS-RoFormer model to output vocals. Vocal models retain their existing mixture-minus-vocals instrumental residual behavior; a non-vocal model cannot declare that residual without a native vocals estimate. CPU contract tests cover direct single-stem inference. These tests validate the adapter contract with a fake separator, not the real Synth/Keys weights or CUDA performance.
 
@@ -123,3 +123,34 @@ These are independently published reference digests; the current development env
 The independent external smoke evidence is for `python-audio-separator`, not pymss. The PyMSS catalog's `supported: true` is a compatibility declaration, not proof that this exact checkpoint has already passed the new mseparate test.
 
 The derivative model registry reports the weight license as unknown. For that reason both candidates remain `status: candidate`, `license_status: review_required`, and excluded from `eligible_models()`, even after digests are pinned. No automatic routing or redistribution is enabled.
+
+
+
+## Current style-aware routing policy
+
+The planner now classifies a provisional music-style family from CLAP genre
+rankings and separately detects source families and acoustic instruments.
+Electro-industrial, industrial electronic, techno, house, trance, synthwave,
+electro and related styles form the electronic family. Classical, orchestral,
+chamber and baroque labels form an orchestral family. Ambiguous genre rankings
+are explicitly marked uncertain; style labels are never treated as calibrated
+probabilities.
+
+For electronic material, the verified Mega 53 Synth and Keys specialists are
+considered when their corresponding synth-source evidence is present. Drum,
+kick, bass, hi-hat and other single-target specialists are gated by their own
+source evidence. A genre label by itself does not trigger a separator.
+
+For acoustic instruments such as violin, viola, cello, harp, flute, clarinet,
+oboe, bassoon, saxophone, trombone, trumpet, tuba, French horn, guitars,
+harpsichord, piano and related sources, the planner may use the verified
+ZFTurbo 53-stem checkpoint. It requests only the detected native heads in one
+inference task (up to twelve), not all 53 output files. Acoustic/synthetic
+prompt pairs are compared so that a close or stronger synth-string, synth-brass,
+synth-flute or similar match suppresses an unsupported acoustic route. Existing
+single-target Mega 53 specialists take precedence for categories already
+covered by dedicated weights, avoiding duplicate versions of the same stem.
+
+The 53-stem parent model remains subject to the existing CUDA and VRAM policy.
+If the device does not pass the standard or verified low-VRAM admission gate,
+the acoustic-instrument pass is skipped rather than silently retried on CPU.
