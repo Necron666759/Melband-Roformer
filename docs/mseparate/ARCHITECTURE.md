@@ -236,7 +236,9 @@ CUDA/VRAM admission policy, including its verified reduced-chunk profile.
 Where a dedicated Mega 53 single-target specialist exists (Synth, Keys, Bass,
 Kick, Drums, Organ, Digital Piano, Percussion or Hi-Hat), the planner routes to
 that specialist rather than requesting a duplicate head from the broad 53-stem
-pass.
+pass. Synth Keys and Digital Piano are compared as competing keyboard-family
+hypotheses so both specialists are not run for the same ambiguous keyboard
+content.
 
 Acoustic/synthetic prompt pairs (for example violin versus synth strings,
 flute versus synth flute, and brass versus synth brass) are compared before

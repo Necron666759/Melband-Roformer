@@ -253,3 +253,52 @@ def test_unknown_style_does_not_auto_run_full_53stem_model():
     assert "zfturbo-bs-roformer-53stem-candidate" not in {
         task.model_id for task in plan.tasks
     }
+
+
+
+def test_digital_piano_uses_one_specialist_without_duplicate_53stem_heads():
+    registry = load_registry(bundled_registry_path())
+    analysis = _analysis_with_predictions([
+        {"kind": "source", "source": "digital_piano", "score": 7.0},
+        {"kind": "source", "source": "synth_keys", "score": 6.2},
+        {"kind": "genre", "source": "electro_industrial", "score": 0.9},
+        {"kind": "genre", "source": "industrial_electronic", "score": 0.7},
+    ])
+    plan = build_plan(analysis=analysis, registry=registry)
+    routes = {task.model_id: task.target_stems for task in plan.tasks}
+    assert routes["mvsep-mega53-digital-piano-specialist-candidate"] == ("digital-piano",)
+    assert "mvsep-mega53-keys-specialist-candidate" not in routes
+    assert "mvsep-mega53-synth-specialist-candidate" not in routes
+    assert "zfturbo-bs-roformer-53stem-candidate" not in routes
+
+
+
+def test_synth_keys_only_does_not_also_schedule_generic_synth_specialist():
+    registry = load_registry(bundled_registry_path())
+    analysis = _analysis_with_predictions([
+        {"kind": "source", "source": "synth_keys", "score": 7.0},
+        {"kind": "source", "source": "synthesizer", "score": 6.1},
+        {"kind": "genre", "source": "electro_industrial", "score": 0.9},
+        {"kind": "genre", "source": "industrial_electronic", "score": 0.7},
+    ])
+    routes = {task.model_id: task.target_stems for task in build_plan(
+        analysis=analysis, registry=registry,
+    ).tasks}
+    assert routes["mvsep-mega53-keys-specialist-candidate"] == ("keys",)
+    assert "mvsep-mega53-synth-specialist-candidate" not in routes
+
+
+def test_live_violin_evidence_suppresses_ambiguous_synth_strings_model():
+    registry = load_registry(bundled_registry_path())
+    analysis = _analysis_with_predictions([
+        {"kind": "source", "source": "synth_strings", "score": 7.0},
+        {"kind": "source", "source": "violin", "score": 6.95},
+        {"kind": "source", "source": "synthesizer", "score": 6.8},
+        {"kind": "genre", "source": "orchestral", "score": 0.9},
+        {"kind": "genre", "source": "classical", "score": 0.75},
+    ])
+    routes = {task.model_id: task.target_stems for task in build_plan(
+        analysis=analysis, registry=registry,
+    ).tasks}
+    assert "mvsep-mega53-synth-specialist-candidate" not in routes
+    assert "zfturbo-bs-roformer-53stem-candidate" not in routes
