@@ -12,6 +12,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/mseparate-cpu-real-audio-evaluation
       - feature/mseparate-gpu-foundation-sync
 
 jobs:
