@@ -13,16 +13,12 @@ perceptual superiority. Audio and model outputs are never uploaded as artifacts.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import time
-import zipfile
 from pathlib import Path
-from urllib.request import Request, urlopen
 
 import numpy as np
 import soundfile as sf
@@ -32,8 +28,6 @@ APP = ROOT / "app"
 if str(APP) not in sys.path:
     sys.path.insert(0, str(APP))
 
-DATA_URL = "https://zenodo.org/records/4603844/files/babyslakh_16k.zip?download=1"
-DATA_MD5 = "ea1797fc57689a0e33c759c17a2292f5"
 MIX_NAMES = {"mix.wav", "mix.flac", "mixture.wav", "mixture.flac"}
 SYNTH = {
     "synthesizer", "synth_lead", "synth_pad", "synth_arp", "synth_keys",
@@ -51,74 +45,6 @@ ACOUSTIC = {
 
 def emit(message: str) -> None:
     print(f"[mseparate-eval] {message}", flush=True)
-
-
-def download_dataset(cache: Path) -> Path:
-    cache.mkdir(parents=True, exist_ok=True)
-    archive = cache / "babyslakh_16k.zip"
-    if archive.exists():
-        digest = hashlib.md5()
-        with archive.open("rb") as cached:
-            for block in iter(lambda: cached.read(1024 * 1024), b""):
-                digest.update(block)
-        if digest.hexdigest() == DATA_MD5:
-            emit(f"Using verified cached BabySlakh archive ({archive.stat().st_size} bytes)")
-            return archive
-        archive.unlink()
-    temporary = archive.with_suffix(".zip.part")
-    request = Request(DATA_URL, headers={"User-Agent": "MSeparate-CPU-Evaluation/1.0"})
-    digest = hashlib.md5()
-    total = 0
-    emit("Downloading BabySlakh from Zenodo (about 883 MB)")
-    with urlopen(request, timeout=60) as response, temporary.open("wb") as output:
-        while True:
-            block = response.read(1024 * 1024)
-            if not block:
-                break
-            output.write(block)
-            digest.update(block)
-            total += len(block)
-            if total % (64 * 1024 * 1024) < len(block):
-                emit(f"Downloaded {total / (1024 * 1024):.0f} MiB")
-    if digest.hexdigest() != DATA_MD5:
-        temporary.unlink(missing_ok=True)
-        raise RuntimeError(
-            f"BabySlakh MD5 mismatch: expected {DATA_MD5}, got {digest.hexdigest()}"
-        )
-    temporary.replace(archive)
-    emit(f"Dataset verified ({total} bytes, MD5 {digest.hexdigest()})")
-    return archive
-
-
-def safe_extract(archive: Path, destination: Path) -> None:
-    marker = destination / ".babyslakh-extracted"
-    if marker.exists():
-        return
-    destination.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive) as bundle:
-        root = destination.resolve()
-        for item in bundle.infolist():
-            target = (destination / item.filename).resolve()
-            if target != root and root not in target.parents:
-                raise RuntimeError(f"Unsafe path in dataset archive: {item.filename}")
-        bundle.extractall(destination)
-    marker.write_text("verified archive extracted\n", encoding="utf-8")
-
-
-def find_mixes(root: Path, limit: int) -> list[Path]:
-    mixes = [
-        path for path in root.rglob("*")
-        if path.is_file() and path.name.lower() in MIX_NAMES
-    ]
-    mixes.sort(key=lambda item: str(item).lower())
-    if not mixes:
-        # Some dataset mirrors use a mixture suffix rather than mix.wav.
-        mixes = sorted(
-            (path for path in root.rglob("*") if path.is_file()
-             and path.stem.lower() in {"mixture", "mix"}),
-            key=lambda item: str(item).lower(),
-        )
-    return mixes[:limit]
 
 
 def source_sets(predictions: list[dict]) -> tuple[set[str], set[str]]:
@@ -230,19 +156,18 @@ def crop_center(source: Path, destination: Path, seconds: float) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--work-dir", type=Path, default=Path("evaluation-work"))
-    parser.add_argument("--max-tracks", type=int, default=20)
+    parser.add_argument("--max-tracks", type=int, default=8)
     parser.add_argument("--max-cases", type=int, default=4)
     parser.add_argument("--excerpt-seconds", type=float, default=12.0)
     parser.add_argument("--inference-timeout", type=int, default=1800)
     args = parser.parse_args()
 
     work = args.work_dir.resolve()
-    dataset_cache = work / "dataset-cache"
     dataset_root = work / "dataset"
     models_dir = work / "models"
     output_root = work / "outputs"
     report_root = work / "reports"
-    for folder in (models_dir, output_root, report_root):
+    for folder in (dataset_root, models_dir, output_root, report_root):
         folder.mkdir(parents=True, exist_ok=True)
 
     from mseparate.audio import analyze_audio
@@ -253,15 +178,31 @@ def main() -> int:
     from mseparate.vram import filter_registry_for_device
 
     started = time.monotonic()
-    archive = download_dataset(dataset_cache)
-    safe_extract(archive, dataset_root)
-    mixes = find_mixes(dataset_root, args.max_tracks)
-    if not mixes:
-        raise RuntimeError(
-            "No mix.wav/mix.flac files found in BabySlakh archive; "
-            "inspect archive layout before proceeding."
-        )
-    emit(f"Found {len(mixes)} musical mixtures")
+    subset_manifest = report_root / "babyslakh-subset-manifest.json"
+    downloader = ROOT / "scripts" / "download_mseparate_babyslakh_subset.py"
+    subprocess.run(
+        [
+            sys.executable, str(downloader),
+            "--output-dir", str(dataset_root),
+            "--manifest", str(subset_manifest),
+            "--max-tracks", str(args.max_tracks),
+        ],
+        cwd=ROOT, check=True, env=os.environ.copy(),
+    )
+    subset = json.loads(subset_manifest.read_text(encoding="utf-8"))
+    subset_rows = subset.get("tracks", [])
+    if not subset_rows:
+        raise RuntimeError("Selective BabySlakh downloader returned no tracks")
+    mixes = [dataset_root / row["mix"] for row in subset_rows]
+    missing = [str(path) for path in mixes if not path.is_file()]
+    if missing:
+        raise FileNotFoundError("Missing selectively downloaded mixtures: " + ", ".join(missing))
+    metadata_by_mix = {str(dataset_root / row["mix"]): row for row in subset_rows}
+    emit(
+        f"Found {len(mixes)} BabySlakh mixtures with isolated drum ground truth; "
+        f"downloaded {subset.get('extracted_files')} selected files "
+        f"({subset.get('extracted_bytes', 0) / (1024 * 1024):.1f} MiB)"
+    )
 
     # Stage A: deterministic signal analysis and one batched CLAP model session.
     audio_reports = {}
@@ -294,9 +235,12 @@ def main() -> int:
         )
         plan_json = to_jsonable(plan)
         category, evidence = classify_case(plan_json, found)
+        subset_row = metadata_by_mix[str(mix)]
         row = {
-            "track": mix.parent.name,
+            "track": subset_row["track"],
             "input": str(mix.relative_to(dataset_root)),
+            "ground_truth": subset_row["ground_truth"],
+            "drum_stem_paths": subset_row["drum_stems"],
             "duration_seconds": report.audio.duration_seconds,
             "sample_rate": report.audio.sample_rate,
             "category": category,
@@ -377,11 +321,16 @@ def main() -> int:
         "dataset": {
             "name": "BabySlakh",
             "source": "https://zenodo.org/records/4603844",
-            "archive_md5": DATA_MD5,
+            "license": "CC BY 4.0",
             "tracks_analyzed": len(rows),
+            "download_method": subset.get("download_method"),
+            "full_archive_downloaded": subset.get("full_archive_downloaded"),
+            "extracted_files": subset.get("extracted_files"),
+            "extracted_bytes": subset.get("extracted_bytes"),
             "note": (
                 "Rendered MIDI compositions with sample-based virtual instruments; "
-                "not live studio recordings. Dataset terms and attribution apply."
+                "not live studio recordings. Ground truth identifies combined drum "
+                "sources from metadata and isolated drum stems, not Snare/Toms components."
             ),
         },
         "runtime": {
@@ -419,8 +368,9 @@ def main() -> int:
         },
         "limitations": [
             "BabySlakh is rendered MIDI music; live acoustic recordings and vocals are not represented reliably.",
-            "The first 20 tracks are a small debug subset, not a statistically representative benchmark.",
-            "No SDR/SI-SDR is reported because reference-source grouping and alignment are not yet implemented in this harness.",
+            "The selected 4-8 tracks are a compact routing diagnostic, not a statistically representative benchmark.",
+            "BabySlakh ground truth identifies combined rendered drum sources; it does not distinguish acoustic versus electronic kits or provide isolated Snare/Toms references.",
+            "No SDR/SI-SDR is reported because this harness does not align and score the selected combined drum stems against Snare/Toms outputs.",
             "A CPU run validates the actual planner and CPU-capable specialist inference, not RTX 3060 Ti CUDA performance.",
             "HT-Demucs remains excluded from normal routing and was not invoked.",
         ],
@@ -431,6 +381,9 @@ def main() -> int:
         "tracks_analyzed": len(rows),
         "routing_coverage": result["stages"]["B_routing"]["coverage"],
         "selected_cases": len(stage_c),
+        "drum_ground_truth_tracks": sum(
+            1 for row in rows if row.get("ground_truth", {}).get("drums_present")
+        ),
         "inference_successes": sum(int(item.get("execution_succeeded", 0)) for item in stage_c),
         "inference_failures": sum(int(item.get("execution_failed", 0)) for item in stage_c),
         "report": str(report_path),
