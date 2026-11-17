@@ -20,7 +20,7 @@ permissions:
 
 concurrency:
   group: mseparate-cpu-real-audio-evaluation-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   cpu-real-audio-evaluation:
@@ -99,12 +99,14 @@ jobs:
           PY
 
       - name: Evaluate URMP source analysis and CPU routing against known instruments
+        timeout-minutes: 90
         run: |
           python scripts/evaluate_mseparate_urmp.py \
             --audio-dir "${{ runner.temp }}/mseparate-urmp" \
             --report "${{ runner.temp }}/mseparate-evaluation/reports/urmp-routing-report.json"
 
       - name: Run stages A, B and C on BabySlakh
+        timeout-minutes: 180
         run: |
           python scripts/evaluate_mseparate_babyslakh.py \
             --work-dir "${{ runner.temp }}/mseparate-evaluation" \
