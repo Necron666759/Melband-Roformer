@@ -35,9 +35,42 @@ SOURCES = {
     "synth_brass": "synthesized brass stabs and electronic horn sounds",
     "synth_vocals": "vocoder, talkbox and synthetic vocal effect",
     "synth_fx": "electronic risers, sweeps, impacts, noise bursts and sound design effects",
-    "strings": "orchestral strings, violin, viola and cello",
+    "strings": "acoustic orchestral strings, violin, viola and cello section",
     "brass": "acoustic brass instruments and horns",
-    "woodwinds": "woodwind instruments, flute and saxophone",
+    "woodwinds": "acoustic woodwind instruments and orchestral woodwinds",
+    "violin": "solo acoustic violin playing a bowed melody, not a synthesizer",
+    "viola": "acoustic viola playing a bowed string part, not a synthesizer",
+    "cello": "acoustic cello playing a bowed low string part, not a synthesizer",
+    "double_bass": "acoustic double bass or orchestral contrabass, not synthesized bass",
+    "harp": "acoustic concert harp playing plucked strings, not a synthesizer",
+    "flute": "acoustic concert flute playing a wind instrument melody, not a synthesizer",
+    "clarinet": "acoustic clarinet playing a woodwind part, not a synthesizer",
+    "oboe": "acoustic oboe playing an orchestral woodwind part, not a synthesizer",
+    "bassoon": "acoustic bassoon playing a low woodwind part, not a synthesizer",
+    "saxophone": "acoustic saxophone playing a jazz or orchestral wind part, not a synthesizer",
+    "trombone": "acoustic trombone playing a brass section part, not a synthesizer",
+    "trumpet": "acoustic trumpet playing a brass melody or fanfare, not a synthesizer",
+    "tuba": "acoustic tuba playing a low brass part, not a synthesizer",
+    "french_horn": "acoustic French horn playing an orchestral brass part, not a synthesizer",
+    "acoustic_guitar": "real acoustic guitar strings being plucked or strummed",
+    "electric_guitar": "real electric guitar performance with amplified guitar tone",
+    "banjo": "acoustic banjo playing plucked strings",
+    "mandolin": "acoustic mandolin playing tremolo or plucked strings",
+    "accordion": "acoustic accordion or concertina performance",
+    "harpsichord": "acoustic harpsichord playing plucked keyboard strings",
+    "acoustic_piano": "acoustic grand or upright piano performance with hammers and strings",
+    "digital_piano": "digital piano or electric keyboard performance",
+    "organ": "organ keyboard performance with sustained pipe or tonewheel notes",
+    "marimba": "acoustic marimba playing wooden pitched percussion",
+    "glockenspiel": "acoustic glockenspiel or orchestral bells",
+    "timpani": "acoustic orchestral timpani drums",
+    "congas": "acoustic conga drums played by hand",
+    "tambourine": "acoustic tambourine percussion",
+    "sitar": "acoustic sitar playing plucked strings",
+    "ukulele": "acoustic ukulele performance",
+    "synth_flute": "synthesized flute patch or electronic flute-like lead",
+    "synth_woodwinds": "synthesized woodwind or flute-like orchestral patch",
+    "synth_guitar": "synthesized guitar-like electronic timbre, not a real guitar",
     "sound_effects": "electronic sound effects, noise textures and transitions",
     "samples": "sampled musical loops, chopped samples and audio chops",
 }
@@ -52,7 +85,70 @@ GENRES = {
     "synthwave": "synthwave music with retro analog synthesizers and electronic drums",
     "industrial_electronic": "industrial electronic music with distorted synths and mechanical percussion",
     "electro": "electro electronic music with synthetic bass lines and drum machine rhythms",
+    "classical": "classical music performed by acoustic orchestral instruments",
+    "orchestral": "orchestral music with acoustic strings brass and woodwinds",
+    "chamber_music": "classical chamber music performed by a small acoustic ensemble",
+    "baroque": "baroque classical music with strings harpsichord and acoustic instruments",
+    "folk": "acoustic folk music with traditional live instruments",
+    "jazz": "jazz music with acoustic instruments and improvisation",
+    "blues": "blues music with guitar bass and live rhythm section",
+    "country": "country music with acoustic guitar fiddle and live band",
+    "rock": "rock music with electric guitars bass and live drums",
+    "metal": "heavy metal music with distorted guitars bass and drums",
+    "pop": "pop music with vocals melody and contemporary production",
+    "hip_hop": "hip hop music with programmed beats bass and samples",
+    "funk": "funk music with syncopated bass guitar and rhythm section",
+    "soul": "soul music with expressive vocals and live band instruments",
+    "reggae": "reggae music with offbeat guitar or keyboard and bass groove",
 }
+GENRE_FAMILIES = {
+    "techno": "electronic", "house": "electronic", "trance": "electronic",
+    "drum_and_bass": "electronic", "dubstep": "electronic", "breakbeat": "electronic",
+    "ambient_electronic": "electronic", "synthwave": "electronic",
+    "industrial_electronic": "electronic", "electro": "electronic",
+    "classical": "orchestral", "orchestral": "orchestral",
+    "chamber_music": "orchestral", "baroque": "orchestral",
+    "folk": "acoustic_band", "jazz": "acoustic_band", "blues": "acoustic_band",
+    "country": "acoustic_band", "rock": "band", "metal": "band",
+    "pop": "popular", "hip_hop": "popular", "funk": "popular",
+    "soul": "popular", "reggae": "popular",
+}
+
+
+def classify_style(predictions: list[dict] | None) -> dict:
+    """Return a transparent, provisional style label from CLAP genre rankings."""
+    genres = sorted(
+        (item for item in (predictions or []) if item.get("kind") == "genre"),
+        key=lambda item: float(item.get("score", 0.0)),
+        reverse=True,
+    )
+    if not genres:
+        return {
+            "label": "unknown", "family": "unknown", "status": "unclassified",
+            "score": None, "margin": None, "alternatives": [],
+        }
+    best = genres[0]
+    runner_up = genres[1] if len(genres) > 1 else None
+    margin = (
+        float(best.get("score", 0.0)) - float(runner_up.get("score", 0.0))
+        if runner_up else None
+    )
+    ambiguous = margin is not None and margin < 0.12
+    label = str(best.get("source", "unknown"))
+    return {
+        "label": label,
+        "family": "mixed_or_uncertain" if ambiguous else GENRE_FAMILIES.get(label, "unknown"),
+        "status": "ambiguous" if ambiguous else "provisional",
+        "score": round(float(best.get("score", 0.0)), 6),
+        "margin": round(margin, 6) if margin is not None else None,
+        "alternatives": [
+            {"label": str(item.get("source", "")), "score": float(item.get("score", 0.0))}
+            for item in genres[:3]
+        ],
+        "interpretation": "CLAP relative genre similarity; not a calibrated genre probability",
+    }
+
+
 CLAP_CANDIDATES = tuple(
     (kind, name, description)
     for kind, collection in (("source", SOURCES), ("genre", GENRES))
