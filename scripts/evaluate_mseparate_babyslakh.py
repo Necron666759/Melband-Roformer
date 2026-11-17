@@ -34,7 +34,6 @@ if str(APP) not in sys.path:
 
 DATA_URL = "https://zenodo.org/records/4603844/files/babyslakh_16k.zip?download=1"
 DATA_MD5 = "ea1797fc57689a0e33c759c17a2292f5"
-DATA_BYTES = 882_900_000
 MIX_NAMES = {"mix.wav", "mix.flac", "mixture.wav", "mixture.flac"}
 SYNTH = {
     "synthesizer", "synth_lead", "synth_pad", "synth_arp", "synth_keys",
@@ -58,8 +57,11 @@ def download_dataset(cache: Path) -> Path:
     cache.mkdir(parents=True, exist_ok=True)
     archive = cache / "babyslakh_16k.zip"
     if archive.exists():
-        digest = hashlib.md5(archive.read_bytes()).hexdigest()
-        if digest == DATA_MD5:
+        digest = hashlib.md5()
+        with archive.open("rb") as cached:
+            for block in iter(lambda: cached.read(1024 * 1024), b""):
+                digest.update(block)
+        if digest.hexdigest() == DATA_MD5:
             emit(f"Using verified cached BabySlakh archive ({archive.stat().st_size} bytes)")
             return archive
         archive.unlink()
@@ -125,6 +127,7 @@ def source_sets(predictions: list[dict]) -> tuple[set[str], set[str]]:
         if item.get("kind", "source") == "source"
     ]
     # Use top-12 labels to avoid treating every weak CLAP match as evidence.
+    ranked.sort(key=lambda item: float(item.get("score", 0.0)), reverse=True)
     top = {str(item.get("source")) for item in ranked[:12]}
     return top & SYNTH, top & ACOUSTIC
 
@@ -298,7 +301,9 @@ def main() -> int:
             "sample_rate": report.audio.sample_rate,
             "category": category,
             "classification_evidence": evidence,
-            "top_source_predictions": found[:12],
+            "top_source_predictions": [
+                item for item in found if item.get("kind", "source") == "source"
+            ][:12],
             "top_genre_predictions": [
                 item for item in found if item.get("kind") == "genre"
             ][:5],
