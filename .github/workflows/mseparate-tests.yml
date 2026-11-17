@@ -7,6 +7,7 @@ on:
       - feature/mseparate-6stem-gpu
       - feature/mseparate-gpu-foundation-sync
       - feature/mseparate-style-routing-followup
+      - feature/mseparate-electronic-genre-coverage
   pull_request:
     branches:
       - main
