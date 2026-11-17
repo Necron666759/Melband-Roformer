@@ -2,20 +2,58 @@
 """Inspect StemGMD Eval Session ZIP metadata using HTTP byte ranges only.
 
 This preflight reads the remote ZIP central directory. It does not download or
-extract audio. The resulting inventory is used to design a small, exact
-Snare/Toms reference subset without fetching the 5 GB archive.
+extract audio. It groups instrument references by matching groove and kit so
+a later downloader can select exact mixture/Snare/Tom members.
 """
 from __future__ import annotations
 
 import argparse
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path, PurePosixPath
 
 ARCHIVE_URL = (
     "https://zenodo.org/records/7882857/files/"
     "StemGMD_eval_session.zip?download=1"
 )
+MIX_DIRS = {"mix", "mixes", "mixture", "mixtures", "full_mix", "full_mixture"}
+SNARE_DIRS = {"snare"}
+TOM_DIRS = {"hi_tom", "mid_tom", "low_tom", "floor_tom", "tom", "toms"}
+
+
+def classify_wav_path(path: str) -> tuple[str | None, str | None]:
+    parts = PurePosixPath(path).parts
+    if len(parts) < 2:
+        return None, None
+    parent = parts[-2].lower().replace("-", "_").replace(" ", "_")
+    if parent in MIX_DIRS:
+        return "mixture", parent
+    if parent in SNARE_DIRS:
+        return "snare", parent
+    if parent in TOM_DIRS:
+        return "tom", parent
+
+    # Some archive revisions encode component names in the filename instead
+    # of the parent directory; retain this fallback but prefer path metadata.
+    stem = PurePosixPath(path).stem.lower().replace("-", "_").replace(" ", "_")
+    tokens = set(stem.split("_"))
+    if stem in {"mix", "mixture", "full_mix", "full_mixture"} or "mixture" in tokens:
+        return "mixture", "filename"
+    if "snare" in tokens or stem in {"sd", "sn"}:
+        return "snare", "filename"
+    if "tom" in tokens or any(token.endswith("_tom") for token in tokens):
+        return "tom", "filename"
+    return None, None
+
+
+def track_group_key(path: str) -> str:
+    parts = list(PurePosixPath(path).parts)
+    if len(parts) >= 2 and (
+        parts[-2].lower().replace("-", "_").replace(" ", "_")
+        in MIX_DIRS | SNARE_DIRS | TOM_DIRS
+    ):
+        parts.pop(-2)
+    return str(PurePosixPath(*parts).with_suffix(""))
 
 
 def inspect_archive(report_path: Path) -> dict:
@@ -32,34 +70,48 @@ def inspect_archive(report_path: Path) -> dict:
     files = [info for info in infos if not info.is_dir()]
     wavs = [info for info in files if PurePosixPath(info.filename).suffix.lower() == ".wav"]
     basenames = Counter(PurePosixPath(info.filename).name for info in wavs)
-    samples = {
-        "mixture_like": [],
-        "snare_like": [],
-        "tom_like": [],
-        "wav_paths": [],
-    }
+    parent_dirs = Counter(PurePosixPath(info.filename).parent.name for info in wavs)
+    samples = {"mixture_like": [], "snare_like": [], "tom_like": [], "wav_paths": []}
+    groups: dict[str, dict] = defaultdict(
+        lambda: {"mixture": [], "snare": [], "tom": defaultdict(list)}
+    )
+
     for info in wavs:
         path = info.filename
-        name = PurePosixPath(path).stem.lower().replace("-", "_").replace(" ", "_")
-        tokens = set(name.split("_"))
-        if name in {"mix", "mixture", "full_mix", "full_mixture"} or "mixture" in tokens:
-            bucket = "mixture_like"
-        elif "snare" in tokens or name in {"sd", "sn"}:
-            bucket = "snare_like"
-        elif "tom" in tokens or any(token.endswith("tom") for token in tokens):
-            bucket = "tom_like"
-        else:
-            bucket = None
-        if bucket and len(samples[bucket]) < 80:
-            samples[bucket].append({
-                "path": path,
-                "uncompressed_bytes": info.file_size,
-            })
+        category, component = classify_wav_path(path)
+        if category:
+            bucket = {
+                "mixture": "mixture_like",
+                "snare": "snare_like",
+                "tom": "tom_like",
+            }[category]
+            if len(samples[bucket]) < 80:
+                samples[bucket].append({
+                    "path": path,
+                    "uncompressed_bytes": info.file_size,
+                })
+            group = groups[track_group_key(path)]
+            if category == "tom":
+                group["tom"][component].append(path)
+            else:
+                group[category].append(path)
         if len(samples["wav_paths"]) < 120:
             samples["wav_paths"].append(path)
 
+    matching_groups = []
+    for key, group in sorted(groups.items()):
+        if group["mixture"] and group["snare"] and group["tom"]:
+            matching_groups.append({
+                "track_key": key,
+                "mixtures": sorted(group["mixture"]),
+                "snare": sorted(group["snare"]),
+                "tom_components": {
+                    name: sorted(paths) for name, paths in sorted(group["tom"].items())
+                },
+            })
+
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "dataset": "StemGMD Eval Session",
         "source": "https://zenodo.org/records/7882857",
         "license": "CC BY 4.0",
@@ -71,11 +123,14 @@ def inspect_archive(report_path: Path) -> dict:
         "wav_members": len(wavs),
         "wav_uncompressed_bytes": sum(info.file_size for info in wavs),
         "wav_basename_counts": basenames.most_common(160),
+        "wav_parent_directory_counts": parent_dirs.most_common(120),
+        "matching_mixture_snare_tom_groups": len(matching_groups),
+        "matching_groups": matching_groups[:80],
         "sample_paths": samples,
         "limitations": [
             "This is metadata-only discovery; no audio bytes were extracted.",
-            "Filename patterns are provisional until the archive layout is reviewed.",
-            "A subsequent downloader must select only exact mixture, Snare and Tom reference members.",
+            "Component names are read from archive directory structure, not guessed from filenames alone.",
+            "A subsequent downloader must verify sample rate, channel count, duration and exact frame alignment after extracting selected members.",
         ],
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -99,6 +154,7 @@ def main() -> int:
             result["wav_uncompressed_bytes"] / 1024**3, 3
         ),
         "audio_downloaded": result["audio_downloaded"],
+        "matching_mixture_snare_tom_groups": result["matching_mixture_snare_tom_groups"],
         "report": str(args.report),
         "sample_paths": result["sample_paths"],
     }, indent=2, ensure_ascii=False))
