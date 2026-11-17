@@ -124,7 +124,6 @@ _ACOUSTIC_TARGETS = {
     "accordion": ("accordion", None),
     "harpsichord": ("harpsichord", None),
     "acoustic_piano": ("piano", "synth_keys"),
-    "digital_piano": ("digital-piano", "synth_keys"),
     "marimba": ("marimba", None),
     "glockenspiel": ("glockenspiel", None),
     "timpani": ("timpani", None),
@@ -159,7 +158,7 @@ def _detected_acoustic_targets(
     top_score = float(ranked[0].get("score", 0.0))
     family = style_profile.get("family")
     if family == "orchestral":
-        max_rank, max_gap = 10, 0.95
+        max_rank, max_gap = 12, 1.20
     elif family == "electronic":
         max_rank, max_gap = 6, 0.50
     else:
