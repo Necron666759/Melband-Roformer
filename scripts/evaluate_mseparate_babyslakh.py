@@ -108,6 +108,18 @@ def choose_cases(rows: list[dict], maximum: int) -> list[dict]:
     return chosen
 
 
+def execution_counts(payload: dict | None) -> tuple[int, int, list[dict], int]:
+    """Read serialized ExecutionSummary results, not non-serialized properties."""
+    payload = payload or {}
+    execution = payload.get("execution") or {}
+    results = execution.get("results") or []
+    succeeded = sum(item.get("status") == "success" for item in results)
+    failed = sum(item.get("status") == "failed" for item in results)
+    plan = payload.get("plan") or {}
+    excerpt_task_count = len(plan.get("tasks") or [])
+    return succeeded, failed, results, excerpt_task_count
+
+
 def run_cli(
     input_path: Path, output: Path, models_dir: Path, timeout: int,
 ) -> tuple[int, dict | None, str]:
@@ -303,17 +315,26 @@ def main() -> int:
             code, payload, tail = run_cli(
                 excerpt, case_output, models_dir, args.inference_timeout,
             )
-            execution = (payload or {}).get("execution") or {}
+            succeeded, failed, task_results, excerpt_task_count = execution_counts(payload)
             rescue = (payload or {}).get("conditional_rescue") or {}
             deep = (payload or {}).get("deep_output_analysis") or {}
+            full_track_task_count = len(row["plan"].get("tasks") or [])
             stage_c.append({
                 "track": row["track"],
                 "category": row["category"],
                 "exit_code": code,
-                "execution_succeeded": execution.get("succeeded", 0),
-                "execution_failed": execution.get("failed", 0),
-                "execution_skipped": execution.get("skipped", 0),
-                "task_results": execution.get("results", []),
+                "status": (
+                    "completed" if succeeded or failed
+                    else "no_tasks" if excerpt_task_count == 0
+                    else "no_execution_result"
+                ),
+                "full_track_planner_tasks": full_track_task_count,
+                "excerpt_planner_tasks": excerpt_task_count,
+                "routing_drift": full_track_task_count > 0 and excerpt_task_count == 0,
+                "execution_succeeded": succeeded,
+                "execution_failed": failed,
+                "execution_skipped": sum(item.get("status") == "skipped" for item in task_results),
+                "task_results": task_results,
                 "deep_analysis_status": deep.get("status", "completed" if deep else "missing"),
                 "candidate_count": deep.get("candidate_count", 0),
                 "residual_source_hints": deep.get("residual_source_hints", []),
@@ -413,6 +434,8 @@ def main() -> int:
         "isolated_drum_stems_analyzed": len(drum_stem_paths),
         "inference_successes": sum(int(item.get("execution_succeeded", 0)) for item in stage_c),
         "inference_failures": sum(int(item.get("execution_failed", 0)) for item in stage_c),
+        "cases_without_excerpt_tasks": sum(item.get("status") == "no_tasks" for item in stage_c),
+        "routing_drift_cases": sum(bool(item.get("routing_drift")) for item in stage_c),
         "report": str(report_path),
     }
     (report_root / "summary.json").write_text(
