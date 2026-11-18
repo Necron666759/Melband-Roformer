@@ -162,7 +162,7 @@ def test_download_skips_tracks_with_silent_toms_and_avoids_other_stems(tmp_path,
     archive = FakeArchive()
     monkeypatch.setitem(
         sys.modules, "remotezip",
-        types.SimpleNamespace(RemoteZip=lambda _url: archive),
+        types.SimpleNamespace(RemoteZip=lambda _url, **_kwargs: archive),
     )
 
     output = tmp_path / "audio"
