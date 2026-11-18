@@ -230,7 +230,7 @@ class ExecutionManager:
                     source_info = sf.info(str(input_path))
                     target_rate = manifest.sample_rate
                     resampled_input = bool(target_rate and source_info.samplerate != target_rate)
-                    mono_to_stereo = bool(manifest.channels == 2 and source_info.channels == 1)
+                    mono_to_stereo = bool(manifest.channels in {2, "stereo"} and source_info.channels == 1)
                     model_input = input_path
                     if resampled_input or mono_to_stereo:
                         # Planner opt-ins authorize model-facing format
