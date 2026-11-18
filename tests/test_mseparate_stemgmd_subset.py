@@ -66,6 +66,33 @@ def test_track_selection_prefers_distinct_kits_and_drummers():
     assert len({row["drummer"] for row in selected}) == 4
 
 
+
+def test_candidate_ranking_uses_groove_diversity_after_high_activity_seed():
+    def candidate(drummer, kit, groove, size):
+        return {
+            "drummer": drummer,
+            "kit": kit,
+            "groove": groove,
+            "members": {},
+            "member_compressed_sizes": {
+                "snare": size,
+                "hi_tom": size,
+                "mid_tom": size,
+                "low_tom": size,
+            },
+        }
+
+    seed = candidate("drummer1", "kit-a", "groove-a.wav", 1000)
+    same_groove = candidate("drummer2", "kit-b", "groove-a.wav", 950)
+    new_groove = candidate("drummer3", "kit-c", "groove-b.wav", 700)
+
+    ranked = subset.rank_track_candidates([seed, same_groove, new_groove])
+
+    assert ranked[0] is seed
+    # Accept a meaningful activity reduction to add a new groove instead
+    # of selecting another rendering of the already-seen groove.
+    assert ranked[1] is new_groove
+
 def test_download_builds_mixture_and_manifest_from_selected_members(tmp_path, monkeypatch):
     members = _members("drummer1", "bluebird", "1_funk-groove1_138_beat_4-4")
 
