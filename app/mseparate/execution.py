@@ -202,6 +202,7 @@ class ExecutionManager:
                 error: str | None = None
                 load_attempted = False
                 active_stage: str | None = None
+                adapted_input_path: Path | None = None
                 try:
                     compatible, reason = backend.compatibility(manifest)
                     if not compatible:
@@ -229,23 +230,27 @@ class ExecutionManager:
                     source_info = sf.info(str(input_path))
                     target_rate = manifest.sample_rate
                     resampled_input = bool(target_rate and source_info.samplerate != target_rate)
+                    mono_to_stereo = bool(manifest.channels == 2 and source_info.channels == 1)
+                    model_input = input_path
+                    if resampled_input or mono_to_stereo:
+                        # Planner opt-ins authorize model-facing format
+                        # adapters. Preserve source audio and validate outputs
+                        # against this exact adapted copy.
+                        adapted_input_path = task_output_dir / ".model-input-adapted.wav"
+                        audio, source_rate = sf.read(str(input_path), dtype="float32", always_2d=True)
+                        if resampled_input:
+                            audio = soxr.resample(audio, source_rate, target_rate)
+                        if mono_to_stereo:
+                            audio = audio.repeat(2, axis=1)
+                        sf.write(str(adapted_input_path), audio, target_rate or source_rate, subtype="PCM_24")
+                        model_input = adapted_input_path
                     inference_started = time.perf_counter()
                     active_stage = "model_inference"
                     self._emit("model_inference", "started", task_id=task.task_id,
-                               model_id=task.model_id, input_path=str(input_path),
-                               target_stems=list(task.target_stems), resampled_input=resampled_input)
-                    if resampled_input:
-                        # Convert only the model-facing working copy. The
-                        # source stays untouched and output stems keep the
-                        # model's native sample rate.
-                        with tempfile.TemporaryDirectory(prefix="mseparate-rate-") as temp:
-                            model_input = Path(temp) / "input.wav"
-                            audio, source_rate = sf.read(str(input_path), dtype="float32", always_2d=True)
-                            converted = soxr.resample(audio, source_rate, target_rate)
-                            sf.write(str(model_input), converted, target_rate, subtype="PCM_24")
-                            produced = backend.infer(model_input, task_output_dir, task.target_stems)
-                    else:
-                        produced = backend.infer(input_path, task_output_dir, task.target_stems)
+                               model_id=task.model_id, input_path=str(model_input),
+                               target_stems=list(task.target_stems), resampled_input=resampled_input,
+                               mono_to_stereo=mono_to_stereo)
+                    produced = backend.infer(model_input, task_output_dir, task.target_stems)
                     self._emit("model_inference", "completed", task_id=task.task_id,
                                model_id=task.model_id, duration_seconds=round(time.perf_counter()-inference_started, 6),
                                output_count=len(produced))
@@ -278,7 +283,7 @@ class ExecutionManager:
                     reports = tuple(
                         inspect_stem(
                             artifact.path,
-                            reference=input_path,
+                            reference=model_input,
                             allow_sample_rate_mismatch=resampled_input,
                         )
                         for artifact in validated
@@ -331,6 +336,8 @@ class ExecutionManager:
                     # The adapter instance and its references go out of scope
                     # before resource checks and before the next model loads.
                     del backend
+                    if adapted_input_path is not None:
+                        adapted_input_path.unlink(missing_ok=True)
                     if self.resource_check is not None:
                         try:
                             self.resource_check()
