@@ -108,6 +108,19 @@ def _summary(values: list[float]) -> dict:
     }
 
 
+def _level_diagnostics(reference: np.ndarray, estimate: np.ndarray) -> dict:
+    """Report loudness mismatch separately from scale-invariant quality metrics."""
+    reference_rms = float(np.sqrt(np.mean(reference ** 2)))
+    estimate_rms = float(np.sqrt(np.mean(estimate ** 2)))
+    ratio = estimate_rms / max(reference_rms, 1e-12)
+    mismatch_db = 20.0 * np.log10(max(ratio, 1e-12))
+    return {
+        "estimate_to_reference_rms_ratio": ratio,
+        "estimate_reference_level_mismatch_db": float(mismatch_db),
+        "level_mismatch_warning": bool(mismatch_db > 6.0),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True, help="CSV with mixture and reference stem paths")
@@ -213,22 +226,7 @@ def main() -> int:
                     "si_sdri_db": score - baseline,
                     "reference_rms": float(np.sqrt(np.mean(refs[target] ** 2))),
                     "estimate_rms": float(np.sqrt(np.mean(estimate ** 2))),
-                    "estimate_to_reference_rms_ratio": float(
-                        np.sqrt(np.mean(estimate ** 2))
-                        / max(float(np.sqrt(np.mean(refs[target] ** 2))), 1e-12)
-                    ),
-                    "estimate_reference_level_mismatch_db": float(
-                        20.0 * np.log10(
-                            max(float(np.sqrt(np.mean(estimate ** 2))), 1e-12)
-                            / max(float(np.sqrt(np.mean(refs[target] ** 2))), 1e-12)
-                        )
-                    ),
-                    "level_mismatch_warning": bool(
-                        20.0 * np.log10(
-                            max(float(np.sqrt(np.mean(estimate ** 2))), 1e-12)
-                            / max(float(np.sqrt(np.mean(refs[target] ** 2))), 1e-12)
-                        ) > 6.0
-                    ),
+                    **_level_diagnostics(refs[target], estimate),
                 })
             print(f"[{index}/{len(rows)}] {track_id}: "
                   + ", ".join(
