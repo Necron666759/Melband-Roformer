@@ -18,6 +18,21 @@ on:
       - "scripts/evaluate_mseparate_urmp.py"
       - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
   workflow_dispatch: {}
+  pull_request:
+    branches:
+      - feature/mseparate-snare-toms-model-routing
+    paths:
+      - "app/mseparate/**"
+      - "scripts/evaluate_mseparate_babyslakh.py"
+      - "scripts/inspect_mseparate_stemgmd_archive.py"
+      - "scripts/download_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_vram.py"
+      - "scripts/download_mseparate_babyslakh_subset.py"
+      - "tests/test_mseparate_babyslakh_subset.py"
+      - "scripts/download_mseparate_urmp_subset.sh"
+      - "scripts/evaluate_mseparate_urmp.py"
+      - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
 
 permissions:
   contents: read
