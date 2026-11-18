@@ -126,7 +126,7 @@ jobs:
             tests/test_mseparate_vram.py
 
       - name: Download four aligned StemGMD Snare/Toms reference tracks
-        timeout-minutes: 30
+        timeout-minutes: 60
         run: |
           python scripts/download_mseparate_stemgmd_subset.py \
             --output-dir "${{ runner.temp }}/mseparate-stemgmd" \
