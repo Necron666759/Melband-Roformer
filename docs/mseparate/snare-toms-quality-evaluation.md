@@ -73,6 +73,10 @@ For each track and target, the runner reports:
 
 The JSON and CSV reports include per-track metrics and mean/median/min/max summaries for Snare and Toms separately.
 
+The model exposes one native `toms` output head. For StemGMD, its reference is the linear sum of the aligned `hi_tom`, `mid_tom` and `low_tom` source files. The report also records each component's RMS and peak, the sum of component RMS values versus aggregate-reference RMS, and aggregate-reference/model-estimate levels relative to the mixture. These are diagnostic measurements only: they do not normalize or reweight the source files or change SI-SDR scoring.
+
+Use the component diagnostics to distinguish a genuinely weak Tom reference from a model output that is much louder than the expected Tom group. A positive SI-SDRi does not by itself establish good Toms separation when the absolute SI-SDR and level mismatch remain poor.
+
 The runner enforces exact sample rate, stereo channel count and frame alignment. It does not silently resample, crop, pad, or time-align audio. The 53-stem outputs are not assumed to be additive, so no artificial residual or mixture-consistency score is calculated.
 
 ## Follow-up live-recording validation
