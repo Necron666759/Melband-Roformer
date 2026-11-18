@@ -173,10 +173,10 @@ def test_download_skips_tracks_with_silent_toms_and_avoids_other_stems(tmp_path,
     assert result["selected_tracks"] == 1
     assert result["candidate_groups_checked"] == 2
     assert result["selected_track_metadata"][0]["kit"] == "a_kit"
-    assert result["rejected_silent_target_tracks"] == [{
-        "track_id": "drummer1__z_kit__1_silent-groove",
-        "reason": "silent_toms_reference",
-    }]
+    rejected = result["rejected_silent_target_tracks"][0]
+    assert rejected["track_id"] == "drummer1__z_kit__1_silent-groove"
+    assert rejected["reason"] == "silent_toms_reference"
+    assert rejected["target_compressed_bytes"] > 0
     # Four target references for the rejected track; all nine for the accepted one.
     assert len(archive.opened) == 13
     assert len(list(output.rglob("*.wav"))) == 10
