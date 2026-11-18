@@ -122,6 +122,55 @@ def _read_reference(path: Path) -> Any:
     return samples
 
 
+def _open_remote_archive(remotezip_module: Any, archive_url: str):
+    """Open Zenodo ZIP with bounded HTTP retries and URL fallbacks.
+
+    Range requests remain enabled: this never falls back to downloading the
+    multi-gigabyte archive. A fresh RemoteZip instance is used per endpoint.
+    """
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+
+    retry = Retry(
+        total=6,
+        connect=6,
+        read=6,
+        status=6,
+        backoff_factor=1.0,
+        status_forcelist=(408, 429, 500, 502, 503, 504),
+        allowed_methods=frozenset(("GET", "HEAD")),
+        respect_retry_after_header=True,
+        raise_on_status=True,
+    )
+    session = requests.Session()
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=4, pool_maxsize=4)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    urls = [archive_url]
+    if "?download=1" in archive_url:
+        urls.append(archive_url.replace("?download=1", ""))
+    # Zenodo's record API exposes the same file via its content endpoint.
+    if archive_url == ARCHIVE_URL:
+        urls.append(
+            "https://zenodo.org/api/records/7882857/files/"
+            "StemGMD_eval_session.zip/content"
+        )
+
+    errors = []
+    for url in dict.fromkeys(urls):
+        try:
+            return remotezip_module.RemoteZip(url, session=session)
+        except Exception as exc:
+            errors.append(f"{url}: {type(exc).__name__}: {exc}")
+    session.close()
+    raise RuntimeError(
+        "Unable to open StemGMD archive through Zenodo endpoints after "
+        "HTTP retries; no full-archive download was attempted. " + " | ".join(errors)
+    )
+
+
 def download_subset(
     output_dir: Path,
     manifest_path: Path,
@@ -144,7 +193,7 @@ def download_subset(
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with RemoteZip(archive_url) as archive:
+    with _open_remote_archive(__import__("remotezip"), archive_url) as archive:
         groups = index_archive_members(archive.infolist())
         if not groups:
             raise RuntimeError(
