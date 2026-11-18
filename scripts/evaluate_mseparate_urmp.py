@@ -133,7 +133,7 @@ def main() -> int:
         )
         plan = build_plan(
             max_depth=3, analysis=analysis, registry=cpu_registry,
-            allow_resample=True,
+            allow_resample=True, allow_mono_to_stereo=True,
         )
         cuda_mono_plan = build_plan(
             max_depth=3, analysis=analysis, registry=cuda_registry,
