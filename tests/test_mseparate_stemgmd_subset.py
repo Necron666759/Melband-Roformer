@@ -215,7 +215,7 @@ def test_download_scans_past_eight_times_requested_tracks(tmp_path, monkeypatch)
     archive = FakeArchive()
     monkeypatch.setitem(
         sys.modules, "remotezip",
-        types.SimpleNamespace(RemoteZip=lambda _url: archive),
+        types.SimpleNamespace(RemoteZip=lambda _url, **_kwargs: archive),
     )
 
     result = subset.download_subset(
