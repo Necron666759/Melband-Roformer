@@ -91,7 +91,7 @@ def test_download_builds_mixture_and_manifest_from_selected_members(tmp_path, mo
     archive = FakeArchive()
     monkeypatch.setitem(
         sys.modules, "remotezip",
-        types.SimpleNamespace(RemoteZip=lambda _url: archive),
+        types.SimpleNamespace(RemoteZip=lambda _url, **_kwargs: archive),
     )
 
     output = tmp_path / "audio"
@@ -230,3 +230,32 @@ def test_download_scans_past_eight_times_requested_tracks(tmp_path, monkeypatch)
     # Nine rejected groups fetch four target stems; the accepted group
     # additionally fetches five non-target stems for mixture synthesis.
     assert len(archive.opened) == 9 * 4 + 9
+
+
+
+def test_remote_archive_uses_fallback_endpoint_after_primary_failure(monkeypatch):
+    import requests
+
+    calls = []
+    archive = object()
+
+    def remote_zip(url, *, session):
+        calls.append(url)
+        assert isinstance(session, requests.Session)
+        if len(calls) == 1:
+            raise OSError("temporary Zenodo 500")
+        return archive
+
+    monkeypatch.setitem(
+        sys.modules, "remotezip",
+        types.SimpleNamespace(RemoteZip=remote_zip),
+    )
+
+    opened = subset._open_remote_archive(
+        sys.modules["remotezip"], subset.ARCHIVE_URL
+    )
+
+    assert opened is archive
+    assert len(calls) == 2
+    assert calls[0] == subset.ARCHIVE_URL
+    assert calls[1] == subset.ARCHIVE_URL.replace("?download=1", "")
