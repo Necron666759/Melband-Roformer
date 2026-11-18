@@ -213,6 +213,22 @@ def main() -> int:
                     "si_sdri_db": score - baseline,
                     "reference_rms": float(np.sqrt(np.mean(refs[target] ** 2))),
                     "estimate_rms": float(np.sqrt(np.mean(estimate ** 2))),
+                    "estimate_to_reference_rms_ratio": float(
+                        np.sqrt(np.mean(estimate ** 2))
+                        / max(float(np.sqrt(np.mean(refs[target] ** 2))), 1e-12)
+                    ),
+                    "estimate_reference_level_mismatch_db": float(
+                        20.0 * np.log10(
+                            max(float(np.sqrt(np.mean(estimate ** 2))), 1e-12)
+                            / max(float(np.sqrt(np.mean(refs[target] ** 2))), 1e-12)
+                        )
+                    ),
+                    "level_mismatch_warning": bool(
+                        20.0 * np.log10(
+                            max(float(np.sqrt(np.mean(estimate ** 2))), 1e-12)
+                            / max(float(np.sqrt(np.mean(refs[target] ** 2))), 1e-12)
+                        ) > 6.0
+                    ),
                 })
             print(f"[{index}/{len(rows)}] {track_id}: "
                   + ", ".join(
@@ -237,7 +253,7 @@ def main() -> int:
         "low_vram_profile": args.low_vram_profile,
         "sample_rate": model.sample_rate,
         "tracks_evaluated": len(rows),
-        "metric": "SI-SDR and SI-SDR improvement over the unprocessed mixture",
+        "metric": "SI-SDR and SI-SDR improvement over the unprocessed mixture; also reports target/estimate RMS level mismatch diagnostically",
         "alignment_policy": "strict: identical sample rate, stereo channels and frame count; no implicit resampling/cropping/padding",
         "summary": summaries,
         "tracks": metric_rows,
