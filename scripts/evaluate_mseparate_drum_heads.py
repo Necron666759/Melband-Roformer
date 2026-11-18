@@ -120,6 +120,59 @@ def _level_diagnostics(reference: np.ndarray, estimate: np.ndarray) -> dict:
         "level_mismatch_warning": bool(mismatch_db > 6.0),
     }
 
+def _tom_component_diagnostics(
+    components: dict[str, np.ndarray],
+    aggregate_reference: np.ndarray,
+    estimate: np.ndarray,
+    mixture: np.ndarray,
+) -> dict:
+    """Describe Hi/Mid/Low Tom level composition without altering any audio."""
+    if not components:
+        return {
+            "tom_component_levels": [],
+            "tom_component_rms_sum": None,
+            "tom_component_rms_sum_to_aggregate_db": None,
+            "tom_reference_to_mixture_db": None,
+            "tom_estimate_to_mixture_db": None,
+        }
+
+    aggregate_rms = float(np.sqrt(np.mean(aggregate_reference ** 2)))
+    estimate_rms = float(np.sqrt(np.mean(estimate ** 2)))
+    mixture_rms = float(np.sqrt(np.mean(mixture ** 2)))
+    component_levels = []
+    component_rms_sum = 0.0
+    for name, samples in components.items():
+        if samples.shape != aggregate_reference.shape:
+            raise ValueError(
+                f"Tom component {name!r} shape {samples.shape} differs from "
+                f"aggregate reference {aggregate_reference.shape}"
+            )
+        component_rms = float(np.sqrt(np.mean(samples ** 2)))
+        component_peak = float(np.max(np.abs(samples)))
+        component_rms_sum += component_rms
+        component_levels.append({
+            "name": name,
+            "rms": component_rms,
+            "peak": component_peak,
+            "estimate_to_component_rms_db": float(
+                20.0 * np.log10(max(estimate_rms, 1e-12) / max(component_rms, 1e-12))
+            ),
+        })
+
+    return {
+        "tom_component_levels": component_levels,
+        "tom_component_rms_sum": component_rms_sum,
+        "tom_component_rms_sum_to_aggregate_db": float(
+            20.0 * np.log10(max(component_rms_sum, 1e-12) / max(aggregate_rms, 1e-12))
+        ),
+        "tom_reference_to_mixture_db": float(
+            20.0 * np.log10(max(aggregate_rms, 1e-12) / max(mixture_rms, 1e-12))
+        ),
+        "tom_estimate_to_mixture_db": float(
+            20.0 * np.log10(max(estimate_rms, 1e-12) / max(mixture_rms, 1e-12))
+        ),
+    }
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -201,6 +254,16 @@ def main() -> int:
                                     sample_rate=model.sample_rate)
                 for target in TARGETS
             }
+            tom_component_paths = _resolve(base, row["toms"])
+            tom_components = {
+                path.stem: _read_audio(
+                    [path], label=f"{track_id} Tom component {path.stem}",
+                    sample_rate=model.sample_rate,
+                )
+                for path in tom_component_paths
+            }
+            if len(tom_components) != len(tom_component_paths):
+                raise ValueError(f"{track_id} has duplicate Tom component names")
             for target, reference in refs.items():
                 if reference.shape != mixture.shape:
                     raise ValueError(
@@ -227,6 +290,10 @@ def main() -> int:
                     "reference_rms": float(np.sqrt(np.mean(refs[target] ** 2))),
                     "estimate_rms": float(np.sqrt(np.mean(estimate ** 2))),
                     **_level_diagnostics(refs[target], estimate),
+                    **_tom_component_diagnostics(
+                        tom_components if target == "toms" else {},
+                        refs["toms"], estimate, mixture,
+                    ),
                 })
             print(f"[{index}/{len(rows)}] {track_id}: "
                   + ", ".join(
@@ -253,6 +320,11 @@ def main() -> int:
         "tracks_evaluated": len(rows),
         "metric": "SI-SDR and SI-SDR improvement over the unprocessed mixture; also reports target/estimate RMS level mismatch diagnostically",
         "alignment_policy": "strict: identical sample rate, stereo channels and frame count; no implicit resampling/cropping/padding",
+        "target_reference_semantics": {
+            "snare": "StemGMD isolated snare reference",
+            "toms": "linear sum of the aligned hi_tom, mid_tom and low_tom references",
+            "note": "Tom component levels are diagnostic only; no normalization or component reweighting is applied.",
+        },
         "summary": summaries,
         "tracks": metric_rows,
     }
