@@ -115,7 +115,7 @@ def run_cli(
     report_path = output / "mseparate-report.json"
     command = [
         sys.executable, "-m", "mseparate", str(input_path),
-        "--execute", "--device", "cpu", "--allow-resample",
+        "--execute", "--device", "cpu", "--allow-resample", "--allow-mono-to-stereo",
         "--output-dir", str(output), "--models-dir", str(models_dir),
         "--inference-timeout", str(timeout),
         "--report", str(report_path), "--log-file",
@@ -241,7 +241,7 @@ def main() -> int:
         )
         plan = build_plan(
             max_depth=3, analysis=analysis, registry=cpu_registry,
-            allow_resample=True,
+            allow_resample=True, allow_mono_to_stereo=True,
         )
         plan_json = to_jsonable(plan)
         category, evidence = classify_case(plan_json, found)
