@@ -74,7 +74,7 @@ def index_archive_members(infos: list[Any]) -> list[dict[str, Any]]:
 
 
 def rank_track_candidates(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Order all candidates to prefer distinct kits, drummers and grooves."""
+    """Prioritize larger target WAVs, using kit/drummer/groove diversity as tie-breakers."""
     remaining = list(groups)
     ranked: list[dict[str, Any]] = []
     kits: set[str] = set()
