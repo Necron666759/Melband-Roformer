@@ -309,6 +309,7 @@ def build_plan(
     registry: dict[str, ModelManifest] | None = None,
     preferred_model_id: str | None = None,
     allow_resample: bool = False,
+    allow_mono_to_stereo: bool = False,
 ) -> ExecutionPlan:
     """Choose eligible, input-compatible models using transparent acoustic routing.
 
@@ -423,11 +424,12 @@ def build_plan(
     rejected: list[str] = []
     for model in candidates:
         if audio is not None:
-            checked_audio = (
-                replace(audio, sample_rate=model.sample_rate)
-                if allow_resample and model.sample_rate is not None
-                else audio
-            )
+            checked_audio = audio
+            if allow_resample and model.sample_rate is not None:
+                checked_audio = replace(checked_audio, sample_rate=model.sample_rate)
+            if (allow_mono_to_stereo and model.channels == 2
+                    and checked_audio.channels == 1):
+                checked_audio = replace(checked_audio, channels=2)
             ok, reason = model_audio_compatibility(model, checked_audio)
             if not ok:
                 rejected.append(f"{model.model_id}: {reason}")
