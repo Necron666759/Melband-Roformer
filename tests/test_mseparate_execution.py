@@ -370,9 +370,17 @@ def test_executor_dual_mono_adapts_mono_input_for_stereo_model(tmp_path):
 
     class ChannelAwareBackend(FakeBackend):
         def infer(self, input_audio, output_dir, target_stems):
-            self.state["input_channels"] = sf.info(str(input_audio)).channels
-            self.state["input_rate"] = sf.info(str(input_audio)).samplerate
-            return super().infer(input_audio, output_dir, target_stems)
+            info = sf.info(str(input_audio))
+            self.state["input_channels"] = info.channels
+            self.state["input_rate"] = info.samplerate
+            outputs = []
+            samples = np.sin(np.linspace(0, 100, info.frames, dtype=np.float32)) * 0.2
+            stereo = np.column_stack((samples, samples))
+            for stem in target_stems:
+                path = output_dir / f"{stem}.wav"
+                sf.write(path, stereo, info.samplerate)
+                outputs.append(StemArtifact(stem, path))
+            return outputs
 
     manager = ExecutionManager(
         {"fake": lambda: ChannelAwareBackend(state)},
