@@ -74,29 +74,40 @@ def index_archive_members(infos: list[Any]) -> list[dict[str, Any]]:
 
 
 def rank_track_candidates(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Prioritize larger target WAVs, using kit/drummer/groove diversity as tie-breakers."""
+    """Balance target-activity priority with greedy groove/kit/drummer diversity.
+
+    Compressed size is only a scan-order heuristic, never evidence that a
+    decoded reference is active. Diversity bonuses are deliberately material:
+    a slightly smaller candidate from a new groove should be scanned before
+    another kit/drummer rendering of a groove already represented.
+    """
+    if not groups:
+        return []
+
+    def activity_bytes(row: dict[str, Any]) -> int:
+        sizes = row.get("member_compressed_sizes", {})
+        return sum(int(sizes.get(name, 0)) for name in ("snare", *TOM_INSTRUMENTS))
+
+    maximum_activity = max(activity_bytes(row) for row in groups) or 1
     remaining = list(groups)
     ranked: list[dict[str, Any]] = []
     kits: set[str] = set()
     drummers: set[str] = set()
     grooves: set[str] = set()
     while remaining:
-        best = max(
-            remaining,
-            key=lambda row: (
-                # Compressed WAV size is a cheap activity proxy: rendered
-                # silent stems compress far more than stems with transients.
-                # It changes scan order only; samples are still decoded below.
-                sum(
-                    row.get("member_compressed_sizes", {}).get(name, 0)
-                    for name in ("snare", *TOM_INSTRUMENTS)
-                ),
-                int(row["kit"] not in kits),
-                int(row["drummer"] not in drummers),
-                int(row["groove"] not in grooves),
-                row["kit"], row["drummer"], row["groove"],
-            ),
-        )
+        def priority(row: dict[str, Any]) -> tuple[float, int, str, str, str]:
+            activity = activity_bytes(row) / maximum_activity
+            novelty = (
+                0.20 * int(row["groove"] not in grooves)
+                + 0.15 * int(row["kit"] not in kits)
+                + 0.10 * int(row["drummer"] not in drummers)
+            )
+            # Activity retains the majority weight; novelty now affects
+            # ordering instead of being consulted only for exact-size ties.
+            score = 0.55 * activity + novelty
+            return (score, activity_bytes(row), row["kit"], row["drummer"], row["groove"])
+
+        best = max(remaining, key=priority)
         ranked.append(best)
         remaining.remove(best)
         kits.add(best["kit"])
@@ -246,6 +257,10 @@ def download_subset(
                     f"StemGMD Snare/Toms references are not aligned for {track_id}"
                 )
             snare_peak = float(np.max(np.abs(target_refs["snare"])))
+            active_tom_components = [
+                name for name in TOM_INSTRUMENTS
+                if float(np.max(np.abs(target_refs[name]))) > 1e-8
+            ]
             tom_reference = np.zeros_like(
                 target_refs[TOM_INSTRUMENTS[0]], dtype=np.float64
             )
@@ -331,6 +346,8 @@ def download_subset(
                 "duration_seconds": round(next(iter(frame_counts.values())) / SAMPLE_RATE, 6),
                 "snare_peak": round(snare_peak, 8),
                 "toms_peak": round(toms_peak, 8),
+                "active_tom_components": active_tom_components,
+                "active_tom_component_count": len(active_tom_components),
                 "mixture_peak": round(float(np.max(np.abs(mixture))), 8),
                 "target_compressed_bytes": sum(
                     group.get("member_compressed_sizes", {}).get(name, 0)
@@ -376,9 +393,10 @@ def download_subset(
         "archive_url": archive_url,
         "download_method": "HTTP Range requests for selected ZIP members",
         "candidate_ordering": (
-            "Descending compressed byte size of Snare and three Tom members, "
-            "then kit/drummer/groove diversity; compressed size is only a "
-            "prioritization heuristic and never replaces decoded-sample validation."
+            "Greedy weighted ranking: 55% normalized compressed target size, "
+            "20% new groove, 15% new kit and 10% new drummer relative to already "
+            "ranked candidates; compressed size is only a prioritization heuristic "
+            "and never replaces decoded-sample validation."
         ),
         "full_archive_downloaded": False,
         "audio_downloaded": True,
