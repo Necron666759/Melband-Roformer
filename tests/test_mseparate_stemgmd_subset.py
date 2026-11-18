@@ -259,3 +259,22 @@ def test_remote_archive_uses_fallback_endpoint_after_primary_failure(monkeypatch
     assert len(calls) == 2
     assert calls[0] == subset.ARCHIVE_URL
     assert calls[1] == subset.ARCHIVE_URL.replace("?download=1", "")
+
+
+def test_candidate_ranking_prioritizes_larger_target_stems_before_diversity():
+    quiet = {
+        "drummer": "drummer1", "kit": "kit-a", "groove": "1_groove.wav",
+        "members": {}, "member_compressed_sizes": {
+            "snare": 10, "hi_tom": 10, "mid_tom": 10, "low_tom": 10,
+        },
+    }
+    active = {
+        "drummer": "drummer2", "kit": "kit-b", "groove": "2_groove.wav",
+        "members": {}, "member_compressed_sizes": {
+            "snare": 1000, "hi_tom": 800, "mid_tom": 700, "low_tom": 600,
+        },
+    }
+
+    ranked = subset.rank_track_candidates([quiet, active])
+
+    assert ranked == [active, quiet]
