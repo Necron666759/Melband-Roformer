@@ -56,3 +56,55 @@ def test_level_diagnostics_does_not_flag_near_matched_levels():
     reference = np.ones(100, dtype=np.float32)
     estimate = np.ones(100, dtype=np.float32) * 1.5
     assert _level_diagnostics(reference, estimate)["level_mismatch_warning"] is False
+
+
+
+def test_tom_component_diagnostics_reports_each_reference_and_mixture_levels():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _tom_component_diagnostics
+
+    hi = np.full((64, 2), 0.1, dtype=np.float32)
+    mid = np.full((64, 2), 0.2, dtype=np.float32)
+    low = np.full((64, 2), 0.3, dtype=np.float32)
+    aggregate = hi + mid + low
+    estimate = np.full((64, 2), 0.3, dtype=np.float32)
+    mixture = np.full((64, 2), 0.9, dtype=np.float32)
+
+    result = _tom_component_diagnostics(
+        {"hi_tom": hi, "mid_tom": mid, "low_tom": low},
+        aggregate, estimate, mixture,
+    )
+
+    assert [item["name"] for item in result["tom_component_levels"]] == [
+        "hi_tom", "mid_tom", "low_tom"
+    ]
+    assert [item["rms"] for item in result["tom_component_levels"]] == pytest.approx(
+        [0.1, 0.2, 0.3]
+    )
+    assert result["tom_component_rms_sum"] == pytest.approx(0.6)
+    assert result["tom_component_rms_sum_to_aggregate_db"] == pytest.approx(0.0, abs=1e-5)
+    assert result["tom_reference_to_mixture_db"] == pytest.approx(
+        20 * np.log10(0.6 / 0.9)
+    )
+    assert result["tom_estimate_to_mixture_db"] == pytest.approx(
+        20 * np.log10(0.3 / 0.9)
+    )
+
+
+def test_tom_component_diagnostics_is_empty_for_non_tom_target():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _tom_component_diagnostics
+
+    audio = np.ones((16, 2), dtype=np.float32)
+    result = _tom_component_diagnostics({}, audio, audio, audio)
+    assert result == {
+        "tom_component_levels": [],
+        "tom_component_rms_sum": None,
+        "tom_component_rms_sum_to_aggregate_db": None,
+        "tom_reference_to_mixture_db": None,
+        "tom_estimate_to_mixture_db": None,
+    }
