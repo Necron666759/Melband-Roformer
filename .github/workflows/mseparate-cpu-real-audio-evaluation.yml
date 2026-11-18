@@ -8,12 +8,15 @@ on:
     paths:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
+      - "scripts/evaluate_mseparate_drum_heads.py"
       - "scripts/inspect_mseparate_stemgmd_archive.py"
       - "scripts/download_mseparate_stemgmd_subset.py"
       - "tests/test_mseparate_stemgmd_subset.py"
       - "tests/test_mseparate_vram.py"
       - "scripts/download_mseparate_babyslakh_subset.py"
       - "tests/test_mseparate_babyslakh_subset.py"
+      - "tests/test_mseparate_babyslakh_evaluation.py"
+      - "tests/test_mseparate_evaluation.py"
       - "scripts/download_mseparate_urmp_subset.sh"
       - "scripts/evaluate_mseparate_urmp.py"
       - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
@@ -24,12 +27,15 @@ on:
     paths:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
+      - "scripts/evaluate_mseparate_drum_heads.py"
       - "scripts/inspect_mseparate_stemgmd_archive.py"
       - "scripts/download_mseparate_stemgmd_subset.py"
       - "tests/test_mseparate_stemgmd_subset.py"
       - "tests/test_mseparate_vram.py"
       - "scripts/download_mseparate_babyslakh_subset.py"
       - "tests/test_mseparate_babyslakh_subset.py"
+      - "tests/test_mseparate_babyslakh_evaluation.py"
+      - "tests/test_mseparate_evaluation.py"
       - "scripts/download_mseparate_urmp_subset.sh"
       - "scripts/evaluate_mseparate_urmp.py"
       - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
@@ -111,6 +117,8 @@ jobs:
           python -m pip install pytest
           python -m pytest -q \
             tests/test_mseparate_urmp_evaluation.py \
+            tests/test_mseparate_evaluation.py \
+            tests/test_mseparate_babyslakh_evaluation.py \
             tests/test_mseparate_babyslakh_subset.py \
             tests/test_mseparate_stemgmd_subset.py \
             tests/test_mseparate_vram.py
