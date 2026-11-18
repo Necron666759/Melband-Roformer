@@ -427,7 +427,7 @@ def build_plan(
             checked_audio = audio
             if allow_resample and model.sample_rate is not None:
                 checked_audio = replace(checked_audio, sample_rate=model.sample_rate)
-            if (allow_mono_to_stereo and model.channels == 2
+            if (allow_mono_to_stereo and model.channels in {2, "stereo"}
                     and checked_audio.channels == 1):
                 checked_audio = replace(checked_audio, channels=2)
             ok, reason = model_audio_compatibility(model, checked_audio)
