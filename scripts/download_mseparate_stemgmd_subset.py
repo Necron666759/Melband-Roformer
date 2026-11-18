@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shutil
+import time
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -83,13 +84,16 @@ def rank_track_candidates(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
         best = max(
             remaining,
             key=lambda row: (
-                int(row["kit"] not in kits),
-                int(row["drummer"] not in drummers),
-                int(row["groove"] not in grooves),
-                -sum(
+                # Compressed WAV size is a cheap activity proxy: rendered
+                # silent stems compress far more than stems with transients.
+                # It changes scan order only; samples are still decoded below.
+                sum(
                     row.get("member_compressed_sizes", {}).get(name, 0)
                     for name in ("snare", *TOM_INSTRUMENTS)
                 ),
+                int(row["kit"] not in kits),
+                int(row["drummer"] not in drummers),
+                int(row["groove"] not in grooves),
                 row["kit"], row["drummer"], row["groove"],
             ),
         )
@@ -211,9 +215,11 @@ def download_subset(
         extracted_bytes = 0
         candidates_checked = 0
 
+        scan_started = time.monotonic()
         for group in ranked:
             if len(rows) >= max_tracks:
                 break
+            candidate_started = time.monotonic()
             candidates_checked += 1
             track_id = _track_id(group["drummer"], group["kit"], group["groove"])
             track_dir = output_dir / track_id
@@ -254,9 +260,13 @@ def download_subset(
                 rejected_tracks.append({
                     "track_id": track_id,
                     "reason": reason,
+                    "target_compressed_bytes": sum(
+                        group.get("member_compressed_sizes", {}).get(name, 0)
+                        for name in ("snare", *TOM_INSTRUMENTS)
+                    ),
                 })
                 shutil.rmtree(track_dir, ignore_errors=True)
-                continue
+                outcome = f"rejected ({reason})"
 
             # Only accepted target-bearing tracks need the remaining five
             # components to construct a full-kit mixture.
@@ -309,9 +319,27 @@ def download_subset(
                 "snare_peak": round(snare_peak, 8),
                 "toms_peak": round(toms_peak, 8),
                 "mixture_peak": round(float(np.max(np.abs(mixture))), 8),
+                "target_compressed_bytes": sum(
+                    group.get("member_compressed_sizes", {}).get(name, 0)
+                    for name in ("snare", *TOM_INSTRUMENTS)
+                ),
             })
             extracted_bytes += sum(path.stat().st_size for path in local_paths.values())
             extracted_bytes += mixture_path.stat().st_size
+            outcome = "selected"
+
+            elapsed = time.monotonic() - candidate_started
+            if candidates_checked == 1 or candidates_checked % 10 == 0 or len(rows) >= max_tracks:
+                print(
+                    "[StemGMD] "
+                    f"checked={candidates_checked}/{len(ranked)} "
+                    f"selected={len(rows)}/{max_tracks} "
+                    f"rejected={len(rejected_tracks)} "
+                    f"candidate={track_id} outcome={outcome} "
+                    f"candidate_seconds={elapsed:.1f} "
+                    f"total_minutes={(time.monotonic() - scan_started) / 60:.1f}",
+                    flush=True,
+                )
 
         minimum_required = min(4, max_tracks)
         if len(rows) < minimum_required:
@@ -334,6 +362,11 @@ def download_subset(
         "license": "CC BY 4.0",
         "archive_url": archive_url,
         "download_method": "HTTP Range requests for selected ZIP members",
+        "candidate_ordering": (
+            "Descending compressed byte size of Snare and three Tom members, "
+            "then kit/drummer/groove diversity; compressed size is only a "
+            "prioritization heuristic and never replaces decoded-sample validation."
+        ),
         "full_archive_downloaded": False,
         "audio_downloaded": True,
         "selected_tracks": len(rows),
