@@ -119,6 +119,16 @@ def execution_counts(payload: dict | None) -> tuple[int, int, list[dict], int]:
     excerpt_task_count = len(plan.get("tasks") or [])
     return succeeded, failed, results, excerpt_task_count
 
+def stage_c_progress_message(
+    index: int, total: int, succeeded: int, failed: int, rescue: dict,
+) -> str:
+    """Format Stage C progress from the already parsed serialized result counts."""
+    rescue_status = (rescue or {}).get("status", "unknown")
+    return (
+        f"Stage C {index}/{total}: {succeeded} succeeded, "
+        f"{failed} failed, rescue={rescue_status}"
+    )
+
 
 def run_cli(
     input_path: Path, output: Path, models_dir: Path, timeout: int,
@@ -343,11 +353,9 @@ def main() -> int:
                 "vram_preflight_notes": (payload or {}).get("vram_preflight_notes", []),
                 "log_tail": tail,
             })
-            emit(
-                f"Stage C {index}/{len(cases)}: "
-                f"{execution.get('succeeded', 0)} succeeded, "
-                f"{execution.get('failed', 0)} failed, rescue={rescue.get('status', 'unknown')}"
-            )
+            emit(stage_c_progress_message(
+                index, len(cases), succeeded, failed, rescue,
+            ))
         except subprocess.TimeoutExpired as exc:
             stage_c.append({
                 "track": row["track"], "category": row["category"],
