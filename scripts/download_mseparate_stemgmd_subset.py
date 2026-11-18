@@ -267,6 +267,19 @@ def download_subset(
                 })
                 shutil.rmtree(track_dir, ignore_errors=True)
                 outcome = f"rejected ({reason})"
+                elapsed = time.monotonic() - candidate_started
+                if candidates_checked == 1 or candidates_checked % 10 == 0:
+                    print(
+                        "[StemGMD] "
+                        f"checked={candidates_checked}/{len(ranked)} "
+                        f"selected={len(rows)}/{max_tracks} "
+                        f"rejected={len(rejected_tracks)} "
+                        f"candidate={track_id} outcome={outcome} "
+                        f"candidate_seconds={elapsed:.1f} "
+                        f"total_minutes={(time.monotonic() - scan_started) / 60:.1f}",
+                        flush=True,
+                    )
+                continue
 
             # Only accepted target-bearing tracks need the remaining five
             # components to construct a full-kit mixture.
