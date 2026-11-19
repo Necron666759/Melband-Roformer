@@ -119,6 +119,33 @@ def execution_counts(payload: dict | None) -> tuple[int, int, list[dict], int]:
     excerpt_task_count = len(plan.get("tasks") or [])
     return succeeded, failed, results, excerpt_task_count
 
+
+def compare_routing_plans(full_track_plan: dict, excerpt_plan: dict) -> dict:
+    """Compare actual model/input/target routes, not merely task counts."""
+    def signatures(plan: dict) -> list[dict]:
+        return [
+            {
+                "model_id": str(task.get("model_id", "")),
+                "input_stem_id": str(task.get("input_stem_id", "mix")),
+                "target_stems": sorted(str(stem) for stem in task.get("target_stems", [])),
+            }
+            for task in (plan.get("tasks") or [])
+        ]
+
+    full = signatures(full_track_plan or {})
+    excerpt = signatures(excerpt_plan or {})
+    full_keys = {json.dumps(item, sort_keys=True) for item in full}
+    excerpt_keys = {json.dumps(item, sort_keys=True) for item in excerpt}
+    full_only = [item for item in full if json.dumps(item, sort_keys=True) not in excerpt_keys]
+    excerpt_only = [item for item in excerpt if json.dumps(item, sort_keys=True) not in full_keys]
+    return {
+        "routing_drift": bool(full_only or excerpt_only),
+        "full_track_routes": full,
+        "excerpt_routes": excerpt,
+        "full_track_only_routes": full_only,
+        "excerpt_only_routes": excerpt_only,
+    }
+
 def stage_c_progress_message(
     index: int, total: int, succeeded: int, failed: int, rescue: dict,
 ) -> str:
@@ -329,6 +356,9 @@ def main() -> int:
             rescue = (payload or {}).get("conditional_rescue") or {}
             deep = (payload or {}).get("deep_output_analysis") or {}
             full_track_task_count = len(row["plan"].get("tasks") or [])
+            route_comparison = compare_routing_plans(
+                row["plan"], (payload or {}).get("plan") or {},
+            )
             stage_c.append({
                 "track": row["track"],
                 "category": row["category"],
@@ -340,7 +370,7 @@ def main() -> int:
                 ),
                 "full_track_planner_tasks": full_track_task_count,
                 "excerpt_planner_tasks": excerpt_task_count,
-                "routing_drift": full_track_task_count > 0 and excerpt_task_count == 0,
+                **route_comparison,
                 "execution_succeeded": succeeded,
                 "execution_failed": failed,
                 "execution_skipped": sum(item.get("status") == "skipped" for item in task_results),
