@@ -108,3 +108,34 @@ def test_tom_component_diagnostics_is_empty_for_non_tom_target():
         "tom_reference_to_mixture_db": None,
         "tom_estimate_to_mixture_db": None,
     }
+
+def test_tom_reference_salience_bands_are_diagnostic_only():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _tom_reference_salience_band
+
+    assert _tom_reference_salience_band(-19.9) == "prominent_ge_-20_db"
+    assert _tom_reference_salience_band(-20.0) == "prominent_ge_-20_db"
+    assert _tom_reference_salience_band(-25.0) == "low_-30_to_-20_db"
+    assert _tom_reference_salience_band(-30.0) == "low_-30_to_-20_db"
+    assert _tom_reference_salience_band(-30.1) == "very_low_lt_-30_db"
+    assert _tom_reference_salience_band(None) == "not_applicable"
+
+
+def test_tom_component_diagnostics_reports_salience_without_changing_audio():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _tom_component_diagnostics
+
+    toms = np.full((32, 2), 0.01, dtype=np.float32)
+    estimate = toms * 2.0
+    mixture = np.full((32, 2), 0.1, dtype=np.float32)
+    result = _tom_component_diagnostics(
+        {"hi_tom": toms, "mid_tom": np.zeros_like(toms), "low_tom": np.zeros_like(toms)},
+        toms, estimate, mixture,
+    )
+    assert result["tom_reference_salience_band"] == "low_-30_to_-20_db"
+    assert result["tom_reference_to_mixture_db"] == pytest.approx(-20.0)
+    assert result["tom_component_levels"][0]["rms"] == pytest.approx(0.01)
