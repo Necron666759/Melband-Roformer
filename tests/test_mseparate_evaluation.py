@@ -219,3 +219,33 @@ def test_component_quality_diagnostics_keeps_silent_sources_explicit():
         "name": "low_tom", "status": "silent_reference", "si_sdr_db": None,
         "mixture_baseline_si_sdr_db": None, "si_sdri_db": None,
     }
+
+
+
+def test_component_quality_summary_aggregates_active_tom_and_non_tom_references():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_quality_summary
+
+    result = _component_quality_summary([
+        {"component_target_quality_diagnostics": [
+            {"name": "hi_tom", "status": "scored", "si_sdri_db": 4.0},
+            {"name": "snare", "status": "scored", "si_sdri_db": 2.0},
+            {"name": "kick", "status": "scored", "si_sdri_db": -3.0},
+            {"name": "ride", "status": "silent_reference", "si_sdri_db": None},
+        ]},
+        {"component_target_quality_diagnostics": [
+            {"name": "hi_tom", "status": "scored", "si_sdri_db": 2.0},
+            {"name": "snare", "status": "scored", "si_sdri_db": -1.0},
+            {"name": "kick", "status": "scored", "si_sdri_db": None},
+        ]},
+    ])
+
+    assert result["components"]["hi_tom"]["count"] == 2
+    assert result["components"]["hi_tom"]["mean_si_sdri_db"] == pytest.approx(3.0)
+    assert result["components"]["snare"]["positive_improvement_count"] == 1
+    assert result["components"]["kick"]["count"] == 1
+    assert result["tom_reference_components"]["mean_si_sdri_db"] == pytest.approx(3.0)
+    assert result["non_tom_components"]["count"] == 3
+    assert "not an additive" in result["interpretation"]
