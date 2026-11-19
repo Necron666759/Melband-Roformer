@@ -8,6 +8,8 @@ on:
       - feature/mseparate-hybrid-routing-coverage
     paths:
       - "app/mseparate/**"
+      - "tests/test_mseparate_electronic.py"
+      - "tests/test_mseparate_source_analysis.py"
       - "scripts/evaluate_mseparate_babyslakh.py"
       - "scripts/evaluate_mseparate_drum_heads.py"
       - "scripts/inspect_mseparate_stemgmd_archive.py"
@@ -27,6 +29,8 @@ on:
       - feature/mseparate-snare-toms-model-routing
     paths:
       - "app/mseparate/**"
+      - "tests/test_mseparate_electronic.py"
+      - "tests/test_mseparate_source_analysis.py"
       - "scripts/evaluate_mseparate_babyslakh.py"
       - "scripts/evaluate_mseparate_drum_heads.py"
       - "scripts/inspect_mseparate_stemgmd_archive.py"
