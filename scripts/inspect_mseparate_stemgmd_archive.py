@@ -55,15 +55,55 @@ def track_group_key(path: str) -> str:
     return str(PurePosixPath(*parts).with_suffix(""))
 
 
+def _open_remote_archive(remotezip_module, archive_url: str):
+    """Open the remote ZIP with bounded HTTP retries and Zenodo URL fallbacks.
+
+    Every attempt remains an HTTP Range request. A full-archive download or
+    disabled TLS verification is deliberately never used.
+    """
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+
+    retry = Retry(
+        total=6, connect=6, read=6, status=6, backoff_factor=1.0,
+        status_forcelist=(408, 429, 500, 502, 503, 504),
+        allowed_methods=frozenset(("GET", "HEAD")),
+        respect_retry_after_header=True, raise_on_status=True,
+    )
+    session = requests.Session()
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=4, pool_maxsize=4)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    urls = [archive_url]
+    if "?download=1" in archive_url:
+        urls.append(archive_url.replace("?download=1", ""))
+    urls.append(
+        "https://zenodo.org/api/records/7882857/files/"
+        "StemGMD_eval_session.zip/content"
+    )
+    errors = []
+    for url in dict.fromkeys(urls):
+        try:
+            return remotezip_module.RemoteZip(url, session=session)
+        except Exception as exc:
+            errors.append(f"{url}: {type(exc).__name__}: {exc}")
+    session.close()
+    raise RuntimeError(
+        "Unable to open StemGMD archive through Zenodo endpoints after bounded "
+        "HTTP retries; no full-archive download was attempted. " + " | ".join(errors)
+    )
+
+
 def inspect_archive(report_path: Path) -> dict:
     try:
-        from remotezip import RemoteZip
+        import remotezip
     except ImportError as exc:
         raise RuntimeError("Install remotezip>=0.12,<1 to inspect the archive") from exc
 
-    # RemoteZip requires HTTP Range support and reads the central directory;
-    # deliberately do not add a full-download fallback.
-    with RemoteZip(ARCHIVE_URL) as archive:
+    # RemoteZip reads the central directory via byte ranges only.
+    with _open_remote_archive(remotezip, ARCHIVE_URL) as archive:
         infos = archive.infolist()
 
     files = [info for info in infos if not info.is_dir()]
