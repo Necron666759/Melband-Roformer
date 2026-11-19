@@ -188,6 +188,43 @@ def _tom_component_diagnostics(
     }
 
 
+def _component_projection_diagnostics(
+    estimate: np.ndarray,
+    components: dict[str, np.ndarray],
+) -> list[dict]:
+    """Measure non-exclusive linear projection overlap with each isolated source.
+
+    These values are diagnostic correlations, not proof of causal leakage. Each
+    component is projected independently, so fractions are not additive.
+    """
+    estimate = np.asarray(estimate, dtype=np.float64)
+    estimate_flat = estimate.reshape(-1)
+    estimate_energy = float(np.dot(estimate_flat, estimate_flat))
+    rows = []
+    for name, samples in sorted(components.items()):
+        samples = np.asarray(samples, dtype=np.float64)
+        if samples.shape != estimate.shape:
+            raise ValueError(
+                f"Component {name!r} shape {samples.shape} differs from estimate {estimate.shape}"
+            )
+        reference_flat = samples.reshape(-1)
+        reference_energy = float(np.dot(reference_flat, reference_flat))
+        if estimate_energy <= 1e-20 or reference_energy <= 1e-20:
+            correlation = None
+            projection_fraction = None
+        else:
+            dot = float(np.dot(estimate_flat, reference_flat))
+            correlation = dot / math.sqrt(estimate_energy * reference_energy)
+            projection_fraction = (dot * dot / reference_energy) / estimate_energy
+        rows.append({
+            "name": name,
+            "normalized_correlation": correlation,
+            "estimate_energy_projection_fraction": projection_fraction,
+            "interpretation": "independent component overlap; not an additive leakage estimate",
+        })
+    return rows
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True, help="CSV with mixture and reference stem paths")
@@ -278,6 +315,24 @@ def main() -> int:
             }
             if len(tom_components) != len(tom_component_paths):
                 raise ValueError(f"{track_id} has duplicate Tom component names")
+            raw_components = row.get("components", "").strip()
+            component_paths = json.loads(raw_components) if raw_components else {}
+            if not isinstance(component_paths, dict):
+                raise ValueError(f"{track_id} components must be a JSON object")
+            source_components = {
+                str(name): _read_audio(
+                    _resolve(base, str(value)),
+                    label=f"{track_id} source component {name}",
+                    sample_rate=model.sample_rate,
+                )
+                for name, value in component_paths.items()
+            }
+            for name, samples in source_components.items():
+                if samples.shape != mixture.shape:
+                    raise ValueError(
+                        f"{track_id} source component {name!r} shape {samples.shape} "
+                        f"does not match mixture {mixture.shape}"
+                    )
             for target, reference in refs.items():
                 if reference.shape != mixture.shape:
                     raise ValueError(
@@ -307,6 +362,9 @@ def main() -> int:
                     **_tom_component_diagnostics(
                         tom_components if target == "toms" else {},
                         refs["toms"], estimate, mixture,
+                    ),
+                    "component_projection_diagnostics": _component_projection_diagnostics(
+                        estimate, source_components,
                     ),
                 })
             print(f"[{index}/{len(rows)}] {track_id}: "
