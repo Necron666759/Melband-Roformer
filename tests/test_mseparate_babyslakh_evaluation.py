@@ -50,3 +50,27 @@ def test_stage_c_progress_message_handles_missing_rescue_status():
     assert stage_c_progress_message(1, 1, 0, 0, {}) == (
         "Stage C 1/1: 0 succeeded, 0 failed, rescue=unknown"
     )
+
+
+def test_crop_representative_selects_sustained_active_window(tmp_path):
+    import numpy as np
+    import soundfile as sf
+    from evaluate_mseparate_babyslakh import crop_representative
+
+    sample_rate = 1000
+    quiet = np.full((3000, 2), 0.02, dtype=np.float32)
+    active = np.full((4000, 2), 0.8, dtype=np.float32)
+    tail = np.full((3000, 2), 0.15, dtype=np.float32)
+    source = tmp_path / "dynamic.wav"
+    destination = tmp_path / "excerpt.wav"
+    sf.write(source, np.concatenate((quiet, active, tail)), sample_rate)
+
+    result = crop_representative(source, destination, 3.0)
+    excerpt, rate = sf.read(destination, dtype="float32", always_2d=True)
+
+    assert result["selection_method"] == "maximum_mean_square_energy"
+    assert result["start_seconds"] == 3.0
+    assert result["duration_seconds"] == 3.0
+    assert result["candidate_windows"] >= 7
+    assert rate == sample_rate
+    assert float(np.sqrt(np.mean(excerpt ** 2))) > 0.75
