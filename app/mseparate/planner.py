@@ -260,6 +260,13 @@ def _detected_acoustic_targets(
             and window_top_5_fraction >= 0.65
         ):
             continue
+        if (
+            source in {"flute", "clarinet", "oboe", "bassoon", "saxophone"}
+            and "window_top_5_fraction" in item
+            and window_top_5_fraction < 0.25
+            and not (rank <= 3 and top_score - score <= 0.50)
+        ):
+            continue
         if (rank > max_rank or top_score - score > max_gap) and not temporal_support:
             continue
         target, synthetic_counterpart = mapping
