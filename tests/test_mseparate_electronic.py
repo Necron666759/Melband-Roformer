@@ -744,3 +744,22 @@ def test_non_electronic_style_retains_synth_counterpart_conflict_filter():
     )
 
     assert "violin" not in targets
+
+
+
+def test_electronic_hybrid_keeps_real_flute_alongside_synth_flute_with_window_evidence():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"kind": "source", "source": "synth_flute", "score": 7.0},
+        {
+            "kind": "source", "source": "flute", "score": 6.8,
+            "window_top_5_fraction": 0.5,
+            "window_top_12_fraction": 0.875,
+            "window_best_source_rank": 2,
+        },
+    ]
+
+    targets = _detected_acoustic_targets(predictions, {"family": "electronic"})
+
+    assert "flute" in targets
