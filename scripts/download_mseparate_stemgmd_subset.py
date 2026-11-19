@@ -321,6 +321,19 @@ def download_subset(
             mixture = np.zeros_like(references[INSTRUMENTS[0]], dtype=np.float64)
             for instrument in INSTRUMENTS:
                 mixture += references[instrument].astype(np.float64)
+            mixture_rms = float(np.sqrt(np.mean(mixture ** 2)))
+            snare_rms = float(np.sqrt(np.mean(references["snare"] ** 2)))
+            tom_reference = np.zeros_like(mixture, dtype=np.float64)
+            for name in TOM_INSTRUMENTS:
+                tom_reference += references[name].astype(np.float64)
+            toms_rms = float(np.sqrt(np.mean(tom_reference ** 2)))
+            mixture_rms_db_floor = max(mixture_rms, 1e-12)
+            toms_to_mixture_rms_db = 20.0 * np.log10(
+                max(toms_rms, 1e-12) / mixture_rms_db_floor
+            )
+            toms_to_snare_rms_db = 20.0 * np.log10(
+                max(toms_rms, 1e-12) / max(snare_rms, 1e-12)
+            )
             mixture_path = track_dir / "mixture.wav"
             # FLOAT WAV preserves the unnormalized sum without PCM clipping.
             sf.write(str(mixture_path), mixture.astype(np.float32), SAMPLE_RATE, subtype="FLOAT")
@@ -348,6 +361,10 @@ def download_subset(
                 "toms_peak": round(toms_peak, 8),
                 "active_tom_components": active_tom_components,
                 "active_tom_component_count": len(active_tom_components),
+                "snare_rms": round(snare_rms, 8),
+                "toms_rms": round(toms_rms, 8),
+                "toms_to_snare_rms_db": round(float(toms_to_snare_rms_db), 4),
+                "toms_to_mixture_rms_db": round(float(toms_to_mixture_rms_db), 4),
                 "mixture_peak": round(float(np.max(np.abs(mixture))), 8),
                 "target_compressed_bytes": sum(
                     group.get("member_compressed_sizes", {}).get(name, 0)
