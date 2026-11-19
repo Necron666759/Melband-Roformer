@@ -51,3 +51,34 @@ def test_rtx3060ti_probe_is_an_explicit_low_vram_boundary_not_live_probe():
     free_bytes, total_bytes = _rtx3060ti_low_vram_boundary()
     assert free_bytes == 6 * GIB
     assert total_bytes == int(7.68 * GIB)
+
+
+def test_ground_truth_ranking_reports_intermittent_window_recovery():
+    result = _ground_truth_ranking(
+        [
+            {
+                "kind": "source", "source": "oboe", "score": 7.2,
+                "window_best_source_rank": 3,
+                "window_mean_source_rank": 9.5,
+                "window_top_5_fraction": 0.25,
+                "window_top_12_fraction": 0.75,
+            },
+            {
+                "kind": "source", "source": "cello", "score": 8.1,
+                "window_best_source_rank": 1,
+                "window_mean_source_rank": 2.0,
+                "window_top_5_fraction": 1.0,
+                "window_top_12_fraction": 1.0,
+            },
+        ],
+        ["oboe", "cello", "flute"],
+    )
+
+    oboe = next(row for row in result["instruments"] if row["instrument"] == "oboe")
+    assert oboe["rank"] == 2
+    assert oboe["in_top_5"] is True
+    assert oboe["window_best_source_rank"] == 3
+    assert oboe["window_top_5_fraction"] == 0.25
+    assert result["window_top_5_any_recall"] == round(2 / 3, 4)
+    assert result["window_top_12_any_recall"] == round(2 / 3, 4)
+    assert result["window_only_top_5_recoveries"] == []
