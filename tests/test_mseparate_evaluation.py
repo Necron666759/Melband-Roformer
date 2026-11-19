@@ -214,7 +214,7 @@ def test_component_quality_diagnostics_keeps_silent_sources_explicit():
     by_name = {row["name"]: row for row in rows}
 
     assert by_name["hi_tom"]["status"] == "scored"
-    assert by_name["hi_tom"]["si_sdri_db"] == float("inf")
+    assert by_name["hi_tom"]["si_sdri_db"] is None
     assert by_name["low_tom"] == {
         "name": "low_tom", "status": "silent_reference", "si_sdr_db": None,
         "mixture_baseline_si_sdr_db": None, "si_sdri_db": None,
