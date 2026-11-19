@@ -125,14 +125,14 @@ jobs:
             tests/test_mseparate_stemgmd_subset.py \
             tests/test_mseparate_vram.py
 
-      - name: Download four aligned StemGMD Snare/Toms reference tracks
+      - name: Download eight diverse StemGMD Snare/Toms reference tracks
         timeout-minutes: 60
         run: |
           python scripts/download_mseparate_stemgmd_subset.py \
             --output-dir "${{ runner.temp }}/mseparate-stemgmd" \
             --manifest "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-eval-manifest.csv" \
             --report "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-subset-report.json" \
-            --max-tracks 4
+            --max-tracks 8
 
       - name: Run real-checkpoint Snare/Toms inference and SI-SDR evaluation on CPU
         timeout-minutes: 240
