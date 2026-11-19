@@ -162,7 +162,46 @@ def run_cli(
     return process.returncode, payload, log[-12000:]
 
 
+def crop_representative(source: Path, destination: Path, seconds: float) -> dict:
+    """Choose the highest sustained-RMS excerpt using one-second energy bins.
+
+    The selection is deterministic and avoids a potentially quiet center crop.
+    It is an evaluation sampling policy, not a production routing heuristic.
+    """
+    info = sf.info(str(source))
+    length = min(info.frames, max(1, int(seconds * info.samplerate)))
+    hop = max(1, info.samplerate)
+    with sf.SoundFile(str(source), "r") as stream:
+        audio = stream.read(dtype="float32", always_2d=True)
+    if not np.isfinite(audio).all() or not len(audio):
+        raise RuntimeError(f"Invalid excerpt source {source}")
+    if len(audio) < length:
+        raise RuntimeError(f"Excerpt source {source} is shorter than requested window")
+    frame_energy = np.mean(np.square(audio.astype(np.float64)), axis=1)
+    prefix = np.concatenate(([0.0], np.cumsum(frame_energy, dtype=np.float64)))
+    starts = list(range(0, len(audio) - length + 1, hop))
+    final_start = len(audio) - length
+    if not starts or starts[-1] != final_start:
+        starts.append(final_start)
+    energies = [
+        (prefix[start + length] - prefix[start]) / length
+        for start in starts
+    ]
+    best_index = int(np.argmax(energies))
+    start = starts[best_index]
+    excerpt = audio[start:start + length]
+    sf.write(destination, excerpt, info.samplerate, subtype="PCM_16")
+    return {
+        "selection_method": "maximum_mean_square_energy",
+        "start_seconds": round(start / info.samplerate, 3),
+        "duration_seconds": round(length / info.samplerate, 3),
+        "window_rms": round(float(np.sqrt(energies[best_index])), 8),
+        "candidate_windows": len(starts),
+    }
+
+
 def crop_center(source: Path, destination: Path, seconds: float) -> None:
+    """Compatibility wrapper retained for callers that explicitly need center crops."""
     info = sf.info(str(source))
     length = min(info.frames, max(1, int(seconds * info.samplerate)))
     start = max(0, (info.frames - length) // 2)
@@ -318,8 +357,8 @@ def main() -> int:
         source = dataset_root / row["input"]
         excerpt_dir = work / "excerpts"
         excerpt_dir.mkdir(parents=True, exist_ok=True)
-        excerpt = excerpt_dir / f"{row['track']}-center-{args.excerpt_seconds:g}s.wav"
-        crop_center(source, excerpt, args.excerpt_seconds)
+        excerpt = excerpt_dir / f"{row['track']}-active-{args.excerpt_seconds:g}s.wav"
+        excerpt_selection = crop_representative(source, excerpt, args.excerpt_seconds)
         case_output = output_root / row["track"]
         try:
             code, payload, tail = run_cli(
@@ -340,6 +379,7 @@ def main() -> int:
                 ),
                 "full_track_planner_tasks": full_track_task_count,
                 "excerpt_planner_tasks": excerpt_task_count,
+                "excerpt_selection": excerpt_selection,
                 "routing_drift": full_track_task_count > 0 and excerpt_task_count == 0,
                 "execution_succeeded": succeeded,
                 "execution_failed": failed,
