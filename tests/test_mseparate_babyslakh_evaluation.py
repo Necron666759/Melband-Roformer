@@ -50,3 +50,46 @@ def test_stage_c_progress_message_handles_missing_rescue_status():
     assert stage_c_progress_message(1, 1, 0, 0, {}) == (
         "Stage C 1/1: 0 succeeded, 0 failed, rescue=unknown"
     )
+
+
+
+def test_compare_routing_plans_detects_changed_targets_even_when_task_counts_match():
+    from evaluate_mseparate_babyslakh import compare_routing_plans
+
+    result = compare_routing_plans(
+        {"tasks": [{"model_id": "model-a", "input_stem_id": "mix", "target_stems": ["bass"]}]},
+        {"tasks": [{"model_id": "model-b", "input_stem_id": "mix", "target_stems": ["synth"]}]},
+    )
+
+    assert result["routing_drift"] is True
+    assert result["full_track_only_routes"] == [
+        {"model_id": "model-a", "input_stem_id": "mix", "target_stems": ["bass"]}
+    ]
+    assert result["excerpt_only_routes"] == [
+        {"model_id": "model-b", "input_stem_id": "mix", "target_stems": ["synth"]}
+    ]
+
+
+def test_compare_routing_plans_accepts_identical_routes():
+    from evaluate_mseparate_babyslakh import compare_routing_plans
+
+    plan = {"tasks": [
+        {"model_id": "model-a", "input_stem_id": "mix", "target_stems": ["violin", "cello"]}
+    ]}
+    result = compare_routing_plans(plan, plan)
+
+    assert result["routing_drift"] is False
+    assert result["full_track_only_routes"] == []
+    assert result["excerpt_only_routes"] == []
+
+
+def test_compare_routing_plans_detects_full_track_route_missing_from_excerpt():
+    from evaluate_mseparate_babyslakh import compare_routing_plans
+
+    result = compare_routing_plans(
+        {"tasks": [{"model_id": "model-a", "target_stems": ["piano"]}]},
+        {"tasks": []},
+    )
+
+    assert result["routing_drift"] is True
+    assert result["full_track_only_routes"][0]["target_stems"] == ["piano"]
