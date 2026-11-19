@@ -668,7 +668,11 @@ def test_electronic_style_keeps_acoustic_instrument_within_conservative_margin()
             {"kind": "source", "source": "granular_textures", "score": 7.4},
             {"kind": "source", "source": "glitch_fx", "score": 7.35},
             {"kind": "source", "source": "synth_bass", "score": 7.3},
-            {"kind": "source", "source": "violin", "score": 7.0},
+            {
+                "kind": "source", "source": "violin", "score": 7.0,
+                "window_top_5_fraction": 0.25, "window_top_12_fraction": 0.75,
+                "window_best_source_rank": 4,
+            },
             {"kind": "genre", "source": "cybercore", "score": 0.94},
         ]),
         registry=registry,
