@@ -12,7 +12,7 @@ def _model():
         "model_id": "mega-53", "name": "Mega 53", "architecture": "BS-RoFormer",
         "backend": "bs-roformer-pymss", "source_url": "https://example.invalid/release",
         "license": "MIT", "license_status": "verified", "status": "available",
-        "category": "mega-multi-stem", "min_vram_gb": 16, "min_free_vram_gb": 14,
+        "category": "mega-multi-stem", "cpu_inference": True, "min_vram_gb": 16, "min_free_vram_gb": 14,
         "assets": [
             {"role": "checkpoint", "url": "https://example.invalid/model.ckpt",
              "relative_path": "model.ckpt", "sha256": "a" * 64},
@@ -27,8 +27,21 @@ def _model():
     })
 
 
-def test_gpu_gated_model_is_excluded_on_cpu():
-    registry, notes = filter_registry_for_device({"mega-53": _model()}, "cpu")
+def test_gpu_memory_requirement_does_not_disable_verified_cpu_runtime():
+    model = _model()
+    registry, notes = filter_registry_for_device(
+        {"mega-53": model}, "cpu",
+        memory_probe=lambda: (_ for _ in ()).throw(
+            AssertionError("CPU admission must not probe CUDA")
+        ),
+    )
+    assert registry["mega-53"] is model
+    assert notes == ()
+
+
+def test_cpu_inference_is_not_assumed_without_manifest_capability():
+    model = replace(_model(), cpu_inference=False)
+    registry, notes = filter_registry_for_device({"mega-53": model}, "cpu")
     assert registry == {}
     assert "No CPU fallback" in notes[0]
 

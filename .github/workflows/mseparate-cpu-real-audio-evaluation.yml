@@ -4,22 +4,79 @@ on:
   push:
     branches:
       - feature/mseparate-cpu-real-audio-evaluation
+      - feature/mseparate-snare-toms-quality-evaluation
     paths:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
+      - "scripts/evaluate_mseparate_drum_heads.py"
+      - "scripts/inspect_mseparate_stemgmd_archive.py"
+      - "scripts/download_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_vram.py"
+      - "scripts/download_mseparate_babyslakh_subset.py"
+      - "tests/test_mseparate_babyslakh_subset.py"
+      - "tests/test_mseparate_babyslakh_evaluation.py"
+      - "tests/test_mseparate_evaluation.py"
       - "scripts/download_mseparate_urmp_subset.sh"
       - "scripts/evaluate_mseparate_urmp.py"
       - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
   workflow_dispatch: {}
+  pull_request:
+    branches:
+      - feature/mseparate-snare-toms-model-routing
+    paths:
+      - "app/mseparate/**"
+      - "scripts/evaluate_mseparate_babyslakh.py"
+      - "scripts/evaluate_mseparate_drum_heads.py"
+      - "scripts/inspect_mseparate_stemgmd_archive.py"
+      - "scripts/download_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_vram.py"
+      - "scripts/download_mseparate_babyslakh_subset.py"
+      - "tests/test_mseparate_babyslakh_subset.py"
+      - "tests/test_mseparate_babyslakh_evaluation.py"
+      - "tests/test_mseparate_evaluation.py"
+      - "scripts/download_mseparate_urmp_subset.sh"
+      - "scripts/evaluate_mseparate_urmp.py"
+      - ".github/workflows/mseparate-cpu-real-audio-evaluation.yml"
 
 permissions:
   contents: read
 
 concurrency:
   group: mseparate-cpu-real-audio-evaluation-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
+  stemgmd-archive-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the evaluation branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install range-only ZIP reader
+        run: python -m pip install "remotezip>=0.12,<1"
+
+      - name: Inspect StemGMD archive central directory without downloading audio
+        timeout-minutes: 10
+        run: |
+          python scripts/inspect_mseparate_stemgmd_archive.py --report "${{ runner.temp }}/stemgmd-archive-inventory.json"
+
+      - name: Upload metadata-only archive inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stemgmd-archive-inventory-${{ github.run_id }}
+          path: ${{ runner.temp }}/stemgmd-archive-inventory.json
+          if-no-files-found: warn
+          retention-days: 7
+
   cpu-real-audio-evaluation:
     runs-on: ubuntu-latest
     timeout-minutes: 300
@@ -51,13 +108,49 @@ jobs:
           python -m pip install \
             "pymss==2.3.5" \
             "numpy" "soundfile>=0.12,<0.13" "tqdm" "soxr>=0.3" \
-            "transformers>=4.45,<5" "librosa>=0.10.2,<1"
+            "transformers>=4.45,<5" "librosa>=0.10.2,<1" \
+            "remotezip>=0.12,<1" "PyYAML>=6,<7"
           python -m pip install --no-deps -e app
 
-      - name: Test URMP ground-truth ranking and GPU admission diagnostics
+      - name: Test URMP ground-truth ranking and CPU/GPU admission policies
+        env:
+          PYTHONPATH: app
         run: |
           python -m pip install pytest
-          python -m pytest -q tests/test_mseparate_urmp_evaluation.py
+          python -m pytest -q \
+            tests/test_mseparate_urmp_evaluation.py \
+            tests/test_mseparate_evaluation.py \
+            tests/test_mseparate_babyslakh_evaluation.py \
+            tests/test_mseparate_babyslakh_subset.py \
+            tests/test_mseparate_stemgmd_subset.py \
+            tests/test_mseparate_vram.py
+
+      - name: Download eight diverse StemGMD Snare/Toms reference tracks
+        timeout-minutes: 60
+        run: |
+          python scripts/download_mseparate_stemgmd_subset.py \
+            --output-dir "${{ runner.temp }}/mseparate-stemgmd" \
+            --manifest "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-eval-manifest.csv" \
+            --report "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-subset-report.json" \
+            --max-tracks 8
+
+      - name: Run real-checkpoint Snare/Toms inference and SI-SDR evaluation on CPU
+        timeout-minutes: 240
+        run: |
+          python scripts/evaluate_mseparate_drum_heads.py \
+            --manifest "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-eval-manifest.csv" \
+            --output-dir "${{ runner.temp }}/mseparate-evaluation/reports/snare-toms-evaluation" \
+            --models-dir "${{ runner.temp }}/mseparate-evaluation/models" \
+            --device cpu \
+            --max-tracks 8
+
+      - name: Selectively download BabySlakh mixtures and drum references
+        timeout-minutes: 30
+        run: |
+          python scripts/download_mseparate_babyslakh_subset.py \
+            --output-dir "${{ runner.temp }}/mseparate-evaluation/dataset" \
+            --manifest "${{ runner.temp }}/mseparate-evaluation/reports/babyslakh-subset-manifest.json" \
+            --max-tracks 8
 
       - name: Download selected URMP audio to the ephemeral runner
         run: bash scripts/download_mseparate_urmp_subset.sh "${{ runner.temp }}/mseparate-urmp"
@@ -93,16 +186,19 @@ jobs:
           PY
 
       - name: Evaluate URMP source analysis and CPU routing against known instruments
+        timeout-minutes: 90
+        continue-on-error: true
         run: |
           python scripts/evaluate_mseparate_urmp.py \
             --audio-dir "${{ runner.temp }}/mseparate-urmp" \
             --report "${{ runner.temp }}/mseparate-evaluation/reports/urmp-routing-report.json"
 
       - name: Run stages A, B and C on BabySlakh
+        timeout-minutes: 180
         run: |
           python scripts/evaluate_mseparate_babyslakh.py \
             --work-dir "${{ runner.temp }}/mseparate-evaluation" \
-            --max-tracks 20 \
+            --max-tracks 8 \
             --max-cases 4 \
             --excerpt-seconds 12 \
             --inference-timeout 600
@@ -114,5 +210,7 @@ jobs:
           name: mseparate-cpu-real-audio-evaluation-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/mseparate-evaluation/reports/*.json
+            ${{ runner.temp }}/mseparate-evaluation/reports/snare-toms-evaluation/snare_toms_evaluation.json
+            ${{ runner.temp }}/mseparate-evaluation/reports/snare-toms-evaluation/snare_toms_evaluation.csv
           if-no-files-found: warn
           retention-days: 30

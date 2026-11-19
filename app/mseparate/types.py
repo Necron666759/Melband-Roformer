@@ -62,6 +62,7 @@ class ModelManifest:
     auto_route: bool = True
     runtime_validation: str = "unverified"
     license_review: dict[str, Any] | None = field(default=None, compare=False, hash=False)
+    cpu_inference: bool = False
     min_vram_gb: float | None = None
     min_free_vram_gb: float | None = None
     inference_params: dict[str, Any] = field(default_factory=dict, compare=False, hash=False)

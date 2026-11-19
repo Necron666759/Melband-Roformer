@@ -12,6 +12,7 @@ on:
       - feature/mseparate-electronic-source-taxonomy
       - feature/mseparate-drum-source-routing
       - feature/mseparate-snare-toms-model-routing
+      - feature/mseparate-snare-toms-quality-evaluation
   pull_request:
     branches:
       - main
@@ -20,6 +21,8 @@ on:
       - feature/mseparate-electronic-source-taxonomy
       - feature/mseparate-drum-source-routing
       - feature/mseparate-drum-component-taxonomy
+      - feature/mseparate-snare-toms-model-routing
+      - feature/mseparate-snare-toms-quality-evaluation
       - feature/mseparate-gpu-foundation-sync
 
 jobs:
@@ -31,13 +34,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install CPU-only test dependencies
-        run: python -m pip install --upgrade pytest numpy soundfile tqdm soxr
+        run: python -m pip install --upgrade pytest numpy soundfile tqdm soxr requests
       - name: Build wrapper wheel and validate packaging metadata
         run: |
           python -m pip install --upgrade "setuptools>=77.0.0" wheel build
           python -m build --wheel --no-isolation app
-      - name: Compile AppImage entry-point Python scripts
-        run: python -m py_compile appimage/melband-roformer-shell.py appimage/melband-roformer-hud-term.py
+      - name: Compile AppImage and evaluation entry-point Python scripts
+        run: python -m py_compile appimage/melband-roformer-shell.py appimage/melband-roformer-hud-term.py scripts/evaluate_mseparate_drum_heads.py scripts/download_mseparate_babyslakh_subset.py scripts/evaluate_mseparate_babyslakh.py scripts/inspect_mseparate_stemgmd_archive.py scripts/download_mseparate_stemgmd_subset.py
       - name: Run AppImage restricted-shell regression tests
         env:
           PYTHONPATH: app
@@ -45,4 +48,4 @@ jobs:
       - name: Run project tests without model downloads or GPU
         env:
           PYTHONPATH: app
-        run: python -m pytest -q tests/test_mseparate.py tests/test_mseparate_electronic.py tests/test_mseparate_assets.py tests/test_mseparate_execution.py tests/test_mseparate_melband.py tests/test_mseparate_quality.py tests/test_mseparate_demucs_onnx.py tests/test_mseparate_pymss.py tests/test_mseparate_license_policy.py tests/test_mseparate_vram.py tests/test_mseparate_quarantine.py tests/test_mseparate_demucs_cli.py tests/test_mseparate_candidate_analysis.py tests/test_mseparate_conditional_rescue.py tests/test_mseparate_vocal_comparison.py
+        run: python -m pytest -q tests/test_mseparate.py tests/test_mseparate_electronic.py tests/test_mseparate_assets.py tests/test_mseparate_execution.py tests/test_mseparate_melband.py tests/test_mseparate_quality.py tests/test_mseparate_demucs_onnx.py tests/test_mseparate_pymss.py tests/test_mseparate_license_policy.py tests/test_mseparate_vram.py tests/test_mseparate_quarantine.py tests/test_mseparate_demucs_cli.py tests/test_mseparate_candidate_analysis.py tests/test_mseparate_conditional_rescue.py tests/test_mseparate_vocal_comparison.py tests/test_mseparate_evaluation.py tests/test_mseparate_babyslakh_subset.py tests/test_mseparate_babyslakh_evaluation.py tests/test_mseparate_stemgmd_subset.py

@@ -700,3 +700,19 @@ def test_htdemucs_cannot_be_selected_through_normal_preference():
             registry=registry,
             preferred_model_id="demucs-onnx-htdemucs-6s",
         )
+
+
+def test_planner_can_opt_into_dual_mono_adapter_for_stereo_only_model():
+    from mseparate.types import AnalysisReport, AudioMetadata
+
+    registry = load_registry(bundled_registry_path())
+    mono = AnalysisReport(
+        schema_version=2,
+        audio=AudioMetadata("mono.wav", 12.0, 44100, 1, 529200, "PCM_16"),
+        predictions=[{"kind": "source", "source": "violin", "score": 9.0}],
+    )
+    conservative = build_plan(analysis=mono, registry=registry)
+    opted_in = build_plan(analysis=mono, registry=registry, allow_mono_to_stereo=True)
+    model_id = "zfturbo-bs-roformer-53stem-candidate"
+    assert model_id not in {task.model_id for task in conservative.tasks}
+    assert model_id in {task.model_id for task in opted_in.tasks}

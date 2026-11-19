@@ -108,6 +108,9 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
     channels = data.get("channels")
     if channels not in _CHANNEL_POLICIES:
         raise RegistryError(f"channels must be one of {sorted(x for x in _CHANNEL_POLICIES if x)} or null")
+    cpu_inference = data.get("cpu_inference", False)
+    if not isinstance(cpu_inference, bool):
+        raise RegistryError("cpu_inference must be a boolean")
     min_vram_gb = data.get("min_vram_gb")
     min_free_vram_gb = data.get("min_free_vram_gb")
     for key, value in (("min_vram_gb", min_vram_gb), ("min_free_vram_gb", min_free_vram_gb)):
@@ -150,6 +153,7 @@ def parse_manifest(data: dict[str, Any]) -> ModelManifest:
         channels=channels, input_formats=tuple(x.lower().lstrip(".") for x in strings("input_formats")),
         category=data.get("category"), planner_priority=planner_priority,
         auto_route=auto_route, runtime_validation=runtime_validation, license_review=license_review,
+        cpu_inference=cpu_inference,
         min_vram_gb=float(min_vram_gb) if min_vram_gb is not None else None,
         min_free_vram_gb=float(min_free_vram_gb) if min_free_vram_gb is not None else None,
         inference_params=dict(inference_params), low_vram_profile=low_vram_profile,

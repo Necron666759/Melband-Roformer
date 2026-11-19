@@ -361,3 +361,37 @@ def test_executor_emits_structured_stage_events_and_task_duration(tmp_path):
     assert ("output_validation", "completed") in stages
     assert ("model_unload", "completed") in stages
     assert ("model_task", "success") in stages
+
+
+def test_executor_dual_mono_adapts_mono_input_for_stereo_model(tmp_path):
+    source = tmp_path / "mono.wav"
+    sf.write(source, np.full((48000, 1), 0.1, dtype=np.float32), 48000)
+    state = {"active": 0, "max_active": 0, "events": []}
+
+    class ChannelAwareBackend(FakeBackend):
+        def infer(self, input_audio, output_dir, target_stems):
+            info = sf.info(str(input_audio))
+            self.state["input_channels"] = info.channels
+            self.state["input_rate"] = info.samplerate
+            outputs = []
+            samples = np.sin(np.linspace(0, 100, info.frames, dtype=np.float32)) * 0.2
+            stereo = np.column_stack((samples, samples))
+            for stem in target_stems:
+                path = output_dir / f"{stem}.wav"
+                sf.write(path, stereo, info.samplerate)
+                outputs.append(StemArtifact(stem, path))
+            return outputs
+
+    manager = ExecutionManager(
+        {"fake": lambda: ChannelAwareBackend(state)},
+        models_root=tmp_path / "models", output_root=tmp_path / "outputs",
+    )
+    manifest = replace(_manifest("stereo-model"), channels=2, sample_rate=44100)
+    plan = ExecutionPlan(1, (ExecutionTask("task", "stereo-model", "mix", ("vocals",)),))
+    result = manager.execute(plan, {"stereo-model": manifest}, {"mix": source}).results[0]
+
+    assert result.status == "success"
+    assert state["input_channels"] == 2
+    assert state["input_rate"] == 44100
+    assert sf.info(str(source)).channels == 1
+    assert not (tmp_path / "outputs" / "task" / ".model-input-adapted.wav").exists()

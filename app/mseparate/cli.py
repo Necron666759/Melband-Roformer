@@ -398,6 +398,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prefer-model", help="Prefer this eligible model ID for overlapping stem routes (see --list-models)")
     parser.add_argument("--allow-resample", action="store_true",
                         help="Allow temporary WAV sample-rate conversion to satisfy model input rates; outputs keep the model sample rate")
+    parser.add_argument("--allow-mono-to-stereo", action="store_true",
+                        help="Allow explicit dual-mono adaptation for stereo-only models when planning from mono input")
     parser.add_argument("--no-deep-analysis", action="store_true",
                         help="Skip post-inference CLAP analysis of separated stems and residual-source hints")
     parser.add_argument("--no-rescue", action="store_true",
@@ -521,7 +523,8 @@ def _main(argv: list[str] | None = None) -> int:
         journal.begin("planning", registry_entries=len(filtered_registry))
         plan = build_plan(max_depth=args.max_depth, analysis=report, registry=filtered_registry,
                           preferred_model_id=args.prefer_model,
-                          allow_resample=args.allow_resample)
+                          allow_resample=args.allow_resample,
+                          allow_mono_to_stereo=args.allow_mono_to_stereo)
         if args.compare_vocal_models:
             plan = add_vocal_comparison_tasks(
                 plan, analysis=report, registry=filtered_registry,
