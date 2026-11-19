@@ -216,7 +216,10 @@ def main() -> int:
             "plan": to_jsonable(plan),
             "planner_task_count": len(plan.tasks),
             "planner_tasks": [to_jsonable(task) for task in plan.tasks],
-            "planner_target_audit": _planner_target_audit(\n                [to_jsonable(task) for task in plan.tasks], MIXES[path.parent.name],\n            ),\n            "cuda_low_vram_mono_plan": to_jsonable(cuda_mono_plan),
+            "planner_target_audit": _planner_target_audit(
+                [to_jsonable(task) for task in plan.tasks], MIXES[path.parent.name],
+            ),
+            "cuda_low_vram_mono_plan": to_jsonable(cuda_mono_plan),
             "cuda_low_vram_mono_task_count": len(cuda_mono_plan.tasks),
             "cuda_low_vram_stereo_adapter_preview": to_jsonable(cuda_stereo_preview_plan),
             "cuda_low_vram_stereo_adapter_preview_task_count": len(cuda_stereo_preview_plan.tasks),
