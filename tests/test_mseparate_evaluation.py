@@ -249,3 +249,33 @@ def test_component_quality_summary_aggregates_active_tom_and_non_tom_references(
     assert result["tom_reference_components"]["mean_si_sdri_db"] == pytest.approx(3.0)
     assert result["non_tom_components"]["count"] == 3
     assert "not an additive" in result["interpretation"]
+
+
+def test_tom_component_coverage_reports_per_track_active_component_completeness():
+    from evaluate_mseparate_drum_heads import _tom_component_coverage_summary
+
+    result = _tom_component_coverage_summary([
+        {
+            "track_id": "full-kit",
+            "component_target_quality_diagnostics": [
+                {"name": "hi_tom", "status": "scored", "si_sdri_db": 2.0},
+                {"name": "mid_tom", "status": "scored", "si_sdri_db": 1.0},
+                {"name": "low_tom", "status": "scored", "si_sdri_db": -0.5},
+                {"name": "snare", "status": "scored", "si_sdri_db": 8.0},
+            ],
+        },
+        {
+            "track_id": "partial-kit",
+            "component_target_quality_diagnostics": [
+                {"name": "hi_tom", "status": "scored", "si_sdri_db": 3.0},
+                {"name": "mid_tom", "status": "silent_reference", "si_sdri_db": None},
+                {"name": "low_tom", "status": "scored", "si_sdri_db": 0.0},
+            ],
+        },
+    ])
+
+    assert result["tracks_with_active_tom_components"] == 2
+    assert result["tracks_with_all_active_tom_components_improved"] == 1
+    assert result["mean_positive_component_fraction"] == pytest.approx(0.8333, abs=1e-4)
+    assert result["tracks"][0]["positive_tom_component_count"] == 2
+    assert result["tracks"][1]["active_tom_component_count"] == 2
