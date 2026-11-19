@@ -110,3 +110,51 @@ def test_planner_target_audit_reports_false_positives_and_missed_instruments():
     assert result["missed_ground_truth_targets"] == ["clarinet", "flute"]
     assert result["precision"] == pytest.approx(0.5)
     assert result["recall"] == pytest.approx(0.5)
+
+
+def test_planner_temporal_evidence_recovers_interleaved_woodwinds_without_widening_all_gates():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"source": "woodwinds", "score": 11.4, "window_best_source_rank": 1,
+         "window_top_5_fraction": 0.95},
+        {"source": "flute", "score": 10.3, "window_best_source_rank": 1,
+         "window_top_5_fraction": 0.66},
+        {"source": "oboe", "score": 9.5, "window_best_source_rank": 3,
+         "window_top_5_fraction": 0.42},
+        {"source": "clarinet", "score": 9.1, "window_best_source_rank": 3,
+         "window_top_5_fraction": 0.33},
+        {"source": "bassoon", "score": 8.0, "window_best_source_rank": 5,
+         "window_top_5_fraction": 0.04},
+    ]
+
+    targets = _detected_acoustic_targets(predictions, {"family": "orchestral"})
+
+    assert {"flute", "oboe", "clarinet"} <= set(targets)
+    assert "bassoon" not in targets
+
+
+def test_planner_temporal_gate_rejects_weak_flute_and_broad_brass_false_positives():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"source": "violin", "score": 10.1, "window_best_source_rank": 1,
+         "window_top_5_fraction": 0.83},
+        {"source": "woodwinds", "score": 9.9, "window_best_source_rank": 1,
+         "window_top_5_fraction": 0.94},
+        {"source": "brass", "score": 9.3, "window_best_source_rank": 1,
+         "window_top_5_fraction": 0.55},
+        {"source": "viola", "score": 8.9, "window_best_source_rank": 3,
+         "window_top_5_fraction": 0.44},
+        {"source": "saxophone", "score": 8.9, "window_best_source_rank": 3,
+         "window_top_5_fraction": 0.22},
+        {"source": "flute", "score": 7.6, "window_best_source_rank": 5,
+         "window_top_5_fraction": 0.11},
+    ]
+
+    targets = _detected_acoustic_targets(predictions, {"family": "orchestral"})
+
+    assert "violin" in targets
+    assert "brass" not in targets
+    assert "saxophone" not in targets
+    assert "flute" not in targets
