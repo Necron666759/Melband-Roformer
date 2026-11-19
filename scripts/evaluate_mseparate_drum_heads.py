@@ -120,6 +120,17 @@ def _level_diagnostics(reference: np.ndarray, estimate: np.ndarray) -> dict:
         "level_mismatch_warning": bool(mismatch_db > 6.0),
     }
 
+def _tom_reference_salience_band(reference_to_mixture_db: float | None) -> str:
+    """Classify target audibility for stratified reporting, never for exclusion."""
+    if reference_to_mixture_db is None:
+        return "not_applicable"
+    if reference_to_mixture_db >= -20.0:
+        return "prominent_ge_-20_db"
+    if reference_to_mixture_db >= -30.0:
+        return "low_-30_to_-20_db"
+    return "very_low_lt_-30_db"
+
+
 def _tom_component_diagnostics(
     components: dict[str, np.ndarray],
     aggregate_reference: np.ndarray,
@@ -133,6 +144,7 @@ def _tom_component_diagnostics(
             "tom_component_rms_sum": None,
             "tom_component_rms_sum_to_aggregate_db": None,
             "tom_reference_to_mixture_db": None,
+            "tom_reference_salience_band": "not_applicable",
             "tom_estimate_to_mixture_db": None,
         }
 
@@ -159,15 +171,17 @@ def _tom_component_diagnostics(
             ),
         })
 
+    reference_to_mixture_db = float(
+        20.0 * np.log10(max(aggregate_rms, 1e-12) / max(mixture_rms, 1e-12))
+    )
     return {
         "tom_component_levels": component_levels,
         "tom_component_rms_sum": component_rms_sum,
         "tom_component_rms_sum_to_aggregate_db": float(
             20.0 * np.log10(max(component_rms_sum, 1e-12) / max(aggregate_rms, 1e-12))
         ),
-        "tom_reference_to_mixture_db": float(
-            20.0 * np.log10(max(aggregate_rms, 1e-12) / max(mixture_rms, 1e-12))
-        ),
+        "tom_reference_to_mixture_db": reference_to_mixture_db,
+        "tom_reference_salience_band": _tom_reference_salience_band(reference_to_mixture_db),
         "tom_estimate_to_mixture_db": float(
             20.0 * np.log10(max(estimate_rms, 1e-12) / max(mixture_rms, 1e-12))
         ),
@@ -310,6 +324,24 @@ def main() -> int:
         }
         for target in TARGETS
     }
+    tom_rows = [row for row in metric_rows if row["target"] == "toms"]
+    salience_bands = (
+        "prominent_ge_-20_db", "low_-30_to_-20_db", "very_low_lt_-30_db"
+    )
+    toms_by_reference_salience = {
+        band: {
+            "count": sum(row["tom_reference_salience_band"] == band for row in tom_rows),
+            "si_sdr": _summary([
+                row["si_sdr_db"] for row in tom_rows
+                if row["tom_reference_salience_band"] == band
+            ]),
+            "si_sdri": _summary([
+                row["si_sdri_db"] for row in tom_rows
+                if row["tom_reference_salience_band"] == band
+            ]),
+        }
+        for band in salience_bands
+    }
     output_dir.mkdir(parents=True, exist_ok=True)
     report = {
         "schema_version": 1,
@@ -326,6 +358,12 @@ def main() -> int:
             "note": "Tom component levels are diagnostic only; no normalization or component reweighting is applied.",
         },
         "summary": summaries,
+        "toms_by_reference_salience": toms_by_reference_salience,
+        "tom_salience_policy": (
+            "Diagnostic-only bins based on Tom reference RMS relative to mixture: "
+            ">= -20 dB, -30 to -20 dB, and < -30 dB. Bins do not exclude or "
+            "reweight tracks and do not alter audio or SI-SDR."
+        ),
         "tracks": metric_rows,
     }
     def json_safe(value):
