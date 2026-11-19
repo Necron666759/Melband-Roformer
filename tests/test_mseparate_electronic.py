@@ -703,3 +703,36 @@ def test_synthetic_flute_counterevidence_blocks_false_flute_route():
     ], {"family": "mixed_or_uncertain"})
 
     assert "flute" not in targets
+
+
+def test_electronic_hybrid_keeps_real_violin_when_synth_strings_also_present():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"kind": "source", "source": "synth_strings", "score": 7.0},
+        {"kind": "source", "source": "violin", "score": 6.8},
+        {"kind": "source", "source": "synth_pad", "score": 6.5},
+        {"kind": "genre", "source": "electro_industrial", "score": 0.96},
+    ]
+
+    targets = _detected_acoustic_targets(
+        [item for item in predictions if item["kind"] == "source"],
+        {"family": "electronic"},
+    )
+
+    assert "violin" in targets
+
+
+def test_non_electronic_style_retains_synth_counterpart_conflict_filter():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"kind": "source", "source": "synth_strings", "score": 7.0},
+        {"kind": "source", "source": "violin", "score": 6.95},
+    ]
+
+    targets = _detected_acoustic_targets(
+        predictions, {"family": "orchestral"},
+    )
+
+    assert "violin" not in targets
