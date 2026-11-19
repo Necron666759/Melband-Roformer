@@ -171,3 +171,51 @@ def test_component_projection_diagnostics_rejects_misaligned_component():
 
     with pytest.raises(ValueError, match="differs from estimate"):
         _component_projection_diagnostics(np.ones((8, 2)), {"kick": np.ones((7, 2))})
+
+
+def test_component_quality_diagnostics_scores_toms_against_individual_kit_sources():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_quality_diagnostics
+
+    phase = np.arange(4096, dtype=np.float64) * (2.0 * np.pi / 64.0)
+    tom = np.sin(phase).astype(np.float32).reshape(-1, 1)
+    kick = np.cos(phase).astype(np.float32).reshape(-1, 1)
+    snare = np.sin(phase * 0.37).astype(np.float32).reshape(-1, 1)
+    mixture = tom + kick + snare
+    estimate = tom + 0.2 * kick
+
+    rows = _component_quality_diagnostics(
+        estimate, mixture, {"hi_tom": tom, "kick": kick, "snare": snare},
+    )
+    by_name = {row["name"]: row for row in rows}
+
+    assert by_name["hi_tom"]["status"] == "scored"
+    assert by_name["kick"]["status"] == "scored"
+    assert by_name["hi_tom"]["si_sdri_db"] > 0
+    assert by_name["kick"]["si_sdri_db"] < 0
+    assert by_name["hi_tom"]["si_sdr_db"] > by_name["kick"]["si_sdr_db"]
+
+
+def test_component_quality_diagnostics_keeps_silent_sources_explicit():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_quality_diagnostics
+
+    phase = np.arange(1024, dtype=np.float64) * (2.0 * np.pi / 32.0)
+    tom = np.sin(phase).astype(np.float32).reshape(-1, 1)
+    silence = np.zeros_like(tom)
+
+    rows = _component_quality_diagnostics(
+        tom, tom, {"hi_tom": tom, "low_tom": silence},
+    )
+    by_name = {row["name"]: row for row in rows}
+
+    assert by_name["hi_tom"]["status"] == "scored"
+    assert by_name["hi_tom"]["si_sdri_db"] == float("inf")
+    assert by_name["low_tom"] == {
+        "name": "low_tom", "status": "silent_reference", "si_sdr_db": None,
+        "mixture_baseline_si_sdr_db": None, "si_sdri_db": None,
+    }
