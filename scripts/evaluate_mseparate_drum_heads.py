@@ -312,6 +312,46 @@ def _component_quality_summary(tom_rows: list[dict]) -> dict:
         ),
     }
 
+def _tom_component_coverage_summary(tom_rows: list[dict]) -> dict:
+    """Report how many active Tom references improve per evaluated track.
+
+    Coverage is a descriptive completeness diagnostic, not a causal leakage
+    estimate or a replacement for the aggregate SI-SDR/SI-SDRi metrics.
+    """
+    names = {"hi_tom", "mid_tom", "low_tom"}
+    tracks = []
+    for track in tom_rows:
+        active = [
+            item for item in track.get("component_target_quality_diagnostics", [])
+            if item.get("name") in names
+            and item.get("status") == "scored"
+            and item.get("si_sdri_db") is not None
+            and math.isfinite(float(item["si_sdri_db"]))
+        ]
+        positive = sum(float(item["si_sdri_db"]) > 0.0 for item in active)
+        count = len(active)
+        tracks.append({
+            "track_id": track.get("track_id"),
+            "active_tom_component_count": count,
+            "positive_tom_component_count": positive,
+            "positive_component_fraction": round(positive / count, 4) if count else None,
+        })
+    fractions = [
+        row["positive_component_fraction"] for row in tracks
+        if row["positive_component_fraction"] is not None
+    ]
+    return {
+        "tracks": tracks,
+        "tracks_with_active_tom_components": len(fractions),
+        "tracks_with_all_active_tom_components_improved": sum(value == 1.0 for value in fractions),
+        "mean_positive_component_fraction": round(float(np.mean(fractions)), 4) if fractions else None,
+        "interpretation": (
+            "Per-track fraction of active hi/mid/low Tom references with positive SI-SDRi; "
+            "descriptive only and not an additive or causal leakage estimate."
+        ),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True, help="CSV with mixture and reference stem paths")
@@ -486,6 +526,7 @@ def main() -> int:
         "prominent_ge_-20_db", "low_-30_to_-20_db", "very_low_lt_-30_db"
     )
     toms_component_quality_summary = _component_quality_summary(tom_rows)
+    toms_component_coverage = _tom_component_coverage_summary(tom_rows)
     toms_by_reference_salience = {
         band: {
             "count": sum(row["tom_reference_salience_band"] == band for row in tom_rows),
@@ -518,6 +559,7 @@ def main() -> int:
         "summary": summaries,
         "toms_by_reference_salience": toms_by_reference_salience,
         "toms_component_quality_summary": toms_component_quality_summary,
+        "toms_component_coverage": toms_component_coverage,
         "tom_salience_policy": (
             "Diagnostic-only bins based on Tom reference RMS relative to mixture: "
             ">= -20 dB, -30 to -20 dB, and < -30 dB. Bins do not exclude or "
