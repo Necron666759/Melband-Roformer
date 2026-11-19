@@ -106,6 +106,7 @@ def test_tom_component_diagnostics_is_empty_for_non_tom_target():
         "tom_component_rms_sum": None,
         "tom_component_rms_sum_to_aggregate_db": None,
         "tom_reference_to_mixture_db": None,
+        "tom_reference_salience_band": "not_applicable",
         "tom_estimate_to_mixture_db": None,
     }
 
@@ -131,11 +132,11 @@ def test_tom_component_diagnostics_reports_salience_without_changing_audio():
 
     toms = np.full((32, 2), 0.01, dtype=np.float32)
     estimate = toms * 2.0
-    mixture = np.full((32, 2), 0.1, dtype=np.float32)
+    mixture = np.full((32, 2), 0.2, dtype=np.float32)
     result = _tom_component_diagnostics(
         {"hi_tom": toms, "mid_tom": np.zeros_like(toms), "low_tom": np.zeros_like(toms)},
         toms, estimate, mixture,
     )
     assert result["tom_reference_salience_band"] == "low_-30_to_-20_db"
-    assert result["tom_reference_to_mixture_db"] == pytest.approx(-20.0)
+    assert result["tom_reference_to_mixture_db"] == pytest.approx(-26.0206, abs=1e-3)
     assert result["tom_component_levels"][0]["rms"] == pytest.approx(0.01)
