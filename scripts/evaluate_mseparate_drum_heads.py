@@ -225,6 +225,36 @@ def _component_projection_diagnostics(
     return rows
 
 
+def _component_quality_diagnostics(
+    estimate: np.ndarray,
+    mixture: np.ndarray,
+    components: dict[str, np.ndarray],
+) -> list[dict]:
+    """Score an estimate against each isolated source, not only the aggregate target.
+
+    This helps distinguish a genuinely broad Toms estimate from a head that
+    mostly follows one tom, Snare, Kick, or another kit component. Silent
+    references are retained as explicit rows but are not passed to SI-SDR.
+    """
+    rows = []
+    for name, reference in sorted(components.items()):
+        reference_rms = float(np.sqrt(np.mean(np.asarray(reference, dtype=np.float64) ** 2)))
+        if reference_rms <= 1e-10:
+            rows.append({"name": name, "status": "silent_reference", "si_sdr_db": None,
+                         "mixture_baseline_si_sdr_db": None, "si_sdri_db": None})
+            continue
+        score = si_sdr_db(reference, estimate)
+        baseline = si_sdr_db(reference, mixture)
+        rows.append({
+            "name": name,
+            "status": "scored",
+            "si_sdr_db": score,
+            "mixture_baseline_si_sdr_db": baseline,
+            "si_sdri_db": score - baseline,
+        })
+    return rows
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True, help="CSV with mixture and reference stem paths")
@@ -373,6 +403,10 @@ def main() -> int:
                     ),
                     "component_projection_diagnostics": _component_projection_diagnostics(
                         estimate, source_components,
+                    ),
+                    "component_target_quality_diagnostics": (
+                        _component_quality_diagnostics(estimate, mixture, source_components)
+                        if target == "toms" else []
                     ),
                 })
             print(f"[{index}/{len(rows)}] {track_id}: "
