@@ -13,6 +13,7 @@ on:
       - feature/mseparate-drum-source-routing
       - feature/mseparate-snare-toms-model-routing
       - feature/mseparate-snare-toms-quality-evaluation
+      - feature/mseparate-urmp-window-evidence
   pull_request:
     branches:
       - main
@@ -23,6 +24,7 @@ on:
       - feature/mseparate-drum-component-taxonomy
       - feature/mseparate-snare-toms-model-routing
       - feature/mseparate-snare-toms-quality-evaluation
+      - feature/mseparate-urmp-ranking-audit
       - feature/mseparate-gpu-foundation-sync
 
 jobs:
