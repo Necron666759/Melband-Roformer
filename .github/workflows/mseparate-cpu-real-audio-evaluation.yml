@@ -142,7 +142,7 @@ jobs:
             --output-dir "${{ runner.temp }}/mseparate-evaluation/reports/snare-toms-evaluation" \
             --models-dir "${{ runner.temp }}/mseparate-evaluation/models" \
             --device cpu \
-            --max-tracks 4
+            --max-tracks 8
 
       - name: Selectively download BabySlakh mixtures and drum references
         timeout-minutes: 30
