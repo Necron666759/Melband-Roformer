@@ -35,27 +35,48 @@ def _ground_truth_ranking(predictions: list[dict], instruments: list[str]) -> di
         key=lambda item: float(item.get("score", 0.0)),
         reverse=True,
     )
-    positions = {str(item.get("source")): (rank, float(item.get("score", 0.0)))
+    positions = {str(item.get("source")): (rank, item)
                  for rank, item in enumerate(ranked, start=1)}
     unique = list(dict.fromkeys(instruments))
     rows = []
     for instrument in unique:
-        rank_score = positions.get(instrument)
+        rank_item = positions.get(instrument)
+        rank = rank_item[0] if rank_item else None
+        prediction = rank_item[1] if rank_item else {}
+        window_best_rank = prediction.get("window_best_source_rank")
+        window_top_5_fraction = prediction.get("window_top_5_fraction")
+        window_top_12_fraction = prediction.get("window_top_12_fraction")
         rows.append({
             "instrument": instrument,
-            "rank": rank_score[0] if rank_score else None,
-            "score": round(rank_score[1], 6) if rank_score else None,
-            "in_top_5": bool(rank_score and rank_score[0] <= 5),
-            "in_top_12": bool(rank_score and rank_score[0] <= 12),
+            "rank": rank,
+            "score": round(float(prediction.get("score", 0.0)), 6) if rank_item else None,
+            "in_top_5": bool(rank and rank <= 5),
+            "in_top_12": bool(rank and rank <= 12),
+            "window_best_source_rank": window_best_rank,
+            "window_mean_source_rank": prediction.get("window_mean_source_rank"),
+            "window_top_5_fraction": window_top_5_fraction,
+            "window_top_12_fraction": window_top_12_fraction,
+            "window_detected_top_5": bool(window_best_rank is not None and window_best_rank <= 5),
+            "window_detected_top_12": bool(window_best_rank is not None and window_best_rank <= 12),
             "mixture_count": instruments.count(instrument),
         })
     found = sum(row["in_top_12"] for row in rows)
+    window_found_5 = sum(row["window_detected_top_5"] for row in rows)
+    window_found_12 = sum(row["window_detected_top_12"] for row in rows)
     return {
         "unique_ground_truth_instruments": len(unique),
         "matched_in_top_5": sum(row["in_top_5"] for row in rows),
         "matched_in_top_12": found,
         "top_5_recall": round(sum(row["in_top_5"] for row in rows) / len(unique), 4) if unique else None,
         "top_12_recall": round(found / len(unique), 4) if unique else None,
+        "window_top_5_any_recall": round(window_found_5 / len(unique), 4) if unique else None,
+        "window_top_12_any_recall": round(window_found_12 / len(unique), 4) if unique else None,
+        "window_only_top_5_recoveries": [
+            row["instrument"] for row in rows if row["window_detected_top_5"] and not row["in_top_5"]
+        ],
+        "window_only_top_12_recoveries": [
+            row["instrument"] for row in rows if row["window_detected_top_12"] and not row["in_top_12"]
+        ],
         "instruments": rows,
         "duplicate_instrument_note": (
             "Repeated instruments share one mixture-level label rank; CLAP cannot count "
