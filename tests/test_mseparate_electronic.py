@@ -710,7 +710,11 @@ def test_electronic_hybrid_keeps_real_violin_when_synth_strings_also_present():
 
     predictions = [
         {"kind": "source", "source": "synth_strings", "score": 7.0},
-        {"kind": "source", "source": "violin", "score": 6.8},
+        {
+            "kind": "source", "source": "violin", "score": 6.8,
+            "window_top_5_fraction": 0.5, "window_top_12_fraction": 1.0,
+            "window_best_source_rank": 2,
+        },
         {"kind": "source", "source": "synth_pad", "score": 6.5},
         {"kind": "genre", "source": "electro_industrial", "score": 0.96},
     ]
