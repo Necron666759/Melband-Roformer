@@ -223,7 +223,9 @@ def _detected_acoustic_targets(
     if family == "orchestral":
         max_rank, max_gap = 12, 1.20
     elif family == "electronic":
-        max_rank, max_gap = 6, 0.50
+        # Strong unrelated electronic layers must not hide a quieter real instrument.
+        # Keep the acoustic margin conservative while allowing a few more ranked sources.
+        max_rank, max_gap = 8, 0.60
     else:
         max_rank, max_gap = 8, 0.75
     score_by_source = {str(item.get("source")): float(item.get("score", 0.0)) for item in ranked}
