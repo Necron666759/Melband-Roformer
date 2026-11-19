@@ -5,6 +5,7 @@ on:
     branches:
       - feature/mseparate-cpu-real-audio-evaluation
       - feature/mseparate-snare-toms-quality-evaluation
+      - feature/mseparate-hybrid-routing-coverage
     paths:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
