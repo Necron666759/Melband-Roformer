@@ -245,12 +245,15 @@ def _component_quality_diagnostics(
             continue
         score = si_sdr_db(reference, estimate)
         baseline = si_sdr_db(reference, mixture)
+        # If both the estimate and mixture are exact copies of this source,
+        # SI-SDRi is inf - inf and therefore undefined rather than NaN.
+        improvement = None if math.isinf(score) and math.isinf(baseline) else score - baseline
         rows.append({
             "name": name,
             "status": "scored",
             "si_sdr_db": score,
             "mixture_baseline_si_sdr_db": baseline,
-            "si_sdri_db": score - baseline,
+            "si_sdri_db": improvement,
         })
     return rows
 
