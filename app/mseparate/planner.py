@@ -249,15 +249,25 @@ def _detected_acoustic_targets(
         if rank > max_rank or top_score - score > max_gap:
             continue
         target, synthetic_counterpart = mapping
-        if synthetic_counterpart and family != "electronic":
-            # In a hybrid electronic arrangement, a real instrument and its
-            # synthetic counterpart may coexist. Do not let strong synth
-            # evidence veto an independently ranked acoustic source; the
-            # acoustic rank/gap gate above still applies. Outside electronic
-            # style, retain the conservative counterpart-conflict filter.
-            synthetic_score = score_by_source.get(synthetic_counterpart)
-            if synthetic_score is not None and score < synthetic_score + 0.10:
-                continue
+        if synthetic_counterpart:
+            if family == "electronic":
+                # A close synth match is not enough to reject an acoustic head
+                # in a hybrid mix. Require independent temporal support for the
+                # acoustic prompt across CLAP windows; this also keeps a
+                # synth-only timbre match from promoting an acoustic head.
+                top_5_fraction = item.get("window_top_5_fraction")
+                top_12_fraction = item.get("window_top_12_fraction")
+                temporal_support = (
+                    top_5_fraction is not None and float(top_5_fraction) >= 0.25
+                ) or (
+                    top_12_fraction is not None and float(top_12_fraction) >= 0.50
+                )
+                if not temporal_support:
+                    continue
+            else:
+                synthetic_score = score_by_source.get(synthetic_counterpart)
+                if synthetic_score is not None and score < synthetic_score + 0.10:
+                    continue
         accepted.append((source, target, rank, score))
     # Prefer specific instrument heads over a broad family head when both fire.
     specific_families = {
