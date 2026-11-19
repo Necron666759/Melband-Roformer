@@ -269,7 +269,7 @@ def test_tom_component_coverage_reports_per_track_active_component_completeness(
             "component_target_quality_diagnostics": [
                 {"name": "hi_tom", "status": "scored", "si_sdri_db": 3.0},
                 {"name": "mid_tom", "status": "silent_reference", "si_sdri_db": None},
-                {"name": "low_tom", "status": "scored", "si_sdri_db": 0.0},
+                {"name": "low_tom", "status": "scored", "si_sdri_db": 1.0},
             ],
         },
     ])
