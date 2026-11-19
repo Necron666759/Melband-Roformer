@@ -1,3 +1,4 @@
+import pytest
 """Unit tests for metadata-only URMP evaluation diagnostics."""
 from __future__ import annotations
 
@@ -86,3 +87,25 @@ def test_ground_truth_ranking_reports_intermittent_window_recovery():
     assert result["window_top_5_any_recall"] == round(2 / 3, 4)
     assert result["window_top_12_any_recall"] == round(2 / 3, 4)
     assert result["window_only_top_5_recoveries"] == ["oboe"]
+
+
+
+def test_planner_target_audit_reports_false_positives_and_missed_instruments():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_urmp import _planner_target_audit
+
+    result = _planner_target_audit(
+        [
+            {"target_stems": ["violin", "viola"]},
+            {"target_stems": ["brass", "saxophone"]},
+        ],
+        ["flute", "violin", "viola", "clarinet"],
+    )
+
+    assert result["true_positive_targets"] == ["viola", "violin"]
+    assert result["false_positive_targets"] == ["brass", "saxophone"]
+    assert result["missed_ground_truth_targets"] == ["clarinet", "flute"]
+    assert result["precision"] == pytest.approx(0.5)
+    assert result["recall"] == pytest.approx(0.5)
