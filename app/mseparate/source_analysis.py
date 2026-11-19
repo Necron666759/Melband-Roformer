@@ -196,6 +196,37 @@ def classify_style(predictions: list[dict] | None) -> dict:
     }
 
 
+def _window_rank_diagnostics(
+    window_scores: np.ndarray,
+    source_candidate_indices: tuple[int, ...],
+    candidate_index: int,
+) -> dict:
+    """Summarize one source prompt across windows without treating scores as probabilities."""
+    matrix = np.asarray(window_scores, dtype=np.float64)
+    if matrix.ndim != 2 or matrix.shape[0] == 0:
+        return {}
+    try:
+        source_position = source_candidate_indices.index(candidate_index)
+    except ValueError:
+        return {}
+    source_scores = matrix[:, source_candidate_indices]
+    order = np.argsort(-source_scores, axis=1, kind="stable")
+    ranks = np.argmax(order == source_position, axis=1) + 1
+    count = int(matrix.shape[0])
+    return {
+        "window_score_std": round(float(np.std(matrix[:, candidate_index])), 6),
+        "window_score_min": round(float(np.min(matrix[:, candidate_index])), 6),
+        "window_score_max": round(float(np.max(matrix[:, candidate_index])), 6),
+        "window_mean_source_rank": round(float(np.mean(ranks)), 3),
+        "window_best_source_rank": int(np.min(ranks)),
+        "window_top_5_count": int(np.count_nonzero(ranks <= 5)),
+        "window_top_12_count": int(np.count_nonzero(ranks <= 12)),
+        "window_top_5_fraction": round(float(np.count_nonzero(ranks <= 5) / count), 4),
+        "window_top_12_fraction": round(float(np.count_nonzero(ranks <= 12) / count), 4),
+    }
+
+
+
 CLAP_CANDIDATES = tuple(
     (kind, name, description)
     for kind, collection in (("source", SOURCES), ("genre", GENRES))
@@ -241,7 +272,7 @@ def analyze_sources_many(
                 info = sf.info(str(source))
                 if info.channels < 1 or info.frames <= 0:
                     raise ValueError(f"Audio stream is empty or invalid: {source}")
-                similarities = np.zeros(len(CLAP_CANDIDATES), dtype=np.float64)
+                window_score_rows = []
                 count = 0
                 with sf.SoundFile(str(source), "r") as audio:
                     start = 0
@@ -265,16 +296,29 @@ def analyze_sources_many(
                         )
                         inputs = {key: value.to(target_device) for key, value in inputs.items()}
                         outputs = model(**inputs)
-                        similarities += outputs.logits_per_audio.squeeze(0).detach().float().cpu().numpy()
+                        window_score_rows.append(
+                            outputs.logits_per_audio.squeeze(0).detach().float().cpu().numpy()
+                        )
                         count += 1
                         start += max(1, int(hop_seconds * info.samplerate))
                 predictions = []
                 if count:
-                    for (kind, name, _), score in zip(CLAP_CANDIDATES, similarities / count):
-                        predictions.append({
+                    score_matrix = np.stack(window_score_rows, axis=0)
+                    mean_scores = score_matrix.mean(axis=0)
+                    source_candidate_indices = tuple(
+                        index for index, (kind, _, _) in enumerate(CLAP_CANDIDATES)
+                        if kind == "source"
+                    )
+                    for index, ((kind, name, _), score) in enumerate(zip(CLAP_CANDIDATES, mean_scores)):
+                        prediction = {
                             "kind": kind, "source": name, "score": round(float(score), 6),
                             "windows": count, "model": MODEL_ID,
-                        })
+                        }
+                        if kind == "source":
+                            prediction.update(_window_rank_diagnostics(
+                                score_matrix, source_candidate_indices, index,
+                            ))
+                        predictions.append(prediction)
                 results[str(source)] = sorted(predictions, key=lambda item: item["score"], reverse=True)
     finally:
         del model, processor

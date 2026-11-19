@@ -223,7 +223,9 @@ def _detected_acoustic_targets(
     if family == "orchestral":
         max_rank, max_gap = 12, 1.20
     elif family == "electronic":
-        max_rank, max_gap = 6, 0.50
+        # Strong unrelated electronic layers must not hide a quieter real instrument.
+        # Keep the acoustic margin conservative while allowing a few more ranked sources.
+        max_rank, max_gap = 8, 0.60
     else:
         max_rank, max_gap = 8, 0.75
     score_by_source = {str(item.get("source")): float(item.get("score", 0.0)) for item in ranked}
@@ -248,9 +250,24 @@ def _detected_acoustic_targets(
             continue
         target, synthetic_counterpart = mapping
         if synthetic_counterpart:
-            synthetic_score = score_by_source.get(synthetic_counterpart)
-            if synthetic_score is not None and score < synthetic_score + 0.10:
-                continue
+            if family == "electronic":
+                # A close synth match is not enough to reject an acoustic head
+                # in a hybrid mix. Require independent temporal support for the
+                # acoustic prompt across CLAP windows; this also keeps a
+                # synth-only timbre match from promoting an acoustic head.
+                top_5_fraction = item.get("window_top_5_fraction")
+                top_12_fraction = item.get("window_top_12_fraction")
+                temporal_support = (
+                    top_5_fraction is not None and float(top_5_fraction) >= 0.25
+                ) or (
+                    top_12_fraction is not None and float(top_12_fraction) >= 0.50
+                )
+                if not temporal_support:
+                    continue
+            else:
+                synthetic_score = score_by_source.get(synthetic_counterpart)
+                if synthetic_score is not None and score < synthetic_score + 0.10:
+                    continue
         accepted.append((source, target, rank, score))
     # Prefer specific instrument heads over a broad family head when both fire.
     specific_families = {

@@ -587,3 +587,179 @@ def test_distinct_drum_components_can_select_distinct_verified_outputs():
         "mvsep-mega53-kick-specialist-candidate": ("kick",),
     }
     assert "zfturbo-bs-roformer-53stem-candidate" not in routes
+
+
+def test_mixed_electronic_orchestral_genre_profile_is_explicitly_uncertain():
+    from mseparate.source_analysis import classify_style
+
+    profile = classify_style([
+        {"kind": "genre", "source": "electro_industrial", "score": 0.91},
+        {"kind": "genre", "source": "orchestral", "score": 0.86},
+    ])
+    assert profile["label"] == "electro_industrial"
+    assert profile["family"] == "mixed_or_uncertain"
+    assert profile["status"] == "ambiguous"
+    assert profile["alternatives"][1]["label"] == "orchestral"
+
+
+def test_hybrid_electronic_and_acoustic_sources_route_to_both_specialist_families():
+    registry = load_registry(bundled_registry_path())
+    analysis = _analysis_with_predictions([
+        {"kind": "source", "source": "synth_pad", "score": 7.5},
+        {"kind": "source", "source": "violin", "score": 7.3},
+        {"kind": "source", "source": "electronic_drums", "score": 7.2},
+        {"kind": "source", "source": "synth_bass", "score": 7.0},
+        {"kind": "genre", "source": "electro_industrial", "score": 0.91},
+        {"kind": "genre", "source": "orchestral", "score": 0.86},
+    ])
+    plan = build_plan(analysis=analysis, registry=registry)
+    routes = {task.model_id: task.target_stems for task in plan.tasks}
+
+    assert plan.style_profile["family"] == "mixed_or_uncertain"
+    assert routes["mvsep-mega53-synth-specialist-candidate"] == ("synth",)
+    assert routes["mvsep-mega53-drums-specialist-candidate"] == ("drums",)
+    assert routes["zfturbo-bs-roformer-53stem-candidate"] == ("violin",)
+
+
+def test_synth_only_electronic_mix_does_not_promote_ambiguous_acoustic_instrument():
+    registry = load_registry(bundled_registry_path())
+    analysis = _analysis_with_predictions([
+        {"kind": "source", "source": "synth_strings", "score": 7.5},
+        {"kind": "source", "source": "synth_pad", "score": 7.3},
+        {"kind": "source", "source": "synth_bass", "score": 7.1},
+        {"kind": "source", "source": "violin", "score": 6.9},
+        {"kind": "genre", "source": "cybercore", "score": 0.94},
+    ])
+    routes = {task.model_id: task.target_stems for task in build_plan(
+        analysis=analysis, registry=registry,
+    ).tasks}
+    assert "mvsep-mega53-synth-specialist-candidate" in routes
+    assert "zfturbo-bs-roformer-53stem-candidate" not in routes
+
+
+def test_real_instrument_survives_dense_industrial_texture_in_hybrid_profile():
+    registry = load_registry(bundled_registry_path())
+    analysis = _analysis_with_predictions([
+        {"kind": "source", "source": "synth_pad", "score": 7.6},
+        {"kind": "source", "source": "industrial_noise", "score": 7.5},
+        {"kind": "source", "source": "granular_textures", "score": 7.4},
+        {"kind": "source", "source": "glitch_fx", "score": 7.3},
+        {"kind": "source", "source": "synth_bass", "score": 7.2},
+        {"kind": "source", "source": "violin", "score": 7.1},
+        {"kind": "source", "source": "synth_brass", "score": 6.7},
+        {"kind": "source", "source": "trombone", "score": 6.9},
+        {"kind": "genre", "source": "electro_industrial", "score": 0.91},
+        {"kind": "genre", "source": "orchestral", "score": 0.86},
+    ])
+    plan = build_plan(analysis=analysis, registry=registry)
+    routes = {task.model_id: task.target_stems for task in plan.tasks}
+
+    assert plan.style_profile["family"] == "mixed_or_uncertain"
+    assert routes["mvsep-mega53-synth-specialist-candidate"] == ("synth",)
+    assert routes["zfturbo-bs-roformer-53stem-candidate"] == ("trombone", "violin")
+
+
+def test_electronic_style_keeps_acoustic_instrument_within_conservative_margin():
+    registry = load_registry(bundled_registry_path())
+    plan = build_plan(
+        analysis=_analysis_with_predictions([
+            {"kind": "source", "source": "synth_pad", "score": 7.5},
+            {"kind": "source", "source": "industrial_noise", "score": 7.45},
+            {"kind": "source", "source": "granular_textures", "score": 7.4},
+            {"kind": "source", "source": "glitch_fx", "score": 7.35},
+            {"kind": "source", "source": "synth_bass", "score": 7.3},
+            {
+                "kind": "source", "source": "violin", "score": 7.0,
+                "window_top_5_fraction": 0.25, "window_top_12_fraction": 0.75,
+                "window_best_source_rank": 4,
+            },
+            {"kind": "genre", "source": "cybercore", "score": 0.94},
+        ]),
+        registry=registry,
+    )
+    routes = {task.model_id: task.target_stems for task in plan.tasks}
+
+    assert plan.style_profile["family"] == "electronic"
+    assert routes["mvsep-mega53-synth-specialist-candidate"] == ("synth",)
+    assert routes["zfturbo-bs-roformer-53stem-candidate"] == ("violin",)
+
+
+def test_synthetic_brass_counterevidence_blocks_false_trombone_route():
+    from mseparate.planner import _detected_acoustic_targets
+
+    targets = _detected_acoustic_targets([
+        {"kind": "source", "source": "synth_brass", "score": 7.4},
+        {"kind": "source", "source": "trombone", "score": 7.35},
+        {"kind": "source", "source": "synth_pad", "score": 7.2},
+    ], {"family": "mixed_or_uncertain"})
+
+    assert "trombone" not in targets
+    assert "brass" not in targets
+
+
+def test_synthetic_flute_counterevidence_blocks_false_flute_route():
+    from mseparate.planner import _detected_acoustic_targets
+
+    targets = _detected_acoustic_targets([
+        {"kind": "source", "source": "synth_flute", "score": 7.4},
+        {"kind": "source", "source": "flute", "score": 7.35},
+        {"kind": "source", "source": "synth_pad", "score": 7.2},
+    ], {"family": "mixed_or_uncertain"})
+
+    assert "flute" not in targets
+
+
+def test_electronic_hybrid_keeps_real_violin_when_synth_strings_also_present():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"kind": "source", "source": "synth_strings", "score": 7.0},
+        {
+            "kind": "source", "source": "violin", "score": 6.8,
+            "window_top_5_fraction": 0.5, "window_top_12_fraction": 1.0,
+            "window_best_source_rank": 2,
+        },
+        {"kind": "source", "source": "synth_pad", "score": 6.5},
+        {"kind": "genre", "source": "electro_industrial", "score": 0.96},
+    ]
+
+    targets = _detected_acoustic_targets(
+        [item for item in predictions if item["kind"] == "source"],
+        {"family": "electronic"},
+    )
+
+    assert "violin" in targets
+
+
+def test_non_electronic_style_retains_synth_counterpart_conflict_filter():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"kind": "source", "source": "synth_strings", "score": 7.0},
+        {"kind": "source", "source": "violin", "score": 6.95},
+    ]
+
+    targets = _detected_acoustic_targets(
+        predictions, {"family": "orchestral"},
+    )
+
+    assert "violin" not in targets
+
+
+
+def test_electronic_hybrid_keeps_real_flute_alongside_synth_flute_with_window_evidence():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"kind": "source", "source": "synth_flute", "score": 7.0},
+        {
+            "kind": "source", "source": "flute", "score": 6.8,
+            "window_top_5_fraction": 0.5,
+            "window_top_12_fraction": 0.875,
+            "window_best_source_rank": 2,
+        },
+    ]
+
+    targets = _detected_acoustic_targets(predictions, {"family": "electronic"})
+
+    assert "flute" in targets
