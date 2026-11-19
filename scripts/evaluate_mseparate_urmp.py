@@ -85,6 +85,34 @@ def _ground_truth_ranking(predictions: list[dict], instruments: list[str]) -> di
     }
 
 
+def _planner_target_audit(planner_tasks: list[dict], instruments: list[str]) -> dict:
+    """Compare exact planned target labels with unique URMP ground-truth labels."""
+    ground_truth = set(instruments)
+    planned = {
+        str(target)
+        for task in planner_tasks
+        for target in task.get("target_stems", [])
+    }
+    true_positive = sorted(ground_truth & planned)
+    false_positive = sorted(planned - ground_truth)
+    missed = sorted(ground_truth - planned)
+    precision = len(true_positive) / len(planned) if planned else None
+    recall = len(true_positive) / len(ground_truth) if ground_truth else None
+    return {
+        "ground_truth_targets": sorted(ground_truth),
+        "planned_targets": sorted(planned),
+        "true_positive_targets": true_positive,
+        "false_positive_targets": false_positive,
+        "missed_ground_truth_targets": missed,
+        "precision": round(precision, 4) if precision is not None else None,
+        "recall": round(recall, 4) if recall is not None else None,
+        "note": (
+            "Exact label overlap is an audit proxy, not perceptual separation quality; "
+            "broad family targets and aliases may require manual interpretation."
+        ),
+    }
+
+
 MIXES = {
     "11_Maria_ob_vc": ["oboe", "cello"],
     "12_Spring_vn_vn_vc": ["violin", "violin", "cello"],
@@ -188,7 +216,7 @@ def main() -> int:
             "plan": to_jsonable(plan),
             "planner_task_count": len(plan.tasks),
             "planner_tasks": [to_jsonable(task) for task in plan.tasks],
-            "cuda_low_vram_mono_plan": to_jsonable(cuda_mono_plan),
+            "planner_target_audit": _planner_target_audit(\n                [to_jsonable(task) for task in plan.tasks], MIXES[path.parent.name],\n            ),\n            "cuda_low_vram_mono_plan": to_jsonable(cuda_mono_plan),
             "cuda_low_vram_mono_task_count": len(cuda_mono_plan.tasks),
             "cuda_low_vram_stereo_adapter_preview": to_jsonable(cuda_stereo_preview_plan),
             "cuda_low_vram_stereo_adapter_preview_task_count": len(cuda_stereo_preview_plan.tasks),
@@ -233,6 +261,9 @@ def main() -> int:
             "total_cuda_low_vram_stereo_preview_tasks": sum(row["cuda_low_vram_stereo_adapter_preview_task_count"] for row in rows),
             "ground_truth_instrument_labels": sum(row["ground_truth_ranking"]["unique_ground_truth_instruments"] for row in rows),
             "ground_truth_labels_in_clap_top12": sum(row["ground_truth_ranking"]["matched_in_top_12"] for row in rows),
+            "planner_target_true_positives": sum(len(row["planner_target_audit"]["true_positive_targets"]) for row in rows),
+            "planner_target_false_positives": sum(len(row["planner_target_audit"]["false_positive_targets"]) for row in rows),
+            "planner_target_misses": sum(len(row["planner_target_audit"]["missed_ground_truth_targets"]) for row in rows),
         },
         "limitations": [
             "This stage evaluates source analysis and routing only; it does not run separation inference.",
