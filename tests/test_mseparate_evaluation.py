@@ -140,3 +140,34 @@ def test_tom_component_diagnostics_reports_salience_without_changing_audio():
     assert result["tom_reference_salience_band"] == "low_-30_to_-20_db"
     assert result["tom_reference_to_mixture_db"] == pytest.approx(-26.0206, abs=1e-3)
     assert result["tom_component_levels"][0]["rms"] == pytest.approx(0.01)
+
+
+def test_component_projection_diagnostics_identifies_overlapping_source():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_projection_diagnostics
+
+    phase = np.arange(4096, dtype=np.float64) * (2.0 * np.pi / 64.0)
+    kick = np.sin(phase).astype(np.float32).reshape(-1, 1)
+    snare = np.cos(phase).astype(np.float32).reshape(-1, 1)
+    result = _component_projection_diagnostics(
+        0.4 * kick,
+        {"kick": kick, "snare": snare},
+    )
+    by_name = {item["name"]: item for item in result}
+    assert by_name["kick"]["normalized_correlation"] == pytest.approx(1.0, abs=1e-6)
+    assert by_name["kick"]["estimate_energy_projection_fraction"] == pytest.approx(1.0, abs=1e-6)
+    assert by_name["snare"]["normalized_correlation"] == pytest.approx(0.0, abs=1e-6)
+    assert by_name["snare"]["estimate_energy_projection_fraction"] == pytest.approx(0.0, abs=1e-6)
+    assert "not an additive" in by_name["kick"]["interpretation"]
+
+
+def test_component_projection_diagnostics_rejects_misaligned_component():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_projection_diagnostics
+
+    with pytest.raises(ValueError, match="differs from estimate"):
+        _component_projection_diagnostics(np.ones((8, 2)), {"kick": np.ones((7, 2))})
