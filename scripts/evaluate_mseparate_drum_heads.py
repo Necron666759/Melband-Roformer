@@ -306,15 +306,6 @@ def main() -> int:
                 for target in TARGETS
             }
             tom_component_paths = _resolve(base, row["toms"])
-            tom_components = {
-                path.stem: _read_audio(
-                    [path], label=f"{track_id} Tom component {path.stem}",
-                    sample_rate=model.sample_rate,
-                )
-                for path in tom_component_paths
-            }
-            if len(tom_components) != len(tom_component_paths):
-                raise ValueError(f"{track_id} has duplicate Tom component names")
             raw_components = row.get("components", "").strip()
             component_paths = json.loads(raw_components) if raw_components else {}
             if not isinstance(component_paths, dict):
@@ -333,6 +324,23 @@ def main() -> int:
                         f"{track_id} source component {name!r} shape {samples.shape} "
                         f"does not match mixture {mixture.shape}"
                     )
+            if source_components and all(path.stem in source_components for path in tom_component_paths):
+                # Reuse already-loaded Tom arrays rather than duplicating three
+                # full-length stereo references in memory.
+                tom_components = {
+                    path.stem: source_components[path.stem] for path in tom_component_paths
+                }
+            else:
+                # Backward compatibility with older four-column manifests.
+                tom_components = {
+                    path.stem: _read_audio(
+                        [path], label=f"{track_id} Tom component {path.stem}",
+                        sample_rate=model.sample_rate,
+                    )
+                    for path in tom_component_paths
+                }
+            if len(tom_components) != len(tom_component_paths):
+                raise ValueError(f"{track_id} has duplicate Tom component names")
             for target, reference in refs.items():
                 if reference.shape != mixture.shape:
                     raise ValueError(
