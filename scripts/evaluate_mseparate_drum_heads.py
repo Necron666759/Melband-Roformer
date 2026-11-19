@@ -258,6 +258,60 @@ def _component_quality_diagnostics(
     return rows
 
 
+
+def _component_quality_summary(tom_rows: list[dict]) -> dict:
+    """Aggregate per-component SI-SDRi across Toms estimates for audit reporting.
+
+    This is descriptive only: positive overlap with a non-Tom component does
+    not prove causal leakage, and component scores are not additive.
+    """
+    component_values: dict[str, list[float]] = {}
+    for track in tom_rows:
+        for item in track.get("component_target_quality_diagnostics", []):
+            value = item.get("si_sdri_db")
+            if item.get("status") != "scored" or value is None:
+                continue
+            value = float(value)
+            if math.isfinite(value):
+                component_values.setdefault(str(item["name"]), []).append(value)
+
+    components = {}
+    for name, values in sorted(component_values.items()):
+        components[name] = {
+            "count": len(values),
+            "mean_si_sdri_db": round(float(np.mean(values)), 4),
+            "median_si_sdri_db": round(float(np.median(values)), 4),
+            "positive_improvement_count": sum(value > 0.0 for value in values),
+            "negative_improvement_count": sum(value < 0.0 for value in values),
+        }
+
+    tom_names = {"hi_tom", "mid_tom", "low_tom"}
+    target_values = [
+        value for name, values in component_values.items()
+        if name in tom_names for value in values
+    ]
+    other_values = [
+        value for name, values in component_values.items()
+        if name not in tom_names for value in values
+    ]
+    return {
+        "components": components,
+        "tom_reference_components": {
+            "count": len(target_values),
+            "mean_si_sdri_db": round(float(np.mean(target_values)), 4) if target_values else None,
+            "positive_improvement_count": sum(value > 0.0 for value in target_values),
+        },
+        "non_tom_components": {
+            "count": len(other_values),
+            "mean_si_sdri_db": round(float(np.mean(other_values)), 4) if other_values else None,
+            "positive_improvement_count": sum(value > 0.0 for value in other_values),
+        },
+        "interpretation": (
+            "Per-component SI-SDRi is an independent diagnostic, not an additive "
+            "or causal leakage estimate; silent references and undefined values are excluded."
+        ),
+    }
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True, help="CSV with mixture and reference stem paths")
@@ -431,6 +485,7 @@ def main() -> int:
     salience_bands = (
         "prominent_ge_-20_db", "low_-30_to_-20_db", "very_low_lt_-30_db"
     )
+    toms_component_quality_summary = _component_quality_summary(tom_rows)
     toms_by_reference_salience = {
         band: {
             "count": sum(row["tom_reference_salience_band"] == band for row in tom_rows),
@@ -462,6 +517,7 @@ def main() -> int:
         },
         "summary": summaries,
         "toms_by_reference_salience": toms_by_reference_salience,
+        "toms_component_quality_summary": toms_component_quality_summary,
         "tom_salience_policy": (
             "Diagnostic-only bins based on Tom reference RMS relative to mixture: "
             ">= -20 dB, -30 to -20 dB, and < -30 dB. Bins do not exclude or "
