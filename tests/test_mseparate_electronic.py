@@ -635,3 +635,71 @@ def test_synth_only_electronic_mix_does_not_promote_ambiguous_acoustic_instrumen
     ).tasks}
     assert "mvsep-mega53-synth-specialist-candidate" in routes
     assert "zfturbo-bs-roformer-53stem-candidate" not in routes
+
+
+def test_real_instrument_survives_dense_industrial_texture_in_hybrid_profile():
+    registry = load_registry(bundled_registry_path())
+    analysis = _analysis_with_predictions([
+        {"kind": "source", "source": "synth_pad", "score": 7.6},
+        {"kind": "source", "source": "industrial_noise", "score": 7.5},
+        {"kind": "source", "source": "granular_textures", "score": 7.4},
+        {"kind": "source", "source": "glitch_fx", "score": 7.3},
+        {"kind": "source", "source": "synth_bass", "score": 7.2},
+        {"kind": "source", "source": "violin", "score": 7.1},
+        {"kind": "source", "source": "synth_brass", "score": 6.7},
+        {"kind": "source", "source": "trombone", "score": 6.9},
+        {"kind": "genre", "source": "electro_industrial", "score": 0.91},
+        {"kind": "genre", "source": "orchestral", "score": 0.86},
+    ])
+    plan = build_plan(analysis=analysis, registry=registry)
+    routes = {task.model_id: task.target_stems for task in plan.tasks}
+
+    assert plan.style_profile["family"] == "mixed_or_uncertain"
+    assert routes["mvsep-mega53-synth-specialist-candidate"] == ("synth",)
+    assert routes["zfturbo-bs-roformer-53stem-candidate"] == ("trombone", "violin")
+
+
+def test_electronic_style_keeps_acoustic_instrument_within_conservative_margin():
+    registry = load_registry(bundled_registry_path())
+    plan = build_plan(
+        analysis=_analysis_with_predictions([
+            {"kind": "source", "source": "synth_pad", "score": 7.5},
+            {"kind": "source", "source": "industrial_noise", "score": 7.45},
+            {"kind": "source", "source": "granular_textures", "score": 7.4},
+            {"kind": "source", "source": "glitch_fx", "score": 7.35},
+            {"kind": "source", "source": "synth_bass", "score": 7.3},
+            {"kind": "source", "source": "violin", "score": 7.0},
+            {"kind": "genre", "source": "cybercore", "score": 0.94},
+        ]),
+        registry=registry,
+    )
+    routes = {task.model_id: task.target_stems for task in plan.tasks}
+
+    assert plan.style_profile["family"] == "electronic"
+    assert routes["mvsep-mega53-synth-specialist-candidate"] == ("synth",)
+    assert routes["zfturbo-bs-roformer-53stem-candidate"] == ("violin",)
+
+
+def test_synthetic_brass_counterevidence_blocks_false_trombone_route():
+    from mseparate.planner import _detected_acoustic_targets
+
+    targets = _detected_acoustic_targets([
+        {"kind": "source", "source": "synth_brass", "score": 7.4},
+        {"kind": "source", "source": "trombone", "score": 7.35},
+        {"kind": "source", "source": "synth_pad", "score": 7.2},
+    ], {"family": "mixed_or_uncertain"})
+
+    assert "trombone" not in targets
+    assert "brass" not in targets
+
+
+def test_synthetic_flute_counterevidence_blocks_false_flute_route():
+    from mseparate.planner import _detected_acoustic_targets
+
+    targets = _detected_acoustic_targets([
+        {"kind": "source", "source": "synth_flute", "score": 7.4},
+        {"kind": "source", "source": "flute", "score": 7.35},
+        {"kind": "source", "source": "synth_pad", "score": 7.2},
+    ], {"family": "mixed_or_uncertain"})
+
+    assert "flute" not in targets
