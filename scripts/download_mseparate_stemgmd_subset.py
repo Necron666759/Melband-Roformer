@@ -344,6 +344,10 @@ def download_subset(
                 "mixture": relative(mixture_path),
                 "snare": relative(local_paths["snare"]),
                 "toms": ";".join(relative(local_paths[name]) for name in TOM_INSTRUMENTS),
+                "components": json.dumps(
+                    {name: relative(path) for name, path in local_paths.items()},
+                    separators=(",", ":"),
+                ),
             }
             rows.append({
                 **row,
@@ -397,7 +401,9 @@ def download_subset(
             )
 
     with manifest_path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=("track_id", "mixture", "snare", "toms"))
+        writer = csv.DictWriter(
+            stream, fieldnames=("track_id", "mixture", "snare", "toms", "components")
+        )
         writer.writeheader()
         for row in rows:
             writer.writerow({key: row[key] for key in writer.fieldnames})
