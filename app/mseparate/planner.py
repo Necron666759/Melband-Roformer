@@ -249,7 +249,12 @@ def _detected_acoustic_targets(
         if rank > max_rank or top_score - score > max_gap:
             continue
         target, synthetic_counterpart = mapping
-        if synthetic_counterpart:
+        if synthetic_counterpart and family != "electronic":
+            # In a hybrid electronic arrangement, a real instrument and its
+            # synthetic counterpart may coexist. Do not let strong synth
+            # evidence veto an independently ranked acoustic source; the
+            # acoustic rank/gap gate above still applies. Outside electronic
+            # style, retain the conservative counterpart-conflict filter.
             synthetic_score = score_by_source.get(synthetic_counterpart)
             if synthetic_score is not None and score < synthetic_score + 0.10:
                 continue
