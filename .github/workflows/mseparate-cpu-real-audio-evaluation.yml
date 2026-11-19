@@ -44,7 +44,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mseparate-cpu-real-audio-evaluation-${{ github.ref }}
+  group: mseparate-cpu-real-audio-evaluation-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
