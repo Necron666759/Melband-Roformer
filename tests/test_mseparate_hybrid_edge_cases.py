@@ -1,8 +1,9 @@
 """Edge-case regressions for hybrid electronic/acoustic routing."""
 from __future__ import annotations
 
-from mseparate.planner import build_plan
+from mseparate.planner import _detected_acoustic_targets, build_plan
 from mseparate.registry import bundled_registry_path, load_registry
+from mseparate.source_analysis import classify_style
 from mseparate.types import AnalysisReport, AudioMetadata
 
 
@@ -70,3 +71,51 @@ def test_quiet_acoustic_cello_survives_dense_electronic_percussion_and_textures(
     assert plan.style_profile["family"] == "electronic"
     assert routes["mvsep-mega53-drums-specialist-candidate"] == ("drums",)
     assert routes["zfturbo-bs-roformer-53stem-candidate"] == ("cello",)
+
+
+def test_all_requested_electronic_subgenres_map_to_electronic_family():
+    for genre in (
+        "breakcore", "cybercore", "electro_industrial", "powernoise",
+        "hardcore", "industrial_hardcore", "dark_ambient",
+    ):
+        profile = classify_style([
+            {"kind": "genre", "source": genre, "score": 0.95},
+            {"kind": "genre", "source": "orchestral", "score": 0.70},
+        ])
+        assert profile["family"] == "electronic", genre
+
+
+def test_synthetic_flute_does_not_promote_acoustic_flute_head():
+    targets = _detected_acoustic_targets(
+        [
+            {"source": "synth_flute", "score": 7.8},
+            {"source": "flute", "score": 7.7},
+            {"source": "synth_pad", "score": 7.5},
+        ],
+        {"family": "electronic"},
+    )
+    assert "flute" not in targets
+
+
+def test_synthetic_woodwinds_do_not_promote_acoustic_oboe_head():
+    targets = _detected_acoustic_targets(
+        [
+            {"source": "synth_woodwinds", "score": 7.8},
+            {"source": "oboe", "score": 7.7},
+            {"source": "synth_pad", "score": 7.5},
+        ],
+        {"family": "electronic"},
+    )
+    assert "oboe" not in targets
+
+
+def test_acoustic_oboe_can_coexist_with_synthetic_woodwinds_when_stronger():
+    targets = _detected_acoustic_targets(
+        [
+            {"source": "synth_woodwinds", "score": 7.5},
+            {"source": "oboe", "score": 7.7},
+            {"source": "synth_pad", "score": 7.4},
+        ],
+        {"family": "electronic"},
+    )
+    assert "oboe" in targets
