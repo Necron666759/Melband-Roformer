@@ -127,7 +127,8 @@ jobs:
             tests/test_mseparate_evaluation.py \
             tests/test_mseparate_babyslakh_evaluation.py \
             tests/test_mseparate_babyslakh_subset.py \
-            tests/test_mseparate_stemgmd_subset.py \
+            tests/test_mseparate_stemgmd_subset.py \\
+            tests/test_mseparate_stemgmd_archive.py \
             tests/test_mseparate_vram.py
 
       - name: Download eight diverse StemGMD Snare/Toms reference tracks
