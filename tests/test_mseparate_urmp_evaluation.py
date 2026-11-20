@@ -158,3 +158,48 @@ def test_planner_temporal_gate_rejects_weak_flute_and_broad_brass_false_positive
     assert "brass" not in targets
     assert "saxophone" not in targets
     assert "flute" not in targets
+
+
+def test_planner_temporal_audit_suppresses_sparse_sax_horn_and_weak_cello_confusions():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"source": "violin", "score": 10.1, "window_best_source_rank": 1,
+         "window_top_5_fraction": 0.83, "window_mean_source_rank": 6.1},
+        {"source": "woodwinds", "score": 9.97, "window_best_source_rank": 1,
+         "window_top_5_fraction": 0.94, "window_mean_source_rank": 5.1},
+        {"source": "saxophone", "score": 8.95, "window_best_source_rank": 3,
+         "window_top_5_fraction": 0.22, "window_mean_source_rank": 8.9},
+        {"source": "french_horn", "score": 8.8, "window_best_source_rank": 4,
+         "window_top_5_fraction": 0.11, "window_mean_source_rank": 14.1},
+        {"source": "cello", "score": 8.82, "window_best_source_rank": 3,
+         "window_top_5_fraction": 0.2778, "window_mean_source_rank": 9.556},
+        {"source": "viola", "score": 8.96, "window_best_source_rank": 3,
+         "window_top_5_fraction": 0.444, "window_mean_source_rank": 9.389},
+    ]
+
+    targets = _detected_acoustic_targets(predictions, {"family": "orchestral"})
+
+    assert "violin" in targets
+    assert "viola" in targets
+    assert "saxophone" not in targets
+    assert "french-horn" not in targets
+    assert "cello" not in targets
+
+
+def test_planner_temporal_gate_keeps_sustained_saxophone_and_cello_candidates():
+    from mseparate.planner import _detected_acoustic_targets
+
+    predictions = [
+        {"source": "violin", "score": 10.0, "window_best_source_rank": 1,
+         "window_top_5_fraction": 0.9, "window_mean_source_rank": 2.0},
+        {"source": "saxophone", "score": 9.8, "window_best_source_rank": 2,
+         "window_top_5_fraction": 0.83, "window_mean_source_rank": 3.0},
+        {"source": "cello", "score": 9.7, "window_best_source_rank": 2,
+         "window_top_5_fraction": 0.8, "window_mean_source_rank": 3.5},
+    ]
+
+    targets = _detected_acoustic_targets(predictions, {"family": "orchestral"})
+
+    assert "saxophone" in targets
+    assert "cello" in targets
