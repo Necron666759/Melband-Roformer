@@ -820,3 +820,33 @@ def test_aggregate_window_predictions_counts_windows_without_local_source_eviden
     )
     assert violin["observed_windows"] == 2
     assert violin["window_top_5_fraction"] == round(2 / 3, 6)
+
+
+
+def test_generic_samples_label_does_not_suppress_specific_synth_or_keys_routes():
+    registry = load_registry(bundled_registry_path())
+    plan = build_plan(
+        analysis=_analysis_with_predictions([
+            {"kind": "source", "source": "samples", "score": 9.9},
+            {"kind": "source", "source": "synth_keys", "score": 8.5},
+            {"kind": "source", "source": "synth_pluck", "score": 8.3},
+            {"kind": "source", "source": "synth_brass", "score": 8.1},
+            {"kind": "source", "source": "synth_lead", "score": 8.0},
+        ]),
+        registry=registry,
+    )
+    routes = {task.model_id: task.target_stems for task in plan.tasks}
+    assert routes["mvsep-mega53-keys-specialist-candidate"] == ("keys",)
+    assert routes["mvsep-mega53-synth-specialist-candidate"] == ("synth",)
+
+
+def test_specific_competing_source_still_enforces_the_score_gap():
+    from mseparate.planner import _has_source_evidence, _has_synth_evidence
+
+    predictions = [
+        {"kind": "source", "source": "brass", "score": 9.0},
+        {"kind": "source", "source": "synth_keys", "score": 7.8},
+        {"kind": "source", "source": "synth_brass", "score": 7.7},
+    ]
+    assert not _has_source_evidence(predictions, ("synth_keys",), max_rank=8, max_score_gap=0.75)
+    assert not _has_synth_evidence(predictions, electronic_style=False)

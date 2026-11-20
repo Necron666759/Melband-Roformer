@@ -197,7 +197,11 @@ def _has_synth_evidence(
     ranked = sorted(predictions, key=lambda item: float(item.get("score", 0.0)), reverse=True)
     if not ranked:
         return False
-    top_score = float(ranked[0].get("score", 0.0))
+    # Generic sample-based rendering is not a competing instrument family.
+    # Keep it in rank ordering, but exclude it from the semantic score margin.
+    top_score = _source_evidence_reference_score(predictions)
+    if top_score is None:
+        return False
     max_rank, max_gap = (12, 1.0) if electronic_style else (8, 0.75)
     conflicts = {
         "synthesizer": (
@@ -238,6 +242,21 @@ def _has_synth_evidence(
     return False
 
 
+def _source_evidence_reference_score(predictions: list[dict]) -> float | None:
+    """Return the strongest discriminative source score for routing margins.
+
+    The generic `samples` prompt describes a rendering/production method,
+    not an instrument family. It remains in the ranking (and therefore still
+    affects rank limits), but must not suppress specific instrument evidence
+    solely through the score-gap gate.
+    """
+    scores = [
+        float(item.get("score", 0.0)) for item in predictions
+        if item.get("source") != "samples"
+    ]
+    return max(scores) if scores else None
+
+
 def _has_source_evidence(
     predictions: list[dict], labels: tuple[str, ...], *,
     max_rank: int = 8, max_score_gap: float = 0.75,
@@ -245,10 +264,15 @@ def _has_source_evidence(
     ranked = sorted(predictions, key=lambda item: float(item.get("score", 0.0)), reverse=True)
     if not ranked:
         return False
-    top_score = float(ranked[0].get("score", 0.0))
+    reference_score = _source_evidence_reference_score(predictions)
+    if reference_score is None:
+        return False
     for rank, item in enumerate(ranked, start=1):
         if item.get("source") in labels:
-            return rank <= max_rank and top_score - float(item.get("score", 0.0)) <= max_score_gap
+            return (
+                rank <= max_rank
+                and reference_score - float(item.get("score", 0.0)) <= max_score_gap
+            )
     return False
 
 
