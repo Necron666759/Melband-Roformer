@@ -352,6 +352,41 @@ def _tom_component_coverage_summary(tom_rows: list[dict]) -> dict:
     }
 
 
+
+def _tom_projection_summary(tom_rows: list[dict]) -> dict:
+    """Summarize normalized projection of the Tom estimate onto kit references.
+
+    Projection fractions are independent, potentially overlapping diagnostics;
+    they are not additive source attribution or proof of causal leakage.
+    """
+    values: dict[str, list[float]] = {}
+    for track in tom_rows:
+        for item in track.get("component_projection_diagnostics", []):
+            fraction = item.get("estimate_energy_projection_fraction")
+            if fraction is None:
+                continue
+            fraction = float(fraction)
+            if math.isfinite(fraction):
+                values.setdefault(str(item.get("name", "unknown")), []).append(fraction)
+    components = {
+        name: {
+            "count": len(rows),
+            "mean_projection_fraction": round(float(np.mean(rows)), 4),
+            "median_projection_fraction": round(float(np.median(rows)), 4),
+            "tracks_at_or_above_25_percent": sum(value >= 0.25 for value in rows),
+        }
+        for name, rows in sorted(values.items())
+    }
+    return {
+        "components": components,
+        "interpretation": (
+            "Normalized projection of the estimated Tom stem onto each aligned "
+            "reference. Components can be correlated and fractions are not additive "
+            "or causal leakage estimates."
+        ),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True, help="CSV with mixture and reference stem paths")
@@ -560,6 +595,7 @@ def main() -> int:
         "toms_by_reference_salience": toms_by_reference_salience,
         "toms_component_quality_summary": toms_component_quality_summary,
         "toms_component_coverage": toms_component_coverage,
+        "toms_projection_summary": _tom_projection_summary(tom_rows),
         "tom_salience_policy": (
             "Diagnostic-only bins based on Tom reference RMS relative to mixture: "
             ">= -20 dB, -30 to -20 dB, and < -30 dB. Bins do not exclude or "
