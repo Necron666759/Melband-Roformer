@@ -74,3 +74,32 @@ def test_crop_representative_selects_sustained_active_window(tmp_path):
     assert result["candidate_windows"] >= 7
     assert rate == sample_rate
     assert float(np.sqrt(np.mean(excerpt ** 2))) > 0.75
+
+
+def test_routing_drift_details_detects_partial_target_loss():
+    from evaluate_mseparate_babyslakh import routing_drift_details
+
+    result = routing_drift_details(
+        [
+            {"target_stems": ["piano", "organ"]},
+            {"target_stems": ["synth"]},
+        ],
+        [{"target_stems": ["piano", "synth"]}],
+    )
+
+    assert result["full_track_target_stems"] == ["organ", "piano", "synth"]
+    assert result["excerpt_target_stems"] == ["piano", "synth"]
+    assert result["missing_full_track_targets"] == ["organ"]
+    assert result["excerpt_only_targets"] == []
+
+
+def test_routing_drift_details_reports_excerpt_only_targets_without_losing_full_track_targets():
+    from evaluate_mseparate_babyslakh import routing_drift_details
+
+    result = routing_drift_details(
+        [{"target_stems": ["piano"]}],
+        [{"target_stems": ["piano", "organ"]}],
+    )
+
+    assert result["missing_full_track_targets"] == []
+    assert result["excerpt_only_targets"] == ["organ"]
