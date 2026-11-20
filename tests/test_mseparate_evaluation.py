@@ -279,3 +279,26 @@ def test_tom_component_coverage_reports_per_track_active_component_completeness(
     assert result["mean_positive_component_fraction"] == pytest.approx(0.8333, abs=1e-4)
     assert result["tracks"][0]["positive_tom_component_count"] == 2
     assert result["tracks"][1]["active_tom_component_count"] == 2
+
+
+
+def test_tom_projection_summary_highlights_snare_and_kick_overlap_without_claiming_additivity():
+    from evaluate_mseparate_drum_heads import _tom_projection_summary
+
+    result = _tom_projection_summary([
+        {"component_projection_diagnostics": [
+            {"name": "snare", "estimate_energy_projection_fraction": 0.45},
+            {"name": "kick", "estimate_energy_projection_fraction": 0.30},
+            {"name": "hi_tom", "estimate_energy_projection_fraction": 0.20},
+        ]},
+        {"component_projection_diagnostics": [
+            {"name": "snare", "estimate_energy_projection_fraction": 0.60},
+            {"name": "kick", "estimate_energy_projection_fraction": 0.10},
+            {"name": "hi_tom", "estimate_energy_projection_fraction": None},
+        ]},
+    ])
+
+    assert result["components"]["snare"]["mean_projection_fraction"] == pytest.approx(0.525)
+    assert result["components"]["snare"]["tracks_at_or_above_25_percent"] == 2
+    assert result["components"]["kick"]["mean_projection_fraction"] == pytest.approx(0.20)
+    assert "not additive" in result["interpretation"]
