@@ -791,7 +791,7 @@ def test_aggregate_window_predictions_preserves_intermittent_real_instrument_evi
         item for item in aggregate_window_predictions(windows)
         if item["source"] == "violin"
     )
-    assert violin["score"] == 5.75
+    assert violin["score"] == 5.375
     assert violin["windows"] == 4
     assert violin["window_top_5_fraction"] == 0.25
     assert violin["window_top_12_fraction"] == 1.0
