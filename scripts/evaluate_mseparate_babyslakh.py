@@ -162,6 +162,29 @@ def run_cli(
     return process.returncode, payload, log[-12000:]
 
 
+def task_target_stems(tasks: list[dict] | None) -> list[str]:
+    """Return stable, de-duplicated target labels from serialized planner tasks."""
+    return sorted({
+        str(stem)
+        for task in (tasks or [])
+        for stem in (task.get("target_stems") or [])
+        if str(stem).strip()
+    })
+
+
+def routing_drift_details(full_track_tasks: list[dict] | None,
+                          excerpt_tasks: list[dict] | None) -> dict:
+    """Compare full-track and excerpt routes, including partial task loss."""
+    full_targets = task_target_stems(full_track_tasks)
+    excerpt_targets = task_target_stems(excerpt_tasks)
+    return {
+        "full_track_target_stems": full_targets,
+        "excerpt_target_stems": excerpt_targets,
+        "missing_full_track_targets": sorted(set(full_targets) - set(excerpt_targets)),
+        "excerpt_only_targets": sorted(set(excerpt_targets) - set(full_targets)),
+    }
+
+
 def crop_representative(source: Path, destination: Path, seconds: float) -> dict:
     """Choose the highest sustained-RMS excerpt using one-second energy bins.
 
@@ -367,7 +390,10 @@ def main() -> int:
             succeeded, failed, task_results, excerpt_task_count = execution_counts(payload)
             rescue = (payload or {}).get("conditional_rescue") or {}
             deep = (payload or {}).get("deep_output_analysis") or {}
-            full_track_task_count = len(row["plan"].get("tasks") or [])
+            full_track_tasks = row["plan"].get("tasks") or []
+            excerpt_tasks = (payload or {}).get("plan", {}).get("tasks") or []
+            full_track_task_count = len(full_track_tasks)
+            route_comparison = routing_drift_details(full_track_tasks, excerpt_tasks)
             stage_c.append({
                 "track": row["track"],
                 "category": row["category"],
@@ -380,7 +406,8 @@ def main() -> int:
                 "full_track_planner_tasks": full_track_task_count,
                 "excerpt_planner_tasks": excerpt_task_count,
                 "excerpt_selection": excerpt_selection,
-                "routing_drift": full_track_task_count > 0 and excerpt_task_count == 0,
+                **route_comparison,
+                "routing_drift": bool(route_comparison["missing_full_track_targets"]),
                 "execution_succeeded": succeeded,
                 "execution_failed": failed,
                 "execution_skipped": sum(item.get("status") == "skipped" for item in task_results),
