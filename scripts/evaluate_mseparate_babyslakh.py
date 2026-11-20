@@ -226,44 +226,115 @@ def crop_representative(source: Path, destination: Path, seconds: float) -> dict
 
 
 def crop_representative_windows(source: Path, destination_dir: Path, seconds: float, *, max_windows: int = 3) -> list[dict]:
-    """Select high-energy, non-overlapping windows across the arrangement."""
+    """Choose the strongest window inside each equal-duration time bin.
+
+    Unlike global greedy energy ranking, stratification guarantees temporal
+    coverage: a loud section cannot consume every available excerpt. Windows
+    are fully contained in their bin, so selected excerpts cannot overlap.
+    """
     if max_windows < 1:
         raise ValueError("max_windows must be at least one")
     info = sf.info(str(source))
     length = min(info.frames, max(1, int(seconds * info.samplerate)))
-    hop = max(1, info.samplerate)
     with sf.SoundFile(str(source), "r") as stream:
         audio = stream.read(dtype="float32", always_2d=True)
     if not np.isfinite(audio).all() or len(audio) < length:
         raise RuntimeError(f"Invalid or too-short multi-window source {source}")
+
+    # Never create more bins than can hold one complete, non-overlapping window.
+    window_count = min(max_windows, max(1, len(audio) // length))
+    hop = max(1, info.samplerate)
     energy = np.mean(np.square(audio.astype(np.float64)), axis=1)
     prefix = np.concatenate(([0.0], np.cumsum(energy, dtype=np.float64)))
-    starts = list(range(0, len(audio) - length + 1, hop))
     final_start = len(audio) - length
-    if not starts or starts[-1] != final_start:
-        starts.append(final_start)
-    candidates = sorted(((prefix[start + length] - prefix[start]) / length, start) for start in starts)
-    selected = []
-    for mean_energy, start in reversed(candidates):
-        if all(abs(start - prior_start) >= length for _, prior_start in selected):
-            selected.append((mean_energy, start))
-            if len(selected) >= max_windows:
-                break
-    selected.sort(key=lambda item: item[1])
     destination_dir.mkdir(parents=True, exist_ok=True)
     result = []
-    for index, (mean_energy, start) in enumerate(selected, 1):
-        path = destination_dir / f"window-{index:02d}-{start / info.samplerate:.3f}s.wav"
+
+    for bin_index in range(window_count):
+        bin_start = (len(audio) * bin_index) // window_count
+        bin_end = (len(audio) * (bin_index + 1)) // window_count
+        first_start = ((bin_start + hop - 1) // hop) * hop
+        last_start = bin_end - length
+        starts = list(range(first_start, last_start + 1, hop))
+        # Keep a valid edge-aligned candidate even when the one-second grid
+        # does not land exactly on the final legal start in this bin.
+        if bin_start <= final_start <= last_start and final_start not in starts:
+            starts.append(final_start)
+        if not starts:
+            starts = [bin_start]
+        energies = [
+            (prefix[start + length] - prefix[start]) / length
+            for start in starts
+        ]
+        best_index = max(range(len(starts)), key=lambda item: (energies[item], -starts[item]))
+        start = starts[best_index]
+        mean_energy = energies[best_index]
+        path = destination_dir / f"window-{bin_index + 1:02d}-{start / info.samplerate:.3f}s.wav"
         sf.write(path, audio[start:start + length], info.samplerate, subtype="PCM_16")
         result.append({
-            "path": str(path), "window_index": index,
+            "path": str(path), "window_index": bin_index + 1,
             "start_seconds": round(start / info.samplerate, 3),
             "duration_seconds": round(length / info.samplerate, 3),
             "window_rms": round(float(np.sqrt(mean_energy)), 8),
             "candidate_windows": len(starts),
-            "selection_method": "greedy_high_energy_non_overlapping",
+            "time_bin_start_seconds": round(bin_start / info.samplerate, 3),
+            "time_bin_end_seconds": round(bin_end / info.samplerate, 3),
+            "selection_method": "stratified_time_bins_max_energy",
         })
     return result
+
+
+def window_source_evidence_details(window_predictions: list[list[dict]], windows: list[dict]) -> dict:
+    """Serialize compact per-window source ranks and temporal coverage diagnostics."""
+    per_window = []
+    source_rows: dict[str, list[tuple[float, int]]] = {}
+    for index, predictions in enumerate(window_predictions):
+        ranked = sorted(
+            (item for item in predictions if item.get("kind", "source") == "source"),
+            key=lambda item: float(item.get("score", 0.0)),
+            reverse=True,
+        )
+        top = []
+        for rank, item in enumerate(ranked, 1):
+            source = str(item.get("source", ""))
+            if not source:
+                continue
+            score = float(item.get("score", 0.0))
+            source_rows.setdefault(source, []).append((score, rank))
+            if rank <= 12:
+                top.append({"source": source, "score": round(score, 6), "rank": rank})
+        metadata = windows[index] if index < len(windows) else {}
+        per_window.append({
+            "window_index": metadata.get("window_index", index + 1),
+            "start_seconds": metadata.get("start_seconds"),
+            "time_bin_start_seconds": metadata.get("time_bin_start_seconds"),
+            "time_bin_end_seconds": metadata.get("time_bin_end_seconds"),
+            "window_rms": metadata.get("window_rms"),
+            "top_source_predictions": top,
+        })
+    total = len(window_predictions)
+    coverage = []
+    for source, values in source_rows.items():
+        ranks = [rank for _, rank in values]
+        coverage.append({
+            "source": source,
+            "observed_windows": len(values),
+            "top_5_windows": sum(rank <= 5 for rank in ranks),
+            "top_12_windows": sum(rank <= 12 for rank in ranks),
+            "window_count": total,
+            "best_rank": min(ranks),
+            "mean_score_when_observed": round(
+                sum(score for score, _ in values) / len(values), 6
+            ),
+        })
+    coverage.sort(key=lambda item: (
+        -item["top_5_windows"], -item["observed_windows"],
+        item["best_rank"], item["source"],
+    ))
+    return {
+        "per_window_source_predictions": per_window,
+        "source_temporal_coverage": coverage,
+    }
 
 
 def multi_window_routing_details(full_track_tasks, temporal_tasks, window_task_sets):
@@ -504,6 +575,10 @@ def main() -> int:
                 "excerpt_selection": excerpt_selection,
                 **route_comparison,
                 **temporal_comparison,
+                **window_source_evidence_details(
+                    [window_predictions.get(str(path), []) for path in window_paths],
+                    temporal_windows,
+                ),
                 "routing_drift": bool(temporal_comparison["multi_window_missing_full_track_targets"]),
                 "single_excerpt_routing_drift": bool(route_comparison["missing_full_track_targets"]),
                 "execution_succeeded": succeeded,
