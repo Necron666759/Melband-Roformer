@@ -267,6 +267,30 @@ def _detected_acoustic_targets(
             and not (rank <= 3 and top_score - score <= 0.50)
         ):
             continue
+        # In the URMP audit, saxophone and french-horn were recurring
+        # orchestral confusions when they appeared in many windows but rarely
+        # ranked among the strongest sources. Require stronger temporal
+        # concentration unless aggregate evidence is exceptionally strong.
+        if (
+            source in {"saxophone", "french_horn"}
+            and "window_top_5_fraction" in item
+            and window_top_5_fraction < 0.75
+            and not (rank <= 2 and top_score - score <= 0.35)
+        ):
+            continue
+        # A weak cello candidate can inherit generic string-family evidence.
+        # Reject only when both its top-five presence is sparse and its mean
+        # window rank is poor; intermittent candidates with stronger window
+        # evidence remain eligible.
+        window_mean_rank = item.get("window_mean_source_rank")
+        if (
+            source == "cello"
+            and window_mean_rank is not None
+            and window_top_5_fraction < 0.35
+            and float(window_mean_rank) > 8.5
+            and not (rank <= 2 and top_score - score <= 0.35)
+        ):
+            continue
         if (rank > max_rank or top_score - score > max_gap) and not temporal_support:
             continue
         target, synthetic_counterpart = mapping
