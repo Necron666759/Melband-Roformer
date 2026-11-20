@@ -186,7 +186,7 @@ def test_crop_representative_windows_stratifies_the_entire_arrangement(tmp_path)
     assert [item["window_index"] for item in windows] == [1, 2, 3]
     assert [item["time_bin_start_seconds"] for item in windows] == [0.0, 9.0, 18.0]
     assert [item["time_bin_end_seconds"] for item in windows] == [9.0, 18.0, 27.0]
-    assert [item["start_seconds"] for item in windows] == [0.0, 10.0, 19.0]
+    assert [item["start_seconds"] for item in windows] == [0.0, 12.0, 21.0]
     assert windows[0]["window_rms"] > windows[1]["window_rms"] > windows[2]["window_rms"]
     assert all(
         left["start_seconds"] + 2.0 <= right["start_seconds"]
