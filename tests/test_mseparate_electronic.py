@@ -763,3 +763,63 @@ def test_electronic_hybrid_keeps_real_flute_alongside_synth_flute_with_window_ev
     targets = _detected_acoustic_targets(predictions, {"family": "electronic"})
 
     assert "flute" in targets
+
+
+def test_aggregate_window_predictions_preserves_intermittent_real_instrument_evidence():
+    from mseparate.planner import aggregate_window_predictions
+
+    windows = [
+        [
+            {"kind": "source", "source": "violin", "score": 8.0},
+            {"kind": "source", "source": "synth_pad", "score": 7.0},
+        ],
+        [
+            {"kind": "source", "source": "synth_pad", "score": 8.0},
+            {"kind": "source", "source": "violin", "score": 6.0},
+        ],
+        [
+            {"kind": "source", "source": "synth_pad", "score": 8.0},
+            {"kind": "source", "source": "violin", "score": 5.0},
+        ],
+        [
+            {"kind": "source", "source": "synth_pad", "score": 8.0},
+            {"kind": "source", "source": "violin", "score": 4.0},
+        ],
+    ]
+
+    violin = next(
+        item for item in aggregate_window_predictions(windows)
+        if item["source"] == "violin"
+    )
+    assert violin["score"] == 5.75
+    assert violin["windows"] == 4
+    assert violin["window_top_5_fraction"] == 0.25
+    assert violin["window_top_12_fraction"] == 1.0
+
+
+def test_aggregate_window_predictions_counts_windows_without_local_source_evidence():
+    from mseparate.planner import aggregate_window_predictions
+
+    windows = [
+        [
+            {"kind": "source", "source": "synth_pad", "score": 8.0},
+            {"kind": "source", "source": "industrial_noise", "score": 7.0},
+            {"kind": "source", "source": "violin", "score": 6.0},
+        ],
+        [
+            {"kind": "source", "source": "synth_pad", "score": 8.0},
+            {"kind": "source", "source": "industrial_noise", "score": 7.0},
+            {"kind": "source", "source": "violin", "score": 6.0},
+        ],
+        [
+            {"kind": "source", "source": "synth_pad", "score": 8.0},
+            {"kind": "source", "source": "industrial_noise", "score": 7.0},
+        ],
+    ]
+
+    violin = next(
+        item for item in aggregate_window_predictions(windows)
+        if item["source"] == "violin"
+    )
+    assert violin["observed_windows"] == 2
+    assert violin["window_top_5_fraction"] == round(2 / 3, 6)

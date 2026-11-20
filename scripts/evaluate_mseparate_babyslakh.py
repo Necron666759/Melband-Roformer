@@ -13,6 +13,7 @@ perceptual superiority. Audio and model outputs are never uploaded as artifacts.
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import json
 import os
 import subprocess
@@ -223,6 +224,66 @@ def crop_representative(source: Path, destination: Path, seconds: float) -> dict
     }
 
 
+
+def crop_representative_windows(source: Path, destination_dir: Path, seconds: float, *, max_windows: int = 3) -> list[dict]:
+    """Select high-energy, non-overlapping windows across the arrangement."""
+    if max_windows < 1:
+        raise ValueError("max_windows must be at least one")
+    info = sf.info(str(source))
+    length = min(info.frames, max(1, int(seconds * info.samplerate)))
+    hop = max(1, info.samplerate)
+    with sf.SoundFile(str(source), "r") as stream:
+        audio = stream.read(dtype="float32", always_2d=True)
+    if not np.isfinite(audio).all() or len(audio) < length:
+        raise RuntimeError(f"Invalid or too-short multi-window source {source}")
+    energy = np.mean(np.square(audio.astype(np.float64)), axis=1)
+    prefix = np.concatenate(([0.0], np.cumsum(energy, dtype=np.float64)))
+    starts = list(range(0, len(audio) - length + 1, hop))
+    final_start = len(audio) - length
+    if not starts or starts[-1] != final_start:
+        starts.append(final_start)
+    candidates = sorted(((prefix[start + length] - prefix[start]) / length, start) for start in starts)
+    selected = []
+    for mean_energy, start in reversed(candidates):
+        if all(abs(start - prior_start) >= length for _, prior_start in selected):
+            selected.append((mean_energy, start))
+            if len(selected) >= max_windows:
+                break
+    selected.sort(key=lambda item: item[1])
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    result = []
+    for index, (mean_energy, start) in enumerate(selected, 1):
+        path = destination_dir / f"window-{index:02d}-{start / info.samplerate:.3f}s.wav"
+        sf.write(path, audio[start:start + length], info.samplerate, subtype="PCM_16")
+        result.append({
+            "path": str(path), "window_index": index,
+            "start_seconds": round(start / info.samplerate, 3),
+            "duration_seconds": round(length / info.samplerate, 3),
+            "window_rms": round(float(np.sqrt(mean_energy)), 8),
+            "candidate_windows": len(starts),
+            "selection_method": "greedy_high_energy_non_overlapping",
+        })
+    return result
+
+
+def multi_window_routing_details(full_track_tasks, temporal_tasks, window_task_sets):
+    """Compare full-track targets with temporal union and retain local activity evidence."""
+    full_targets = task_target_stems(full_track_tasks)
+    temporal_targets = task_target_stems(temporal_tasks)
+    per_window = [task_target_stems(tasks) for tasks in (window_task_sets or [])]
+    target_counts = {
+        target: sum(target in targets for targets in per_window)
+        for target in sorted({target for targets in per_window for target in targets})
+    }
+    return {
+        "multi_window_target_stems": temporal_targets,
+        "multi_window_missing_full_track_targets": sorted(set(full_targets) - set(temporal_targets)),
+        "window_target_presence": target_counts,
+        "per_window_target_stems": per_window,
+        "windows_analyzed": len(per_window),
+    }
+
+
 def crop_center(source: Path, destination: Path, seconds: float) -> None:
     """Compatibility wrapper retained for callers that explicitly need center crops."""
     info = sf.info(str(source))
@@ -254,7 +315,7 @@ def main() -> int:
         folder.mkdir(parents=True, exist_ok=True)
 
     from mseparate.audio import analyze_audio
-    from mseparate.planner import build_plan
+    from mseparate.planner import aggregate_window_predictions, build_plan
     from mseparate.registry import bundled_registry_path, load_registry
     from mseparate.source_analysis import analyze_sources_many
     from mseparate.types import to_jsonable
@@ -382,8 +443,40 @@ def main() -> int:
         excerpt_dir.mkdir(parents=True, exist_ok=True)
         excerpt = excerpt_dir / f"{row['track']}-active-{args.excerpt_seconds:g}s.wav"
         excerpt_selection = crop_representative(source, excerpt, args.excerpt_seconds)
+        temporal_windows = crop_representative_windows(
+            source, excerpt_dir / f"{row['track']}-temporal",
+            args.excerpt_seconds, max_windows=3,
+        )
         case_output = output_root / row["track"]
         try:
+            # Track-level temporal voting is separate from the single-excerpt
+            # inference plan, so quiet excerpts never inherit absent targets.
+            window_paths = [Path(item["path"]) for item in temporal_windows]
+            window_predictions = analyze_sources_many(
+                window_paths, device="cpu",
+                cache_dir=models_dir / "source-analysis", no_download=False,
+            )
+            full_audio_report = audio_reports[str(source)]
+            per_window_tasks = []
+            for window_path in window_paths:
+                window_analysis = replace(
+                    full_audio_report,
+                    predictions=window_predictions.get(str(window_path), []),
+                )
+                window_plan = build_plan(
+                    max_depth=3, analysis=window_analysis, registry=cpu_registry,
+                    allow_resample=True, allow_mono_to_stereo=True,
+                )
+                per_window_tasks.append(to_jsonable(window_plan.tasks))
+            temporal_predictions = aggregate_window_predictions([
+                window_predictions.get(str(window_path), []) for window_path in window_paths
+            ])
+            temporal_plan = build_plan(
+                max_depth=3,
+                analysis=replace(full_audio_report, predictions=temporal_predictions),
+                registry=cpu_registry,
+                allow_resample=True, allow_mono_to_stereo=True,
+            )
             code, payload, tail = run_cli(
                 excerpt, case_output, models_dir, args.inference_timeout,
             )
@@ -394,6 +487,9 @@ def main() -> int:
             excerpt_tasks = (payload or {}).get("plan", {}).get("tasks") or []
             full_track_task_count = len(full_track_tasks)
             route_comparison = routing_drift_details(full_track_tasks, excerpt_tasks)
+            temporal_comparison = multi_window_routing_details(
+                full_track_tasks, to_jsonable(temporal_plan.tasks), per_window_tasks,
+            )
             stage_c.append({
                 "track": row["track"],
                 "category": row["category"],
@@ -407,7 +503,9 @@ def main() -> int:
                 "excerpt_planner_tasks": excerpt_task_count,
                 "excerpt_selection": excerpt_selection,
                 **route_comparison,
-                "routing_drift": bool(route_comparison["missing_full_track_targets"]),
+                **temporal_comparison,
+                "routing_drift": bool(temporal_comparison["multi_window_missing_full_track_targets"]),
+                "single_excerpt_routing_drift": bool(route_comparison["missing_full_track_targets"]),
                 "execution_succeeded": succeeded,
                 "execution_failed": failed,
                 "execution_skipped": sum(item.get("status") == "skipped" for item in task_results),

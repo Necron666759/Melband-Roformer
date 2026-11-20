@@ -103,3 +103,52 @@ def test_routing_drift_details_reports_excerpt_only_targets_without_losing_full_
 
     assert result["missing_full_track_targets"] == []
     assert result["excerpt_only_targets"] == ["organ"]
+
+
+def test_crop_representative_windows_selects_distinct_regions_without_overlap(tmp_path):
+    import numpy as np
+    import soundfile as sf
+    from evaluate_mseparate_babyslakh import crop_representative_windows
+
+    sample_rate = 1000
+    quiet_a = np.full((3000, 2), 0.02, dtype=np.float32)
+    active_a = np.full((3000, 2), 0.8, dtype=np.float32)
+    quiet_b = np.full((3000, 2), 0.03, dtype=np.float32)
+    active_b = np.full((3000, 2), 0.6, dtype=np.float32)
+    source = tmp_path / "multi-region.wav"
+    sf.write(source, np.concatenate((quiet_a, active_a, quiet_b, active_b)), sample_rate)
+
+    windows = crop_representative_windows(
+        source, tmp_path / "windows", 2.0, max_windows=3,
+    )
+
+    assert len(windows) == 3
+    starts = [item["start_seconds"] for item in windows]
+    assert starts == sorted(starts)
+    assert all(
+        abs(left - right) >= 2.0
+        for index, left in enumerate(starts)
+        for right in starts[index + 1:]
+    )
+    assert max(item["window_rms"] for item in windows) > 0.5
+
+
+def test_multi_window_routing_details_uses_union_and_reports_local_activity():
+    from evaluate_mseparate_babyslakh import multi_window_routing_details
+
+    result = multi_window_routing_details(
+        [{"target_stems": ["keys", "organ", "synth"]}],
+        [{"target_stems": ["keys", "organ", "synth"]}],
+        [
+            [{"target_stems": ["keys", "synth"]}],
+            [{"target_stems": ["organ"]}],
+            [],
+        ],
+    )
+
+    assert result["multi_window_target_stems"] == ["keys", "organ", "synth"]
+    assert result["multi_window_missing_full_track_targets"] == []
+    assert result["window_target_presence"] == {"keys": 1, "organ": 1, "synth": 1}
+    assert result["per_window_target_stems"] == [
+        ["keys", "synth"], ["organ"], []
+    ]

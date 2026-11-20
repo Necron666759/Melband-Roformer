@@ -141,6 +141,47 @@ _ACOUSTIC_TARGETS = {
 }
 
 
+
+def aggregate_window_predictions(window_predictions: list[list[dict]]) -> list[dict]:
+    """Aggregate CLAP evidence across distinct windows without requiring a source in every window.
+
+    Mean scores retain the global context while temporal rank fractions preserve
+    intermittent evidence for the planner's conservative routing gates.
+    These values are relative semantic evidence, not calibrated probabilities.
+    """
+    if not window_predictions:
+        return []
+    grouped: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for predictions in window_predictions:
+        for item in predictions:
+            kind = str(item.get("kind", "source"))
+            source = str(item.get("source", ""))
+            if source:
+                grouped[(kind, source)].append(item)
+    source_ranks: list[dict[str, int]] = []
+    for predictions in window_predictions:
+        ranked = sorted(
+            (item for item in predictions if item.get("kind", "source") == "source"),
+            key=lambda item: float(item.get("score", 0.0)), reverse=True,
+        )
+        source_ranks.append({str(item.get("source")): rank for rank, item in enumerate(ranked, 1)})
+    aggregated = []
+    for (kind, source), items in grouped.items():
+        scores = [float(item.get("score", 0.0)) for item in items]
+        result = dict(max(items, key=lambda item: float(item.get("score", 0.0))))
+        result["score"] = round(sum(scores) / len(scores), 6)
+        result["windows"] = len(window_predictions)
+        result["observed_windows"] = len(scores)
+        if kind == "source":
+            ranks = [window[source] for window in source_ranks if source in window]
+            result["window_top_5_fraction"] = round(sum(rank <= 5 for rank in ranks) / len(window_predictions), 6)
+            result["window_top_12_fraction"] = round(sum(rank <= 12 for rank in ranks) / len(window_predictions), 6)
+            result["window_best_source_rank"] = min(ranks) if ranks else None
+            result["window_mean_source_rank"] = round(sum(ranks) / len(ranks), 4) if ranks else None
+        aggregated.append(result)
+    return sorted(aggregated, key=lambda item: float(item.get("score", 0.0)), reverse=True)
+
+
 def _source_score(predictions: list[dict], label: str) -> float | None:
     values = [
         float(item.get("score", 0.0)) for item in predictions
