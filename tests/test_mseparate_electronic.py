@@ -772,18 +772,15 @@ def test_aggregate_window_predictions_preserves_intermittent_real_instrument_evi
         [
             {"kind": "source", "source": "violin", "score": 8.0},
             {"kind": "source", "source": "synth_pad", "score": 7.0},
+            *[{"kind": "source", "source": f"texture_{i}", "score": 3.0 - i * 0.1} for i in range(6)],
         ],
-        [
-            {"kind": "source", "source": "synth_pad", "score": 8.0},
-            {"kind": "source", "source": "violin", "score": 6.0},
-        ],
-        [
-            {"kind": "source", "source": "synth_pad", "score": 8.0},
-            {"kind": "source", "source": "violin", "score": 5.0},
-        ],
-        [
-            {"kind": "source", "source": "synth_pad", "score": 8.0},
-            {"kind": "source", "source": "violin", "score": 4.0},
+        *[
+            [
+                {"kind": "source", "source": "synth_pad", "score": 8.0},
+                {"kind": "source", "source": "violin", "score": 4.0 + i * 0.5},
+                *[{"kind": "source", "source": f"texture_{j}", "score": 7.0 - j * 0.1} for j in range(6)],
+            ]
+            for i in range(3)
         ],
     ]
 
