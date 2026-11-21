@@ -112,6 +112,29 @@ def test_planner_target_audit_reports_false_positives_and_missed_instruments():
     assert result["recall"] == pytest.approx(0.5)
 
 
+
+def test_planner_target_audit_credits_broad_family_coverage_separately():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_urmp import _planner_target_audit
+
+    result = _planner_target_audit(
+        [{"target_stems": ["woodwind", "violin"]}],
+        ["flute", "clarinet", "violin", "viola"],
+    )
+    assert result["true_positive_targets"] == ["violin"]
+    assert result["false_positive_targets"] == ["woodwind"]
+    assert result["missed_ground_truth_targets"] == ["clarinet", "flute", "viola"]
+    assert result["family_covered_ground_truth_targets"] == ["clarinet", "flute"]
+    assert result["family_aware_covered_ground_truth_targets"] == [
+        "clarinet", "flute", "viola", "violin"
+    ]
+    assert result["family_aware_uncovered_ground_truth_targets"] == []
+    assert result["family_aware_recall"] == pytest.approx(1.0)
+
+
+
 def test_planner_temporal_evidence_recovers_interleaved_woodwinds_without_widening_all_gates():
     from mseparate.planner import _detected_acoustic_targets
 

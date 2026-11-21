@@ -86,7 +86,7 @@ def _ground_truth_ranking(predictions: list[dict], instruments: list[str]) -> di
 
 
 def _planner_target_audit(planner_tasks: list[dict], instruments: list[str]) -> dict:
-    """Compare exact planned target labels with unique URMP ground-truth labels."""
+    """Compare exact targets and broad-family coverage against URMP ground truth."""
     ground_truth = set(instruments)
     planned = {
         str(target)
@@ -98,6 +98,25 @@ def _planner_target_audit(planner_tasks: list[dict], instruments: list[str]) -> 
     missed = sorted(ground_truth - planned)
     precision = len(true_positive) / len(planned) if planned else None
     recall = len(true_positive) / len(ground_truth) if ground_truth else None
+
+    # The Mega 53 registry exposes some family heads (for example, "woodwind")
+    # rather than one output per exact instrument. Keep strict label metrics
+    # above, but separately account for ground-truth instruments covered by
+    # those family targets so the audit does not mislabel valid family coverage
+    # as both a false positive and a miss.
+    family_members = {
+        "woodwind": {"flute", "clarinet", "oboe", "bassoon", "saxophone"},
+        "strings": {"violin", "viola", "cello", "double_bass", "harp"},
+        "brass": {"trombone", "trumpet", "tuba", "french_horn"},
+        "guitar": {"guitar", "acoustic_guitar", "electric_guitar"},
+    }
+    family_expanded = set(planned)
+    for target in planned:
+        family_expanded.update(family_members.get(target, set()))
+    covered = sorted(ground_truth & family_expanded)
+    family_only_covered = sorted(set(covered) - set(true_positive))
+    uncovered = sorted(ground_truth - family_expanded)
+    family_recall = len(covered) / len(ground_truth) if ground_truth else None
     return {
         "ground_truth_targets": sorted(ground_truth),
         "planned_targets": sorted(planned),
@@ -106,9 +125,14 @@ def _planner_target_audit(planner_tasks: list[dict], instruments: list[str]) -> 
         "missed_ground_truth_targets": missed,
         "precision": round(precision, 4) if precision is not None else None,
         "recall": round(recall, 4) if recall is not None else None,
+        "family_covered_ground_truth_targets": family_only_covered,
+        "family_aware_covered_ground_truth_targets": covered,
+        "family_aware_uncovered_ground_truth_targets": uncovered,
+        "family_aware_recall": round(family_recall, 4) if family_recall is not None else None,
         "note": (
-            "Exact label overlap is an audit proxy, not perceptual separation quality; "
-            "broad family targets and aliases may require manual interpretation."
+            "Exact-label metrics remain strict. Family-aware recall separately "
+            "credits supported broad outputs such as woodwind for compatible "
+            "ground-truth instruments; neither metric measures perceptual quality."
         ),
     }
 
