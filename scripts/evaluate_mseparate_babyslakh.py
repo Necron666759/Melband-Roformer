@@ -109,6 +109,23 @@ def choose_cases(rows: list[dict], maximum: int) -> list[dict]:
     return chosen
 
 
+def instrument_program_family_coverage(subset_rows: list[dict]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in subset_rows:
+        for family in set(row.get("instrument_program_families", [])):
+            counts[str(family)] = counts.get(str(family), 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def style_family_coverage(rows: list[dict]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        profile = row.get("plan", {}).get("style_profile", {})
+        family = str(profile.get("family") or "unknown")
+        counts[family] = counts.get(family, 0) + 1
+    return dict(sorted(counts.items()))
+
+
 def execution_counts(payload: dict | None) -> tuple[int, int, list[dict], int]:
     """Read serialized ExecutionSummary results, not non-serialized properties."""
     payload = payload or {}
@@ -486,6 +503,9 @@ def main() -> int:
             "duration_seconds": report.audio.duration_seconds,
             "sample_rate": report.audio.sample_rate,
             "category": category,
+            "style_profile": plan_json.get("style_profile", {}),
+            "instrument_program_families": subset_row.get("instrument_program_families", []),
+            "instrument_program_count": subset_row.get("instrument_program_count", 0),
             "classification_evidence": evidence,
             "top_source_predictions": [
                 item for item in found if item.get("kind", "source") == "source"
@@ -621,6 +641,11 @@ def main() -> int:
             "metadata_files_scanned": subset.get("metadata_files_scanned"),
             "candidate_tracks_found": subset.get("candidate_tracks_found"),
             "selection_strategy": subset.get("selection_strategy"),
+            "instrument_program_family_coverage": instrument_program_family_coverage(subset_rows),
+            "distinct_instrument_program_families": sorted({
+                family for row in subset_rows
+                for family in row.get("instrument_program_families", [])
+            }),
             "download_method": subset.get("download_method"),
             "full_archive_downloaded": subset.get("full_archive_downloaded"),
             "extracted_files": subset.get("extracted_files"),
@@ -653,6 +678,7 @@ def main() -> int:
                     category: sum(1 for row in rows if row["category"] == category)
                     for category in ("electronic", "orchestral", "mixed", "ambiguous", "other")
                 },
+                "style_family_coverage": style_family_coverage(rows),
             },
             "C_inference_and_output_review": {
                 "status": "completed" if stage_c else "not_run",

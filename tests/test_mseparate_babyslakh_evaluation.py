@@ -7,6 +7,35 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from evaluate_mseparate_babyslakh import execution_counts, stage_c_progress_message
 
+
+def test_instrument_program_family_coverage_counts_tracks_not_stems():
+    from evaluate_mseparate_babyslakh import instrument_program_family_coverage
+
+    result = instrument_program_family_coverage([
+        {"instrument_program_families": ["strings", "synth_lead"]},
+        {"instrument_program_families": ["strings", "brass"]},
+        {"instrument_program_families": []},
+    ])
+    assert result == {"brass": 1, "strings": 2, "synth_lead": 1}
+
+
+def test_style_family_coverage_counts_unknown_and_known_profiles():
+    from evaluate_mseparate_babyslakh import style_family_coverage
+
+    result = style_family_coverage([
+        {"plan": {"style_profile": {"family": "electronic"}}},
+        {"plan": {"style_profile": {"family": "electronic"}}},
+        {"plan": {"style_profile": {"family": "mixed_or_uncertain"}}},
+        {"plan": {}},
+    ])
+    assert result == {
+        "electronic": 2,
+        "mixed_or_uncertain": 1,
+        "unknown": 1,
+    }
+
+
+
 def test_execution_counts_reads_serialized_task_results():
     payload = {
         "execution": {
