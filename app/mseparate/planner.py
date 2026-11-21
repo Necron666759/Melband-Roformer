@@ -244,12 +244,63 @@ def _detected_acoustic_targets(
         if mapping is None:
             continue
         score = float(item.get("score", 0.0))
-        if rank > max_rank or top_score - score > max_gap:
+        window_best_rank = item.get("window_best_source_rank")
+        window_top_5_fraction = float(item.get("window_top_5_fraction") or 0.0)
+        temporal_support = (
+            window_best_rank is not None
+            and int(window_best_rank) <= 5
+            and window_top_5_fraction >= 0.25
+        )
+        # Generic family labels are especially prone to semantic bleed in
+        # dense orchestral mixes. Keep them only with stronger temporal support;
+        # specific instrument labels use the normal gate or temporal recovery.
+        if source in {"strings", "brass", "woodwinds", "guitar"} and not (
+            window_best_rank is not None
+            and int(window_best_rank) <= 3
+            and window_top_5_fraction >= 0.65
+        ):
+            continue
+        if (
+            source in {"flute", "clarinet", "oboe", "bassoon", "saxophone"}
+            and "window_top_5_fraction" in item
+            and window_top_5_fraction < 0.25
+            and not (rank <= 3 and top_score - score <= 0.50)
+        ):
+            continue
+        # In the URMP audit, saxophone and french-horn were recurring
+        # orchestral confusions when they appeared in many windows but rarely
+        # ranked among the strongest sources. Require stronger temporal
+        # concentration unless aggregate evidence is exceptionally strong.
+        if (
+            source in {"saxophone", "french_horn"}
+            and "window_top_5_fraction" in item
+            and window_top_5_fraction < 0.75
+            and not (rank <= 2 and top_score - score <= 0.35)
+        ):
+            continue
+        # A weak cello candidate can inherit generic string-family evidence.
+        # Reject only when both its top-five presence is sparse and its mean
+        # window rank is poor; intermittent candidates with stronger window
+        # evidence remain eligible.
+        window_mean_rank = item.get("window_mean_source_rank")
+        if (
+            source == "cello"
+            and window_mean_rank is not None
+            and window_top_5_fraction < 0.35
+            and float(window_mean_rank) > 8.5
+            and not (rank <= 2 and top_score - score <= 0.35)
+        ):
+            continue
+        if (rank > max_rank or top_score - score > max_gap) and not temporal_support:
             continue
         target, synthetic_counterpart = mapping
         if synthetic_counterpart:
             synthetic_score = score_by_source.get(synthetic_counterpart)
-            if synthetic_score is not None and score < synthetic_score + 0.10:
+            if (
+                synthetic_score is not None
+                and score < synthetic_score + 0.10
+                and not (family == "electronic" and temporal_support)
+            ):
                 continue
         accepted.append((source, target, rank, score))
     # Prefer specific instrument heads over a broad family head when both fire.

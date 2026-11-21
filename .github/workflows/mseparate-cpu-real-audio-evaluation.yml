@@ -5,6 +5,7 @@ on:
     branches:
       - feature/mseparate-cpu-real-audio-evaluation
       - feature/mseparate-snare-toms-quality-evaluation
+      - feature/mseparate-urmp-window-evidence
     paths:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
@@ -12,7 +13,9 @@ on:
       - "scripts/inspect_mseparate_stemgmd_archive.py"
       - "scripts/download_mseparate_stemgmd_subset.py"
       - "tests/test_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_stemgmd_archive.py"
       - "tests/test_mseparate_vram.py"
+      - "tests/test_mseparate_urmp_evaluation.py"
       - "scripts/download_mseparate_babyslakh_subset.py"
       - "tests/test_mseparate_babyslakh_subset.py"
       - "tests/test_mseparate_babyslakh_evaluation.py"
@@ -31,7 +34,9 @@ on:
       - "scripts/inspect_mseparate_stemgmd_archive.py"
       - "scripts/download_mseparate_stemgmd_subset.py"
       - "tests/test_mseparate_stemgmd_subset.py"
+      - "tests/test_mseparate_stemgmd_archive.py"
       - "tests/test_mseparate_vram.py"
+      - "tests/test_mseparate_urmp_evaluation.py"
       - "scripts/download_mseparate_babyslakh_subset.py"
       - "tests/test_mseparate_babyslakh_subset.py"
       - "tests/test_mseparate_babyslakh_evaluation.py"
@@ -123,6 +128,7 @@ jobs:
             tests/test_mseparate_babyslakh_evaluation.py \
             tests/test_mseparate_babyslakh_subset.py \
             tests/test_mseparate_stemgmd_subset.py \
+            tests/test_mseparate_stemgmd_archive.py \
             tests/test_mseparate_vram.py
 
       - name: Download eight diverse StemGMD Snare/Toms reference tracks

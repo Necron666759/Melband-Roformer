@@ -35,31 +35,105 @@ def _ground_truth_ranking(predictions: list[dict], instruments: list[str]) -> di
         key=lambda item: float(item.get("score", 0.0)),
         reverse=True,
     )
-    positions = {str(item.get("source")): (rank, float(item.get("score", 0.0)))
+    positions = {str(item.get("source")): (rank, item)
                  for rank, item in enumerate(ranked, start=1)}
     unique = list(dict.fromkeys(instruments))
     rows = []
     for instrument in unique:
-        rank_score = positions.get(instrument)
+        rank_item = positions.get(instrument)
+        rank = rank_item[0] if rank_item else None
+        prediction = rank_item[1] if rank_item else {}
+        window_best_rank = prediction.get("window_best_source_rank")
+        window_top_5_fraction = prediction.get("window_top_5_fraction")
+        window_top_12_fraction = prediction.get("window_top_12_fraction")
         rows.append({
             "instrument": instrument,
-            "rank": rank_score[0] if rank_score else None,
-            "score": round(rank_score[1], 6) if rank_score else None,
-            "in_top_5": bool(rank_score and rank_score[0] <= 5),
-            "in_top_12": bool(rank_score and rank_score[0] <= 12),
+            "rank": rank,
+            "score": round(float(prediction.get("score", 0.0)), 6) if rank_item else None,
+            "in_top_5": bool(rank and rank <= 5),
+            "in_top_12": bool(rank and rank <= 12),
+            "window_best_source_rank": window_best_rank,
+            "window_mean_source_rank": prediction.get("window_mean_source_rank"),
+            "window_top_5_fraction": window_top_5_fraction,
+            "window_top_12_fraction": window_top_12_fraction,
+            "window_detected_top_5": bool(window_best_rank is not None and window_best_rank <= 5),
+            "window_detected_top_12": bool(window_best_rank is not None and window_best_rank <= 12),
             "mixture_count": instruments.count(instrument),
         })
     found = sum(row["in_top_12"] for row in rows)
+    window_found_5 = sum(row["window_detected_top_5"] for row in rows)
+    window_found_12 = sum(row["window_detected_top_12"] for row in rows)
     return {
         "unique_ground_truth_instruments": len(unique),
         "matched_in_top_5": sum(row["in_top_5"] for row in rows),
         "matched_in_top_12": found,
         "top_5_recall": round(sum(row["in_top_5"] for row in rows) / len(unique), 4) if unique else None,
         "top_12_recall": round(found / len(unique), 4) if unique else None,
+        "window_top_5_any_recall": round(window_found_5 / len(unique), 4) if unique else None,
+        "window_top_12_any_recall": round(window_found_12 / len(unique), 4) if unique else None,
+        "window_only_top_5_recoveries": [
+            row["instrument"] for row in rows if row["window_detected_top_5"] and not row["in_top_5"]
+        ],
+        "window_only_top_12_recoveries": [
+            row["instrument"] for row in rows if row["window_detected_top_12"] and not row["in_top_12"]
+        ],
         "instruments": rows,
         "duplicate_instrument_note": (
             "Repeated instruments share one mixture-level label rank; CLAP cannot count "
             "how many separate performers or instances are present."
+        ),
+    }
+
+
+def _planner_target_audit(planner_tasks: list[dict], instruments: list[str]) -> dict:
+    """Compare exact targets and broad-family coverage against URMP ground truth."""
+    ground_truth = set(instruments)
+    planned = {
+        str(target)
+        for task in planner_tasks
+        for target in task.get("target_stems", [])
+    }
+    true_positive = sorted(ground_truth & planned)
+    false_positive = sorted(planned - ground_truth)
+    missed = sorted(ground_truth - planned)
+    precision = len(true_positive) / len(planned) if planned else None
+    recall = len(true_positive) / len(ground_truth) if ground_truth else None
+
+    # The Mega 53 registry exposes some family heads (for example, "woodwind")
+    # rather than one output per exact instrument. Keep strict label metrics
+    # above, but separately account for ground-truth instruments covered by
+    # those family targets so the audit does not mislabel valid family coverage
+    # as both a false positive and a miss.
+    family_members = {
+        "woodwind": {"flute", "clarinet", "oboe", "bassoon", "saxophone"},
+        "strings": {"violin", "viola", "cello", "double_bass", "harp"},
+        "brass": {"trombone", "trumpet", "tuba", "french_horn"},
+        "guitar": {"guitar", "acoustic_guitar", "electric_guitar"},
+    }
+    family_expanded = set(planned)
+    for target in planned:
+        family_expanded.update(family_members.get(target, set()))
+    covered = sorted(ground_truth & family_expanded)
+    family_only_covered = sorted(set(covered) - set(true_positive))
+    uncovered = sorted(ground_truth - family_expanded)
+    family_recall = len(covered) / len(ground_truth) if ground_truth else None
+    return {
+        "ground_truth_targets": sorted(ground_truth),
+        "unique_ground_truth_count": len(ground_truth),
+        "planned_targets": sorted(planned),
+        "true_positive_targets": true_positive,
+        "false_positive_targets": false_positive,
+        "missed_ground_truth_targets": missed,
+        "precision": round(precision, 4) if precision is not None else None,
+        "recall": round(recall, 4) if recall is not None else None,
+        "family_covered_ground_truth_targets": family_only_covered,
+        "family_aware_covered_ground_truth_targets": covered,
+        "family_aware_uncovered_ground_truth_targets": uncovered,
+        "family_aware_recall": round(family_recall, 4) if family_recall is not None else None,
+        "note": (
+            "Exact-label metrics remain strict. Family-aware recall separately "
+            "credits supported broad outputs such as woodwind for compatible "
+            "ground-truth instruments; neither metric measures perceptual quality."
         ),
     }
 
@@ -167,6 +241,9 @@ def main() -> int:
             "plan": to_jsonable(plan),
             "planner_task_count": len(plan.tasks),
             "planner_tasks": [to_jsonable(task) for task in plan.tasks],
+            "planner_target_audit": _planner_target_audit(
+                [to_jsonable(task) for task in plan.tasks], MIXES[path.parent.name],
+            ),
             "cuda_low_vram_mono_plan": to_jsonable(cuda_mono_plan),
             "cuda_low_vram_mono_task_count": len(cuda_mono_plan.tasks),
             "cuda_low_vram_stereo_adapter_preview": to_jsonable(cuda_stereo_preview_plan),
@@ -212,6 +289,21 @@ def main() -> int:
             "total_cuda_low_vram_stereo_preview_tasks": sum(row["cuda_low_vram_stereo_adapter_preview_task_count"] for row in rows),
             "ground_truth_instrument_labels": sum(row["ground_truth_ranking"]["unique_ground_truth_instruments"] for row in rows),
             "ground_truth_labels_in_clap_top12": sum(row["ground_truth_ranking"]["matched_in_top_12"] for row in rows),
+            "planner_target_true_positives": sum(len(row["planner_target_audit"]["true_positive_targets"]) for row in rows),
+            "planner_target_false_positives": sum(len(row["planner_target_audit"]["false_positive_targets"]) for row in rows),
+            "planner_target_misses": sum(len(row["planner_target_audit"]["missed_ground_truth_targets"]) for row in rows),
+            "family_aware_ground_truth_covered": sum(
+                len(row["planner_target_audit"]["family_aware_covered_ground_truth_targets"])
+                for row in rows
+            ),
+            "family_aware_ground_truth_uncovered": sum(
+                len(row["planner_target_audit"]["family_aware_uncovered_ground_truth_targets"])
+                for row in rows
+            ),
+            "family_aware_recall": round(
+                sum(len(row["planner_target_audit"]["family_aware_covered_ground_truth_targets"]) for row in rows)
+                / max(1, sum(row["planner_target_audit"]["unique_ground_truth_count"] for row in rows)), 4
+            ),
         },
         "limitations": [
             "This stage evaluates source analysis and routing only; it does not run separation inference.",
