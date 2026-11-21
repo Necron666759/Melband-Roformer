@@ -163,6 +163,58 @@ def test_component_projection_diagnostics_identifies_overlapping_source():
     assert "not an additive" in by_name["kick"]["interpretation"]
 
 
+
+def test_windowed_projection_localizes_transient_snare_overlap():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _windowed_component_projection_diagnostics
+
+    sample_rate = 100
+    samples = 200
+    time = np.arange(samples, dtype=np.float64) / sample_rate
+    tom = np.column_stack((np.sin(2 * np.pi * 5 * time), np.sin(2 * np.pi * 5 * time)))
+    snare = np.zeros_like(tom)
+    snare[50:100, 0] = np.cos(2 * np.pi * 7 * time[50:100])
+    snare[50:100, 1] = np.cos(2 * np.pi * 7 * time[50:100])
+    estimate = tom + 2.0 * snare
+
+    rows = _windowed_component_projection_diagnostics(
+        estimate, {"snare": snare, "hi_tom": tom},
+        sample_rate=sample_rate, window_seconds=0.5,
+    )
+    by_name = {row["name"]: row for row in rows}
+    assert by_name["snare"]["windows_scored"] == 1
+    assert by_name["snare"]["peak_window_start_seconds"] == pytest.approx(0.5)
+    assert by_name["snare"]["max_projection_fraction"] > 0.7
+    assert by_name["hi_tom"]["windows_scored"] == 4
+    assert "not additive" in by_name["snare"]["interpretation"]
+
+
+def test_windowed_projection_reports_silent_components_without_nan():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _windowed_component_projection_diagnostics
+
+    rows = _windowed_component_projection_diagnostics(
+        np.ones((100, 2)), {"silent": np.zeros((100, 2))},
+        sample_rate=100, window_seconds=0.5,
+    )
+    assert rows == [{
+        "name": "silent",
+        "window_seconds": 0.5,
+        "windows_scored": 0,
+        "median_projection_fraction": None,
+        "p90_projection_fraction": None,
+        "max_projection_fraction": None,
+        "windows_at_or_above_25_percent": 0,
+        "peak_window_start_seconds": None,
+        "interpretation": "no active aligned windows available for projection",
+    }]
+
+
+
 def test_component_projection_diagnostics_rejects_misaligned_component():
     from pathlib import Path
     import sys

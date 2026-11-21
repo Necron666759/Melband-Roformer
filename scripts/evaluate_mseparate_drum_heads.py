@@ -225,6 +225,106 @@ def _component_projection_diagnostics(
     return rows
 
 
+def _windowed_component_projection_diagnostics(
+    estimate: np.ndarray,
+    components: dict[str, np.ndarray],
+    *,
+    sample_rate: int,
+    window_seconds: float = 0.5,
+) -> list[dict]:
+    """Locate time regions with component overlap in the estimated stem.
+
+    Each component is projected independently inside fixed, non-overlapping
+    windows. The resulting fractions are local diagnostics, not additive
+    attribution or proof of causal leakage.
+    """
+    if sample_rate < 1 or not math.isfinite(window_seconds) or window_seconds <= 0:
+        raise ValueError("sample_rate and window_seconds must be positive")
+    estimate = np.asarray(estimate, dtype=np.float64)
+    if estimate.ndim != 2:
+        raise ValueError("estimate must be a time-by-channel array")
+    window_samples = max(1, int(round(sample_rate * window_seconds)))
+    rows = []
+    for name, reference in sorted(components.items()):
+        reference = np.asarray(reference, dtype=np.float64)
+        if reference.shape != estimate.shape:
+            raise ValueError(
+                f"Component {name!r} shape {reference.shape} differs from estimate {estimate.shape}"
+            )
+        fractions = []
+        starts = []
+        for start in range(0, len(estimate), window_samples):
+            stop = min(len(estimate), start + window_samples)
+            estimate_window = estimate[start:stop].reshape(-1)
+            reference_window = reference[start:stop].reshape(-1)
+            estimate_energy = float(np.dot(estimate_window, estimate_window))
+            reference_energy = float(np.dot(reference_window, reference_window))
+            if estimate_energy <= 1e-20 or reference_energy <= 1e-20:
+                continue
+            dot = float(np.dot(estimate_window, reference_window))
+            fraction = (dot * dot / reference_energy) / estimate_energy
+            if math.isfinite(fraction):
+                fractions.append(float(fraction))
+                starts.append(start / sample_rate)
+        if fractions:
+            peak_index = max(range(len(fractions)), key=fractions.__getitem__)
+            rows.append({
+                "name": name,
+                "window_seconds": window_seconds,
+                "windows_scored": len(fractions),
+                "median_projection_fraction": float(np.median(fractions)),
+                "p90_projection_fraction": float(np.quantile(fractions, 0.90)),
+                "max_projection_fraction": float(fractions[peak_index]),
+                "windows_at_or_above_25_percent": sum(value >= 0.25 for value in fractions),
+                "peak_window_start_seconds": float(starts[peak_index]),
+                "interpretation": (
+                    "window-local independent component overlap; not additive "
+                    "source attribution or proof of causal leakage"
+                ),
+            })
+        else:
+            rows.append({
+                "name": name,
+                "window_seconds": window_seconds,
+                "windows_scored": 0,
+                "median_projection_fraction": None,
+                "p90_projection_fraction": None,
+                "max_projection_fraction": None,
+                "windows_at_or_above_25_percent": 0,
+                "peak_window_start_seconds": None,
+                "interpretation": "no active aligned windows available for projection",
+            })
+    return rows
+
+
+def _tom_windowed_projection_summary(tom_rows: list[dict]) -> dict:
+    """Aggregate window-local overlap diagnostics without summing fractions."""
+    values: dict[str, list[float]] = {}
+    peaks: dict[str, list[float]] = {}
+    for track in tom_rows:
+        for item in track.get("windowed_component_projection_diagnostics", []):
+            value = item.get("max_projection_fraction")
+            if value is not None and math.isfinite(float(value)):
+                values.setdefault(str(item.get("name", "unknown")), []).append(float(value))
+                peaks.setdefault(str(item.get("name", "unknown")), []).append(float(value))
+    components = {
+        name: {
+            "tracks": len(rows),
+            "mean_track_max_projection_fraction": round(float(np.mean(rows)), 4),
+            "median_track_max_projection_fraction": round(float(np.median(rows)), 4),
+            "tracks_with_window_at_or_above_25_percent": sum(value >= 0.25 for value in rows),
+        }
+        for name, rows in sorted(values.items())
+    }
+    return {
+        "components": components,
+        "interpretation": (
+            "Per-track maximum of 0.5-second local projections. Windows and "
+            "components overlap in meaning; values are not additive or causal."
+        ),
+    }
+
+
 def _component_quality_diagnostics(
     estimate: np.ndarray,
     mixture: np.ndarray,
@@ -536,6 +636,11 @@ def main() -> int:
                     "component_projection_diagnostics": _component_projection_diagnostics(
                         estimate, source_components,
                     ),
+                    "windowed_component_projection_diagnostics": (
+                        _windowed_component_projection_diagnostics(
+                            estimate, source_components, sample_rate=model.sample_rate,
+                        ) if target == "toms" else []
+                    ),
                     "component_target_quality_diagnostics": (
                         _component_quality_diagnostics(estimate, mixture, source_components)
                         if target == "toms" else []
@@ -596,6 +701,7 @@ def main() -> int:
         "toms_component_quality_summary": toms_component_quality_summary,
         "toms_component_coverage": toms_component_coverage,
         "toms_projection_summary": _tom_projection_summary(tom_rows),
+        "toms_windowed_projection_summary": _tom_windowed_projection_summary(tom_rows),
         "tom_salience_policy": (
             "Diagnostic-only bins based on Tom reference RMS relative to mixture: "
             ">= -20 dB, -30 to -20 dB, and < -30 dB. Bins do not exclude or "
