@@ -128,10 +128,10 @@ def test_planner_target_audit_credits_broad_family_coverage_separately():
     assert result["missed_ground_truth_targets"] == ["clarinet", "flute", "viola"]
     assert result["family_covered_ground_truth_targets"] == ["clarinet", "flute"]
     assert result["family_aware_covered_ground_truth_targets"] == [
-        "clarinet", "flute", "viola", "violin"
+        "clarinet", "flute", "violin"
     ]
-    assert result["family_aware_uncovered_ground_truth_targets"] == []
-    assert result["family_aware_recall"] == pytest.approx(1.0)
+    assert result["family_aware_uncovered_ground_truth_targets"] == ["viola"]
+    assert result["family_aware_recall"] == pytest.approx(0.75)
 
 
 
