@@ -158,7 +158,8 @@ jobs:
           python scripts/download_mseparate_babyslakh_subset.py \
             --output-dir "${{ runner.temp }}/mseparate-evaluation/dataset" \
             --manifest "${{ runner.temp }}/mseparate-evaluation/reports/babyslakh-subset-manifest.json" \
-            --max-tracks 8
+            --max-tracks 16 \
+            --metadata-scan-limit 128
 
       - name: Download selected URMP audio to the ephemeral runner
         run: bash scripts/download_mseparate_urmp_subset.sh "${{ runner.temp }}/mseparate-urmp"
