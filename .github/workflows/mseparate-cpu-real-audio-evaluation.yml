@@ -5,6 +5,7 @@ on:
     branches:
       - feature/mseparate-cpu-real-audio-evaluation
       - feature/mseparate-snare-toms-quality-evaluation
+      - feature/mseparate-toms-leakage-diagnostics
     paths:
       - "app/mseparate/**"
       - "scripts/evaluate_mseparate_babyslakh.py"
@@ -44,7 +45,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mseparate-cpu-real-audio-evaluation-${{ github.ref }}
+  group: mseparate-cpu-real-audio-evaluation-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:

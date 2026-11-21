@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import sys
 import types
 from pathlib import Path
@@ -134,8 +135,11 @@ def test_download_builds_mixture_and_manifest_from_selected_members(tmp_path, mo
 
     with manifest.open(encoding="utf-8", newline="") as stream:
         row = next(csv.DictReader(stream))
-    assert set(row) == {"track_id", "mixture", "snare", "toms"}
+    assert set(row) == {"track_id", "mixture", "snare", "toms", "components"}
     assert len(row["toms"].split(";")) == 3
+    component_paths = json.loads(row["components"])
+    assert set(component_paths) == set(subset.INSTRUMENTS)
+    assert all((manifest.parent / value).is_file() for value in component_paths.values())
 
     mixture_path = (manifest.parent / row["mixture"]).resolve()
     mixture, rate = sf.read(str(mixture_path), dtype="float32", always_2d=True)

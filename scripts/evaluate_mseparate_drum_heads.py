@@ -188,6 +188,303 @@ def _tom_component_diagnostics(
     }
 
 
+def _component_projection_diagnostics(
+    estimate: np.ndarray,
+    components: dict[str, np.ndarray],
+) -> list[dict]:
+    """Measure non-exclusive linear projection overlap with each isolated source.
+
+    These values are diagnostic correlations, not proof of causal leakage. Each
+    component is projected independently, so fractions are not additive.
+    """
+    estimate = np.asarray(estimate, dtype=np.float64)
+    estimate_flat = estimate.reshape(-1)
+    estimate_energy = float(np.dot(estimate_flat, estimate_flat))
+    rows = []
+    for name, samples in sorted(components.items()):
+        samples = np.asarray(samples, dtype=np.float64)
+        if samples.shape != estimate.shape:
+            raise ValueError(
+                f"Component {name!r} shape {samples.shape} differs from estimate {estimate.shape}"
+            )
+        reference_flat = samples.reshape(-1)
+        reference_energy = float(np.dot(reference_flat, reference_flat))
+        if estimate_energy <= 1e-20 or reference_energy <= 1e-20:
+            correlation = None
+            projection_fraction = None
+        else:
+            dot = float(np.dot(estimate_flat, reference_flat))
+            correlation = dot / math.sqrt(estimate_energy * reference_energy)
+            projection_fraction = (dot * dot / reference_energy) / estimate_energy
+        rows.append({
+            "name": name,
+            "normalized_correlation": correlation,
+            "estimate_energy_projection_fraction": projection_fraction,
+            "interpretation": "independent component overlap; not an additive leakage estimate",
+        })
+    return rows
+
+
+def _windowed_component_projection_diagnostics(
+    estimate: np.ndarray,
+    components: dict[str, np.ndarray],
+    *,
+    sample_rate: int,
+    window_seconds: float = 0.5,
+) -> list[dict]:
+    """Locate time regions with component overlap in the estimated stem.
+
+    Each component is projected independently inside fixed, non-overlapping
+    windows. The resulting fractions are local diagnostics, not additive
+    attribution or proof of causal leakage.
+    """
+    if sample_rate < 1 or not math.isfinite(window_seconds) or window_seconds <= 0:
+        raise ValueError("sample_rate and window_seconds must be positive")
+    estimate = np.asarray(estimate, dtype=np.float64)
+    if estimate.ndim != 2:
+        raise ValueError("estimate must be a time-by-channel array")
+    window_samples = max(1, int(round(sample_rate * window_seconds)))
+    rows = []
+    for name, reference in sorted(components.items()):
+        reference = np.asarray(reference, dtype=np.float64)
+        if reference.shape != estimate.shape:
+            raise ValueError(
+                f"Component {name!r} shape {reference.shape} differs from estimate {estimate.shape}"
+            )
+        fractions = []
+        starts = []
+        for start in range(0, len(estimate), window_samples):
+            stop = min(len(estimate), start + window_samples)
+            estimate_window = estimate[start:stop].reshape(-1)
+            reference_window = reference[start:stop].reshape(-1)
+            estimate_energy = float(np.dot(estimate_window, estimate_window))
+            reference_energy = float(np.dot(reference_window, reference_window))
+            if estimate_energy <= 1e-20 or reference_energy <= 1e-20:
+                continue
+            dot = float(np.dot(estimate_window, reference_window))
+            fraction = (dot * dot / reference_energy) / estimate_energy
+            if math.isfinite(fraction):
+                fractions.append(float(fraction))
+                starts.append(start / sample_rate)
+        if fractions:
+            peak_index = max(range(len(fractions)), key=fractions.__getitem__)
+            rows.append({
+                "name": name,
+                "window_seconds": window_seconds,
+                "windows_scored": len(fractions),
+                "median_projection_fraction": float(np.median(fractions)),
+                "p90_projection_fraction": float(np.quantile(fractions, 0.90)),
+                "max_projection_fraction": float(fractions[peak_index]),
+                "windows_at_or_above_25_percent": sum(value >= 0.25 for value in fractions),
+                "peak_window_start_seconds": float(starts[peak_index]),
+                "interpretation": (
+                    "window-local independent component overlap; not additive "
+                    "source attribution or proof of causal leakage"
+                ),
+            })
+        else:
+            rows.append({
+                "name": name,
+                "window_seconds": window_seconds,
+                "windows_scored": 0,
+                "median_projection_fraction": None,
+                "p90_projection_fraction": None,
+                "max_projection_fraction": None,
+                "windows_at_or_above_25_percent": 0,
+                "peak_window_start_seconds": None,
+                "interpretation": "no active aligned windows available for projection",
+            })
+    return rows
+
+
+def _tom_windowed_projection_summary(tom_rows: list[dict]) -> dict:
+    """Aggregate window-local overlap diagnostics without summing fractions."""
+    values: dict[str, list[float]] = {}
+    for track in tom_rows:
+        for item in track.get("windowed_component_projection_diagnostics", []):
+            value = item.get("max_projection_fraction")
+            if value is not None and math.isfinite(float(value)):
+                values.setdefault(str(item.get("name", "unknown")), []).append(float(value))
+    components = {
+        name: {
+            "tracks": len(rows),
+            "mean_track_max_projection_fraction": round(float(np.mean(rows)), 4),
+            "median_track_max_projection_fraction": round(float(np.median(rows)), 4),
+            "tracks_with_window_at_or_above_25_percent": sum(value >= 0.25 for value in rows),
+        }
+        for name, rows in sorted(values.items())
+    }
+    return {
+        "components": components,
+        "interpretation": (
+            "Per-track maximum of 0.5-second local projections. Windows and "
+            "components overlap in meaning; values are not additive or causal."
+        ),
+    }
+
+
+def _component_quality_diagnostics(
+    estimate: np.ndarray,
+    mixture: np.ndarray,
+    components: dict[str, np.ndarray],
+) -> list[dict]:
+    """Score an estimate against each isolated source, not only the aggregate target.
+
+    This helps distinguish a genuinely broad Toms estimate from a head that
+    mostly follows one tom, Snare, Kick, or another kit component. Silent
+    references are retained as explicit rows but are not passed to SI-SDR.
+    """
+    rows = []
+    for name, reference in sorted(components.items()):
+        reference_rms = float(np.sqrt(np.mean(np.asarray(reference, dtype=np.float64) ** 2)))
+        if reference_rms <= 1e-10:
+            rows.append({"name": name, "status": "silent_reference", "si_sdr_db": None,
+                         "mixture_baseline_si_sdr_db": None, "si_sdri_db": None})
+            continue
+        score = si_sdr_db(reference, estimate)
+        baseline = si_sdr_db(reference, mixture)
+        # If both the estimate and mixture are exact copies of this source,
+        # SI-SDRi is inf - inf and therefore undefined rather than NaN.
+        improvement = None if math.isinf(score) and math.isinf(baseline) else score - baseline
+        rows.append({
+            "name": name,
+            "status": "scored",
+            "si_sdr_db": score,
+            "mixture_baseline_si_sdr_db": baseline,
+            "si_sdri_db": improvement,
+        })
+    return rows
+
+
+
+def _component_quality_summary(tom_rows: list[dict]) -> dict:
+    """Aggregate per-component SI-SDRi across Toms estimates for audit reporting.
+
+    This is descriptive only: positive overlap with a non-Tom component does
+    not prove causal leakage, and component scores are not additive.
+    """
+    component_values: dict[str, list[float]] = {}
+    for track in tom_rows:
+        for item in track.get("component_target_quality_diagnostics", []):
+            value = item.get("si_sdri_db")
+            if item.get("status") != "scored" or value is None:
+                continue
+            value = float(value)
+            if math.isfinite(value):
+                component_values.setdefault(str(item["name"]), []).append(value)
+
+    components = {}
+    for name, values in sorted(component_values.items()):
+        components[name] = {
+            "count": len(values),
+            "mean_si_sdri_db": round(float(np.mean(values)), 4),
+            "median_si_sdri_db": round(float(np.median(values)), 4),
+            "positive_improvement_count": sum(value > 0.0 for value in values),
+            "negative_improvement_count": sum(value < 0.0 for value in values),
+        }
+
+    tom_names = {"hi_tom", "mid_tom", "low_tom"}
+    target_values = [
+        value for name, values in component_values.items()
+        if name in tom_names for value in values
+    ]
+    other_values = [
+        value for name, values in component_values.items()
+        if name not in tom_names for value in values
+    ]
+    return {
+        "components": components,
+        "tom_reference_components": {
+            "count": len(target_values),
+            "mean_si_sdri_db": round(float(np.mean(target_values)), 4) if target_values else None,
+            "positive_improvement_count": sum(value > 0.0 for value in target_values),
+        },
+        "non_tom_components": {
+            "count": len(other_values),
+            "mean_si_sdri_db": round(float(np.mean(other_values)), 4) if other_values else None,
+            "positive_improvement_count": sum(value > 0.0 for value in other_values),
+        },
+        "interpretation": (
+            "Per-component SI-SDRi is an independent diagnostic, not an additive "
+            "or causal leakage estimate; silent references and undefined values are excluded."
+        ),
+    }
+
+def _tom_component_coverage_summary(tom_rows: list[dict]) -> dict:
+    """Report how many active Tom references improve per evaluated track.
+
+    Coverage is a descriptive completeness diagnostic, not a causal leakage
+    estimate or a replacement for the aggregate SI-SDR/SI-SDRi metrics.
+    """
+    names = {"hi_tom", "mid_tom", "low_tom"}
+    tracks = []
+    for track in tom_rows:
+        active = [
+            item for item in track.get("component_target_quality_diagnostics", [])
+            if item.get("name") in names
+            and item.get("status") == "scored"
+            and item.get("si_sdri_db") is not None
+            and math.isfinite(float(item["si_sdri_db"]))
+        ]
+        positive = sum(float(item["si_sdri_db"]) > 0.0 for item in active)
+        count = len(active)
+        tracks.append({
+            "track_id": track.get("track_id"),
+            "active_tom_component_count": count,
+            "positive_tom_component_count": positive,
+            "positive_component_fraction": round(positive / count, 4) if count else None,
+        })
+    fractions = [
+        row["positive_component_fraction"] for row in tracks
+        if row["positive_component_fraction"] is not None
+    ]
+    return {
+        "tracks": tracks,
+        "tracks_with_active_tom_components": len(fractions),
+        "tracks_with_all_active_tom_components_improved": sum(value == 1.0 for value in fractions),
+        "mean_positive_component_fraction": round(float(np.mean(fractions)), 4) if fractions else None,
+        "interpretation": (
+            "Per-track fraction of active hi/mid/low Tom references with positive SI-SDRi; "
+            "descriptive only and not an additive or causal leakage estimate."
+        ),
+    }
+
+
+
+def _tom_projection_summary(tom_rows: list[dict]) -> dict:
+    """Summarize normalized projection of the Tom estimate onto kit references.
+
+    Projection fractions are independent, potentially overlapping diagnostics;
+    they are not additive source attribution or proof of causal leakage.
+    """
+    values: dict[str, list[float]] = {}
+    for track in tom_rows:
+        for item in track.get("component_projection_diagnostics", []):
+            fraction = item.get("estimate_energy_projection_fraction")
+            if fraction is None:
+                continue
+            fraction = float(fraction)
+            if math.isfinite(fraction):
+                values.setdefault(str(item.get("name", "unknown")), []).append(fraction)
+    components = {
+        name: {
+            "count": len(rows),
+            "mean_projection_fraction": round(float(np.mean(rows)), 4),
+            "median_projection_fraction": round(float(np.median(rows)), 4),
+            "tracks_at_or_above_25_percent": sum(value >= 0.25 for value in rows),
+        }
+        for name, rows in sorted(values.items())
+    }
+    return {
+        "components": components,
+        "interpretation": (
+            "Normalized projection of the estimated Tom stem onto each aligned "
+            "reference. Components can be correlated and fractions are not additive "
+            "or causal leakage estimates."
+        ),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True, help="CSV with mixture and reference stem paths")
@@ -269,13 +566,39 @@ def main() -> int:
                 for target in TARGETS
             }
             tom_component_paths = _resolve(base, row["toms"])
-            tom_components = {
-                path.stem: _read_audio(
-                    [path], label=f"{track_id} Tom component {path.stem}",
+            raw_components = row.get("components", "").strip()
+            component_paths = json.loads(raw_components) if raw_components else {}
+            if not isinstance(component_paths, dict):
+                raise ValueError(f"{track_id} components must be a JSON object")
+            source_components = {
+                str(name): _read_audio(
+                    _resolve(base, str(value)),
+                    label=f"{track_id} source component {name}",
                     sample_rate=model.sample_rate,
                 )
-                for path in tom_component_paths
+                for name, value in component_paths.items()
             }
+            for name, samples in source_components.items():
+                if samples.shape != mixture.shape:
+                    raise ValueError(
+                        f"{track_id} source component {name!r} shape {samples.shape} "
+                        f"does not match mixture {mixture.shape}"
+                    )
+            if source_components and all(path.stem in source_components for path in tom_component_paths):
+                # Reuse already-loaded Tom arrays rather than duplicating three
+                # full-length stereo references in memory.
+                tom_components = {
+                    path.stem: source_components[path.stem] for path in tom_component_paths
+                }
+            else:
+                # Backward compatibility with older four-column manifests.
+                tom_components = {
+                    path.stem: _read_audio(
+                        [path], label=f"{track_id} Tom component {path.stem}",
+                        sample_rate=model.sample_rate,
+                    )
+                    for path in tom_component_paths
+                }
             if len(tom_components) != len(tom_component_paths):
                 raise ValueError(f"{track_id} has duplicate Tom component names")
             for target, reference in refs.items():
@@ -308,6 +631,18 @@ def main() -> int:
                         tom_components if target == "toms" else {},
                         refs["toms"], estimate, mixture,
                     ),
+                    "component_projection_diagnostics": _component_projection_diagnostics(
+                        estimate, source_components,
+                    ),
+                    "windowed_component_projection_diagnostics": (
+                        _windowed_component_projection_diagnostics(
+                            estimate, source_components, sample_rate=model.sample_rate,
+                        ) if target == "toms" else []
+                    ),
+                    "component_target_quality_diagnostics": (
+                        _component_quality_diagnostics(estimate, mixture, source_components)
+                        if target == "toms" else []
+                    ),
                 })
             print(f"[{index}/{len(rows)}] {track_id}: "
                   + ", ".join(
@@ -328,6 +663,8 @@ def main() -> int:
     salience_bands = (
         "prominent_ge_-20_db", "low_-30_to_-20_db", "very_low_lt_-30_db"
     )
+    toms_component_quality_summary = _component_quality_summary(tom_rows)
+    toms_component_coverage = _tom_component_coverage_summary(tom_rows)
     toms_by_reference_salience = {
         band: {
             "count": sum(row["tom_reference_salience_band"] == band for row in tom_rows),
@@ -359,6 +696,10 @@ def main() -> int:
         },
         "summary": summaries,
         "toms_by_reference_salience": toms_by_reference_salience,
+        "toms_component_quality_summary": toms_component_quality_summary,
+        "toms_component_coverage": toms_component_coverage,
+        "toms_projection_summary": _tom_projection_summary(tom_rows),
+        "toms_windowed_projection_summary": _tom_windowed_projection_summary(tom_rows),
         "tom_salience_policy": (
             "Diagnostic-only bins based on Tom reference RMS relative to mixture: "
             ">= -20 dB, -30 to -20 dB, and < -30 dB. Bins do not exclude or "

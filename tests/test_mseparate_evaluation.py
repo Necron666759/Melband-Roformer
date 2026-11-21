@@ -140,3 +140,217 @@ def test_tom_component_diagnostics_reports_salience_without_changing_audio():
     assert result["tom_reference_salience_band"] == "low_-30_to_-20_db"
     assert result["tom_reference_to_mixture_db"] == pytest.approx(-26.0206, abs=1e-3)
     assert result["tom_component_levels"][0]["rms"] == pytest.approx(0.01)
+
+
+def test_component_projection_diagnostics_identifies_overlapping_source():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_projection_diagnostics
+
+    phase = np.arange(4096, dtype=np.float64) * (2.0 * np.pi / 64.0)
+    kick = np.sin(phase).astype(np.float32).reshape(-1, 1)
+    snare = np.cos(phase).astype(np.float32).reshape(-1, 1)
+    result = _component_projection_diagnostics(
+        0.4 * kick,
+        {"kick": kick, "snare": snare},
+    )
+    by_name = {item["name"]: item for item in result}
+    assert by_name["kick"]["normalized_correlation"] == pytest.approx(1.0, abs=1e-6)
+    assert by_name["kick"]["estimate_energy_projection_fraction"] == pytest.approx(1.0, abs=1e-6)
+    assert by_name["snare"]["normalized_correlation"] == pytest.approx(0.0, abs=1e-6)
+    assert by_name["snare"]["estimate_energy_projection_fraction"] == pytest.approx(0.0, abs=1e-6)
+    assert "not an additive" in by_name["kick"]["interpretation"]
+
+
+
+def test_windowed_projection_localizes_transient_snare_overlap():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _windowed_component_projection_diagnostics
+
+    sample_rate = 100
+    samples = 200
+    time = np.arange(samples, dtype=np.float64) / sample_rate
+    tom = np.column_stack((np.sin(2 * np.pi * 8 * time), np.sin(2 * np.pi * 5 * time)))
+    snare = np.zeros_like(tom)
+    snare[50:100, 0] = np.cos(2 * np.pi * 10 * time[50:100])
+    snare[50:100, 1] = np.cos(2 * np.pi * 7 * time[50:100])
+    estimate = tom + 2.0 * snare
+
+    rows = _windowed_component_projection_diagnostics(
+        estimate, {"snare": snare, "hi_tom": tom},
+        sample_rate=sample_rate, window_seconds=0.5,
+    )
+    by_name = {row["name"]: row for row in rows}
+    assert by_name["snare"]["windows_scored"] == 1
+    assert by_name["snare"]["peak_window_start_seconds"] == pytest.approx(0.5)
+    assert by_name["snare"]["max_projection_fraction"] > 0.7
+    assert by_name["hi_tom"]["windows_scored"] == 4
+    assert "not additive" in by_name["snare"]["interpretation"]
+
+
+def test_windowed_projection_reports_silent_components_without_nan():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _windowed_component_projection_diagnostics
+
+    rows = _windowed_component_projection_diagnostics(
+        np.ones((100, 2)), {"silent": np.zeros((100, 2))},
+        sample_rate=100, window_seconds=0.5,
+    )
+    assert rows == [{
+        "name": "silent",
+        "window_seconds": 0.5,
+        "windows_scored": 0,
+        "median_projection_fraction": None,
+        "p90_projection_fraction": None,
+        "max_projection_fraction": None,
+        "windows_at_or_above_25_percent": 0,
+        "peak_window_start_seconds": None,
+        "interpretation": "no active aligned windows available for projection",
+    }]
+
+
+
+def test_component_projection_diagnostics_rejects_misaligned_component():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_projection_diagnostics
+
+    with pytest.raises(ValueError, match="differs from estimate"):
+        _component_projection_diagnostics(np.ones((8, 2)), {"kick": np.ones((7, 2))})
+
+
+def test_component_quality_diagnostics_scores_toms_against_individual_kit_sources():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_quality_diagnostics
+
+    phase = np.arange(4096, dtype=np.float64) * (2.0 * np.pi / 64.0)
+    tom = np.sin(phase).astype(np.float32).reshape(-1, 1)
+    kick = np.cos(phase).astype(np.float32).reshape(-1, 1)
+    snare = np.sin(phase * 0.37).astype(np.float32).reshape(-1, 1)
+    mixture = tom + kick + snare
+    estimate = tom + 0.2 * kick
+
+    rows = _component_quality_diagnostics(
+        estimate, mixture, {"hi_tom": tom, "kick": kick, "snare": snare},
+    )
+    by_name = {row["name"]: row for row in rows}
+
+    assert by_name["hi_tom"]["status"] == "scored"
+    assert by_name["kick"]["status"] == "scored"
+    assert by_name["hi_tom"]["si_sdri_db"] > 0
+    assert by_name["kick"]["si_sdri_db"] < 0
+    assert by_name["hi_tom"]["si_sdr_db"] > by_name["kick"]["si_sdr_db"]
+
+
+def test_component_quality_diagnostics_keeps_silent_sources_explicit():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_quality_diagnostics
+
+    phase = np.arange(1024, dtype=np.float64) * (2.0 * np.pi / 32.0)
+    tom = np.sin(phase).astype(np.float32).reshape(-1, 1)
+    silence = np.zeros_like(tom)
+
+    rows = _component_quality_diagnostics(
+        tom, tom, {"hi_tom": tom, "low_tom": silence},
+    )
+    by_name = {row["name"]: row for row in rows}
+
+    assert by_name["hi_tom"]["status"] == "scored"
+    assert by_name["hi_tom"]["si_sdri_db"] is None
+    assert by_name["low_tom"] == {
+        "name": "low_tom", "status": "silent_reference", "si_sdr_db": None,
+        "mixture_baseline_si_sdr_db": None, "si_sdri_db": None,
+    }
+
+
+
+def test_component_quality_summary_aggregates_active_tom_and_non_tom_references():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from evaluate_mseparate_drum_heads import _component_quality_summary
+
+    result = _component_quality_summary([
+        {"component_target_quality_diagnostics": [
+            {"name": "hi_tom", "status": "scored", "si_sdri_db": 4.0},
+            {"name": "snare", "status": "scored", "si_sdri_db": 2.0},
+            {"name": "kick", "status": "scored", "si_sdri_db": -3.0},
+            {"name": "ride", "status": "silent_reference", "si_sdri_db": None},
+        ]},
+        {"component_target_quality_diagnostics": [
+            {"name": "hi_tom", "status": "scored", "si_sdri_db": 2.0},
+            {"name": "snare", "status": "scored", "si_sdri_db": -1.0},
+            {"name": "kick", "status": "scored", "si_sdri_db": None},
+        ]},
+    ])
+
+    assert result["components"]["hi_tom"]["count"] == 2
+    assert result["components"]["hi_tom"]["mean_si_sdri_db"] == pytest.approx(3.0)
+    assert result["components"]["snare"]["positive_improvement_count"] == 1
+    assert result["components"]["kick"]["count"] == 1
+    assert result["tom_reference_components"]["mean_si_sdri_db"] == pytest.approx(3.0)
+    assert result["non_tom_components"]["count"] == 3
+    assert "not an additive" in result["interpretation"]
+
+
+def test_tom_component_coverage_reports_per_track_active_component_completeness():
+    from evaluate_mseparate_drum_heads import _tom_component_coverage_summary
+
+    result = _tom_component_coverage_summary([
+        {
+            "track_id": "full-kit",
+            "component_target_quality_diagnostics": [
+                {"name": "hi_tom", "status": "scored", "si_sdri_db": 2.0},
+                {"name": "mid_tom", "status": "scored", "si_sdri_db": 1.0},
+                {"name": "low_tom", "status": "scored", "si_sdri_db": -0.5},
+                {"name": "snare", "status": "scored", "si_sdri_db": 8.0},
+            ],
+        },
+        {
+            "track_id": "partial-kit",
+            "component_target_quality_diagnostics": [
+                {"name": "hi_tom", "status": "scored", "si_sdri_db": 3.0},
+                {"name": "mid_tom", "status": "silent_reference", "si_sdri_db": None},
+                {"name": "low_tom", "status": "scored", "si_sdri_db": 1.0},
+            ],
+        },
+    ])
+
+    assert result["tracks_with_active_tom_components"] == 2
+    assert result["tracks_with_all_active_tom_components_improved"] == 1
+    assert result["mean_positive_component_fraction"] == pytest.approx(0.8333, abs=1e-4)
+    assert result["tracks"][0]["positive_tom_component_count"] == 2
+    assert result["tracks"][1]["active_tom_component_count"] == 2
+
+
+
+def test_tom_projection_summary_highlights_snare_and_kick_overlap_without_claiming_additivity():
+    from evaluate_mseparate_drum_heads import _tom_projection_summary
+
+    result = _tom_projection_summary([
+        {"component_projection_diagnostics": [
+            {"name": "snare", "estimate_energy_projection_fraction": 0.45},
+            {"name": "kick", "estimate_energy_projection_fraction": 0.30},
+            {"name": "hi_tom", "estimate_energy_projection_fraction": 0.20},
+        ]},
+        {"component_projection_diagnostics": [
+            {"name": "snare", "estimate_energy_projection_fraction": 0.60},
+            {"name": "kick", "estimate_energy_projection_fraction": 0.10},
+            {"name": "hi_tom", "estimate_energy_projection_fraction": None},
+        ]},
+    ])
+
+    assert result["components"]["snare"]["mean_projection_fraction"] == pytest.approx(0.525)
+    assert result["components"]["snare"]["tracks_at_or_above_25_percent"] == 2
+    assert result["components"]["kick"]["mean_projection_fraction"] == pytest.approx(0.20)
+    assert "not additive" in result["interpretation"]
