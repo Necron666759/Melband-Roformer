@@ -68,6 +68,63 @@ def _find_stem_member(track_dir: str, metadata: dict[str, Any], stem_id: str,
     return sorted(candidates)[0] if candidates else None
 
 
+GM_PROGRAM_FAMILIES = (
+    "piano", "chromatic_percussion", "organ", "guitar",
+    "bass", "strings", "ensemble", "brass",
+    "reed", "pipe", "synth_lead", "synth_pad",
+    "synth_effects", "ethnic", "percussive", "sound_effects",
+)
+
+
+def _midi_program_family(program: Any) -> str | None:
+    """Map a zero-based General MIDI program number to its 8-program family."""
+    try:
+        number = int(program)
+    except (TypeError, ValueError):
+        return None
+    if number < 0 or number > 127:
+        return None
+    return GM_PROGRAM_FAMILIES[number // 8]
+
+
+def _instrument_program_families(metadata: dict[str, Any]) -> list[str]:
+    """Extract coarse GM instrument families from non-drum stem metadata."""
+    stems = metadata.get("stems")
+    if not isinstance(stems, dict):
+        return []
+    families = set()
+    for details in stems.values():
+        if not isinstance(details, dict) or details.get("is_drum") is True:
+            continue
+        program = details.get("program_num", details.get("program"))
+        family = _midi_program_family(program)
+        if family:
+            families.add(family)
+    return sorted(families)
+
+
+def _select_diverse_candidates(
+    candidates: list[dict[str, Any]], max_tracks: int,
+) -> list[dict[str, Any]]:
+    """Greedily maximize GM-family coverage, preserving archive order for ties."""
+    remaining = list(enumerate(candidates))
+    selected = []
+    covered: set[str] = set()
+    while remaining and len(selected) < max_tracks:
+        best_position = max(
+            range(len(remaining)),
+            key=lambda position: (
+                len(set(remaining[position][1].get("instrument_program_families", [])) - covered),
+                len(set(remaining[position][1].get("instrument_program_families", []))),
+                -remaining[position][0],
+            ),
+        )
+        _, candidate = remaining.pop(best_position)
+        selected.append(candidate)
+        covered.update(candidate.get("instrument_program_families", []))
+    return selected
+
+
 def _safe_destination(root: Path, member: str) -> Path:
     relative = PurePosixPath(member)
     if relative.is_absolute() or ".." in relative.parts:
@@ -88,9 +145,16 @@ def _copy_member(archive: Any, member: str, root: Path) -> dict[str, Any]:
             "bytes": destination.stat().st_size}
 
 
-def download_subset(destination: Path, manifest_path: Path, max_tracks: int = 8) -> dict[str, Any]:
+def download_subset(
+    destination: Path, manifest_path: Path, max_tracks: int = 16,
+    metadata_scan_limit: int | None = None,
+) -> dict[str, Any]:
     if max_tracks < 1:
         raise ValueError("max_tracks must be >= 1")
+    if metadata_scan_limit is None:
+        metadata_scan_limit = max(32, max_tracks * 8)
+    if metadata_scan_limit < 1:
+        raise ValueError("metadata_scan_limit must be >= 1")
     try:
         from remotezip import RemoteZip
         import yaml
@@ -133,13 +197,21 @@ def download_subset(destination: Path, manifest_path: Path, max_tracks: int = 8)
                 "mix_member": mix_member,
                 "drum_stem_members": drum_members,
                 "drum_source_ids": drum_ids,
+                "instrument_program_families": _instrument_program_families(metadata),
+                "instrument_program_count": sum(
+                    1 for details in metadata.get("stems", {}).values()
+                    if isinstance(details, dict)
+                    and details.get("is_drum") is not True
+                    and _midi_program_family(details.get("program_num", details.get("program")))
+                ) if isinstance(metadata.get("stems"), dict) else 0,
             })
-            # Metadata reads are individual HTTP range requests. Stop as soon
-            # as the requested number of complete drum tracks is available.
-            if len(candidates) >= max_tracks:
+            # Scan a bounded metadata sample, then select for instrument-family
+            # coverage. This avoids biasing the evaluation toward the first few
+            # archive entries without issuing range requests for the whole set.
+            if metadata_files_scanned >= metadata_scan_limit:
                 break
 
-        selected = candidates[:max_tracks]
+        selected = _select_diverse_candidates(candidates, max_tracks)
         if len(selected) < min(4, max_tracks):
             raise RuntimeError(
                 f"BabySlakh subset contains only {len(selected)} tracks with "
@@ -163,6 +235,8 @@ def download_subset(destination: Path, manifest_path: Path, max_tracks: int = 8)
                 "metadata": metadata_file["path"],
                 "drum_stems": [entry["path"] for entry in drum_files],
                 "drum_source_ids": item["drum_source_ids"],
+                "instrument_program_families": item["instrument_program_families"],
+                "instrument_program_count": item["instrument_program_count"],
                 "ground_truth": {
                     "drums_present": True,
                     "drum_stem_count": len(drum_files),
@@ -179,6 +253,9 @@ def download_subset(destination: Path, manifest_path: Path, max_tracks: int = 8)
         "full_archive_downloaded": False,
         "selected_tracks": len(rows),
         "metadata_files_scanned": metadata_files_scanned,
+        "metadata_scan_limit": metadata_scan_limit,
+        "candidate_tracks_found": len(candidates),
+        "selection_strategy": "greedy_gm_program_family_coverage_then_archive_order",
         "extracted_files": len(extracted_members),
         "extracted_bytes": sum(item["bytes"] for item in extracted_members),
         "tracks": rows,
@@ -186,6 +263,7 @@ def download_subset(destination: Path, manifest_path: Path, max_tracks: int = 8)
             "BabySlakh is sample-based MIDI-rendered music, not live drum recordings.",
             "Its drum ground truth identifies a combined drum source, not isolated Snare/Toms components.",
             "The subset is a compact routing/source-presence diagnostic, not a perceptual-quality benchmark.",
+            "General MIDI program families are coarse instrument-diversity proxies, not verified genre labels.",
         ],
     }
     manifest_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -196,9 +274,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--max-tracks", type=int, default=8)
+    parser.add_argument("--max-tracks", type=int, default=16)
+    parser.add_argument("--metadata-scan-limit", type=int, default=None)
     args = parser.parse_args()
-    result = download_subset(args.output_dir, args.manifest, args.max_tracks)
+    result = download_subset(
+        args.output_dir, args.manifest, args.max_tracks, args.metadata_scan_limit,
+    )
     print(json.dumps({
         "selected_tracks": result["selected_tracks"],
         "extracted_files": result["extracted_files"],

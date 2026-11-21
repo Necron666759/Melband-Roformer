@@ -139,7 +139,8 @@ jobs:
             --output-dir "${{ runner.temp }}/mseparate-stemgmd" \
             --manifest "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-eval-manifest.csv" \
             --report "${{ runner.temp }}/mseparate-evaluation/reports/stemgmd-subset-report.json" \
-            --max-tracks 8
+            --max-tracks 16 \
+            --metadata-scan-limit 128
 
       - name: Run real-checkpoint Snare/Toms inference and SI-SDR evaluation on CPU
         timeout-minutes: 240
@@ -205,8 +206,8 @@ jobs:
         run: |
           python scripts/evaluate_mseparate_babyslakh.py \
             --work-dir "${{ runner.temp }}/mseparate-evaluation" \
-            --max-tracks 8 \
-            --max-cases 4 \
+            --max-tracks 16 \
+            --max-cases 6 \
             --excerpt-seconds 12 \
             --inference-timeout 600
 

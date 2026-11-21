@@ -371,8 +371,8 @@ def crop_center(source: Path, destination: Path, seconds: float) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--work-dir", type=Path, default=Path("evaluation-work"))
-    parser.add_argument("--max-tracks", type=int, default=8)
-    parser.add_argument("--max-cases", type=int, default=4)
+    parser.add_argument("--max-tracks", type=int, default=16)
+    parser.add_argument("--max-cases", type=int, default=6)
     parser.add_argument("--excerpt-seconds", type=float, default=12.0)
     parser.add_argument("--inference-timeout", type=int, default=1800)
     args = parser.parse_args()
@@ -618,6 +618,9 @@ def main() -> int:
             "source": "https://zenodo.org/records/4603844",
             "license": "CC BY 4.0",
             "tracks_analyzed": len(rows),
+            "metadata_files_scanned": subset.get("metadata_files_scanned"),
+            "candidate_tracks_found": subset.get("candidate_tracks_found"),
+            "selection_strategy": subset.get("selection_strategy"),
             "download_method": subset.get("download_method"),
             "full_archive_downloaded": subset.get("full_archive_downloaded"),
             "extracted_files": subset.get("extracted_files"),
@@ -663,7 +666,7 @@ def main() -> int:
         },
         "limitations": [
             "BabySlakh is rendered MIDI music; live acoustic recordings and vocals are not represented reliably.",
-            "The selected 4-8 tracks are a compact routing diagnostic, not a statistically representative benchmark.",
+            "The selected 8-16 tracks are a broader routing diagnostic, not a statistically representative benchmark.",
             "BabySlakh ground truth identifies combined rendered drum sources; it does not distinguish acoustic versus electronic kits or provide isolated Snare/Toms references.",
             "No SDR/SI-SDR is reported because this harness does not align and score the selected combined drum stems against Snare/Toms outputs.",
             "A CPU run validates the actual planner and CPU-capable specialist inference, not RTX 3060 Ti CUDA performance.",

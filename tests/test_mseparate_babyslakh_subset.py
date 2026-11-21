@@ -60,6 +60,39 @@ def test_safe_destination_rejects_parent_traversal(tmp_path):
         subset._safe_destination(tmp_path, "../outside.wav")
 
 
+
+def test_midi_program_family_uses_general_midi_groups():
+    assert subset._midi_program_family(0) == "piano"
+    assert subset._midi_program_family(40) == "strings"
+    assert subset._midi_program_family(80) == "synth_lead"
+    assert subset._midi_program_family(127) == "sound_effects"
+    assert subset._midi_program_family(-1) is None
+    assert subset._midi_program_family(128) is None
+    assert subset._midi_program_family("unknown") is None
+
+
+def test_instrument_program_families_ignore_drum_stems():
+    metadata = {"stems": {
+        "S01": {"is_drum": True, "program_num": 0},
+        "S02": {"is_drum": False, "program_num": 40},
+        "S03": {"is_drum": False, "program_num": 80},
+        "S04": {"is_drum": False, "program_num": 81},
+    }}
+    assert subset._instrument_program_families(metadata) == ["strings", "synth_lead"]
+
+
+def test_diverse_candidate_selection_prioritizes_new_program_families():
+    candidates = [
+        {"track": "first", "instrument_program_families": ["strings"]},
+        {"track": "second", "instrument_program_families": ["strings"]},
+        {"track": "third", "instrument_program_families": ["synth_lead"]},
+        {"track": "fourth", "instrument_program_families": ["brass", "reed"]},
+    ]
+    selected = subset._select_diverse_candidates(candidates, 3)
+    assert [item["track"] for item in selected] == ["fourth", "first", "third"]
+
+
+
 def test_download_subset_fetches_only_selected_members(tmp_path, monkeypatch):
     class FakeArchive:
         read_members = []
@@ -107,7 +140,9 @@ def test_download_subset_fetches_only_selected_members(tmp_path, monkeypatch):
     result = subset.download_subset(output, manifest, max_tracks=4)
 
     assert result["selected_tracks"] == 4
-    assert result["metadata_files_scanned"] == 4
+    assert result["metadata_files_scanned"] == 6
+    assert result["candidate_tracks_found"] == 6
+    assert result["selection_strategy"] == "greedy_gm_program_family_coverage_then_archive_order"
     assert len(archive.read_members) == 4
     assert result["full_archive_downloaded"] is False
     assert result["download_method"].startswith("HTTP range")
