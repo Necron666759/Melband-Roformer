@@ -119,6 +119,7 @@ def _planner_target_audit(planner_tasks: list[dict], instruments: list[str]) -> 
     family_recall = len(covered) / len(ground_truth) if ground_truth else None
     return {
         "ground_truth_targets": sorted(ground_truth),
+        "unique_ground_truth_count": len(ground_truth),
         "planned_targets": sorted(planned),
         "true_positive_targets": true_positive,
         "false_positive_targets": false_positive,
@@ -291,6 +292,18 @@ def main() -> int:
             "planner_target_true_positives": sum(len(row["planner_target_audit"]["true_positive_targets"]) for row in rows),
             "planner_target_false_positives": sum(len(row["planner_target_audit"]["false_positive_targets"]) for row in rows),
             "planner_target_misses": sum(len(row["planner_target_audit"]["missed_ground_truth_targets"]) for row in rows),
+            "family_aware_ground_truth_covered": sum(
+                len(row["planner_target_audit"]["family_aware_covered_ground_truth_targets"])
+                for row in rows
+            ),
+            "family_aware_ground_truth_uncovered": sum(
+                len(row["planner_target_audit"]["family_aware_uncovered_ground_truth_targets"])
+                for row in rows
+            ),
+            "family_aware_recall": round(
+                sum(len(row["planner_target_audit"]["family_aware_covered_ground_truth_targets"]) for row in rows)
+                / max(1, sum(row["planner_target_audit"]["unique_ground_truth_count"] for row in rows)), 4
+            ),
         },
         "limitations": [
             "This stage evaluates source analysis and routing only; it does not run separation inference.",
