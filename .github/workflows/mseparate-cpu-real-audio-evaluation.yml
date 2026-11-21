@@ -1,4 +1,3 @@
-            --metadata-scan-limit 128
 name: MSeparate CPU real-audio routing evaluation
 
 on:
