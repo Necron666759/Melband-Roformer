@@ -300,13 +300,11 @@ def _windowed_component_projection_diagnostics(
 def _tom_windowed_projection_summary(tom_rows: list[dict]) -> dict:
     """Aggregate window-local overlap diagnostics without summing fractions."""
     values: dict[str, list[float]] = {}
-    peaks: dict[str, list[float]] = {}
     for track in tom_rows:
         for item in track.get("windowed_component_projection_diagnostics", []):
             value = item.get("max_projection_fraction")
             if value is not None and math.isfinite(float(value)):
                 values.setdefault(str(item.get("name", "unknown")), []).append(float(value))
-                peaks.setdefault(str(item.get("name", "unknown")), []).append(float(value))
     components = {
         name: {
             "tracks": len(rows),

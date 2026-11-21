@@ -173,9 +173,9 @@ def test_windowed_projection_localizes_transient_snare_overlap():
     sample_rate = 100
     samples = 200
     time = np.arange(samples, dtype=np.float64) / sample_rate
-    tom = np.column_stack((np.sin(2 * np.pi * 5 * time), np.sin(2 * np.pi * 5 * time)))
+    tom = np.column_stack((np.sin(2 * np.pi * 8 * time), np.sin(2 * np.pi * 5 * time)))
     snare = np.zeros_like(tom)
-    snare[50:100, 0] = np.cos(2 * np.pi * 7 * time[50:100])
+    snare[50:100, 0] = np.cos(2 * np.pi * 10 * time[50:100])
     snare[50:100, 1] = np.cos(2 * np.pi * 7 * time[50:100])
     estimate = tom + 2.0 * snare
 
