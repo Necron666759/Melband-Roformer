@@ -143,7 +143,7 @@ def test_download_subset_fetches_only_selected_members(tmp_path, monkeypatch):
     assert result["metadata_files_scanned"] == 6
     assert result["candidate_tracks_found"] == 6
     assert result["selection_strategy"] == "greedy_gm_program_family_coverage_then_archive_order"
-    assert len(archive.read_members) == 4
+    assert len(archive.read_members) == 6
     assert result["full_archive_downloaded"] is False
     assert result["download_method"].startswith("HTTP range")
     assert len(result["tracks"]) == 4

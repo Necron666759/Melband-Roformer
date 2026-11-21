@@ -152,7 +152,7 @@ jobs:
             --device cpu \
             --max-tracks 8
 
-      - name: Selectively download BabySlakh mixtures and drum references
+      - name: Selectively download sixteen diverse BabySlakh mixtures and drum references
         timeout-minutes: 30
         run: |
           python scripts/download_mseparate_babyslakh_subset.py \
